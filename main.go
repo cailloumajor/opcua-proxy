@@ -16,17 +16,14 @@ func main() {
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM)
 	defer signal.Stop(sc)
 
-	// Termination loop
 	go func() {
-		for {
-			select {
-			case s := <-sc:
-				log.Printf("received %v signal, cancelling main context", s)
-				signal.Stop(sc)
-				cancel()
-			case <-ctx.Done():
-				return
-			}
-		}
+		s := <-sc
+		signal.Stop(sc)
+		log.Printf("received %v signal, cancelling main context", s)
+		cancel()
 	}()
+
+	// TODO: remove
+	<-ctx.Done()
+
 }
