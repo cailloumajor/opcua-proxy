@@ -1,5 +1,6 @@
 [*.json]
 indent_style = tab
+tab_width = 4
 
 [Dockerfile]
 indent_style = space
