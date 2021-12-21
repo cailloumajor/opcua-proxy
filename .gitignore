@@ -1,5 +1,8 @@
-# Created by https://www.toptal.com/developers/gitignore/api/go,visualstudiocode
-# Edit at https://www.toptal.com/developers/gitignore?templates=go,visualstudiocode
+# Created by https://www.toptal.com/developers/gitignore/api/go,visualstudiocode,dotenv
+# Edit at https://www.toptal.com/developers/gitignore?templates=go,visualstudiocode,dotenv
+
+### dotenv ###
+.env
 
 ### Go ###
 # Binaries for programs and plugins
@@ -41,4 +44,4 @@
 # Support for Project snippet scope
 !.vscode/*.code-snippets
 
-# End of https://www.toptal.com/developers/gitignore/api/go,visualstudiocode
+# End of https://www.toptal.com/developers/gitignore/api/go,visualstudiocode,dotenv
