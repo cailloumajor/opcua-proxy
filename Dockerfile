@@ -1,0 +1,15 @@
+# syntax=docker/dockerfile:1.3
+
+FROM golang:1.17.5-bullseye AS builder
+
+WORKDIR /usr/src/app
+COPY go.mod go.sum *.go ./
+RUN --mount=type=cache,target=/root/.cache/go-build go build -o bin/ -v
+
+
+FROM gcr.io/distroless/static-debian11
+
+COPY --from=builder /usr/src/app/bin/* /usr/local/bin/
+
+USER nonroot
+CMD ["/usr/local/bin/opcua-centrifugo"]
