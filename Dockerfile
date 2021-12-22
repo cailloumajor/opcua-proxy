@@ -7,6 +7,7 @@ COPY go.mod go.sum *.go ./
 RUN --mount=type=cache,target=/root/.cache/go-build go build -o bin/ -v
 
 
+# hadolint ignore=DL3006
 FROM gcr.io/distroless/static-debian11
 
 COPY --from=builder /usr/src/app/bin/* /usr/local/bin/
