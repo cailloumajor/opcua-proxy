@@ -9,23 +9,18 @@ import (
 	"github.com/vrischmann/envconfig"
 )
 
-type envFileLoader interface {
+type configHandler interface {
 	LoadEnvFile() error
-}
-
-type defEnvFileLoader struct{}
-
-func (defEnvFileLoader) LoadEnvFile() error {
-	return godotenv.Load()
-}
-
-type envConfigInitializer interface {
 	InitEnvConfig(*Config) error
 }
 
-type defEnvConfigInitializer struct{}
+type defConfigHandler struct{}
 
-func (defEnvConfigInitializer) InitEnvConfig(c *Config) error {
+func (defConfigHandler) LoadEnvFile() error {
+	return godotenv.Load()
+}
+
+func (defConfigHandler) InitEnvConfig(c *Config) error {
 	return envconfig.Init(c)
 }
 
@@ -33,24 +28,22 @@ func (defEnvConfigInitializer) InitEnvConfig(c *Config) error {
 type Config struct{}
 
 var (
-	efl envFileLoader
-	eci envConfigInitializer
+	ch configHandler
 )
 
 func init() {
-	efl = defEnvFileLoader{}
-	eci = defEnvConfigInitializer{}
+	ch = defConfigHandler{}
 }
 
 // InitConfig initializes and returns the application configuration
 func InitConfig() (*Config, error) {
 	cfg := &Config{}
 
-	if err := efl.LoadEnvFile(); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err := ch.LoadEnvFile(); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, fmt.Errorf("error loading .env file: %v", err)
 	}
 
-	if err := eci.InitEnvConfig(cfg); err != nil {
+	if err := ch.InitEnvConfig(cfg); err != nil {
 		return nil, fmt.Errorf("error loading configuration: %v", err)
 	}
 

@@ -8,20 +8,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type envFileLoaderMock struct {
-	returnError error
+type configHandlerMock struct {
+	loadEnvFileError   error
+	initEnvConfigError error
 }
 
-func (e envFileLoaderMock) LoadEnvFile() error {
-	return e.returnError
+func (c configHandlerMock) LoadEnvFile() error {
+	return c.loadEnvFileError
 }
 
-type envConfigInitializerMock struct {
-	returnError error
-}
-
-func (e envConfigInitializerMock) InitEnvConfig(*Config) error {
-	return e.returnError
+func (c configHandlerMock) InitEnvConfig(*Config) error {
+	return c.initEnvConfigError
 }
 
 // Tests the error return of InitConfig
@@ -41,8 +38,7 @@ func TestInitConfigError(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			assert := assert.New(t)
-			efl = envFileLoaderMock{tc.loadEnvFileError}
-			eci = envConfigInitializerMock{tc.initEnvConfigError}
+			ch = configHandlerMock{tc.loadEnvFileError, tc.initEnvConfigError}
 			_, err := InitConfig()
 			if tc.expectError {
 				assert.Error(err)
@@ -65,7 +61,7 @@ func TestInitConfigSuccess(t *testing.T) {
 			t.Fatalf("error setting environment variable %v: %v", k, err)
 		}
 	}
-	efl = envFileLoaderMock{}
+	ch = configHandlerMock{}
 	c, err := InitConfig()
 	assert.NoError(err)
 	assert.Equal(expected, c)
