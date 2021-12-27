@@ -3,8 +3,11 @@
 FROM golang:1.17.5-bullseye AS builder
 
 WORKDIR /usr/src/app
-COPY go.mod go.sum *.go ./
-RUN --mount=type=cache,target=/root/.cache/go-build go build -o bin/ -v
+COPY go.mod go.sum ./
+COPY cmd ./cmd
+COPY internal ./internal
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    go build -o bin/ -v ./...
 
 
 # hadolint ignore=DL3006

@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/cailloumajor/opcua-centrifugo/internal/config"
 )
 
 func main() {
@@ -23,7 +26,13 @@ func main() {
 		cancel()
 	}()
 
-	// TODO: remove
-	<-ctx.Done()
+	ci := &config.DefaultInitializer{}
+	cfg, err := config.Init(ci)
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	// TODO: remove lines below
+	fmt.Println(cfg)
+	<-ctx.Done()
 }
