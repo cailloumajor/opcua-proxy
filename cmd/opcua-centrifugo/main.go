@@ -26,8 +26,7 @@ func main() {
 		cancel()
 	}()
 
-	ci := &config.DefaultInitializer{}
-	cfg, err := config.Init(ci)
+	cfg, err := config.Init()
 	if err != nil {
 		log.Fatal(err)
 	}

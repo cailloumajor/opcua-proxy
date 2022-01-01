@@ -1,11 +1,9 @@
-package config_test
+package config
 
 import (
 	"io/fs"
 	"os"
 	"testing"
-
-	"github.com/cailloumajor/opcua-centrifugo/internal/config"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -15,11 +13,11 @@ type configInitializerMock struct {
 	initEnvConfigError error
 }
 
-func (c configInitializerMock) LoadEnvFile() error {
+func (c configInitializerMock) loadEnvFile() error {
 	return c.loadEnvFileError
 }
 
-func (c configInitializerMock) InitEnvConfig(*config.Config) error {
+func (c configInitializerMock) initEnvConfig(*Config) error {
 	return c.initEnvConfigError
 }
 
@@ -40,8 +38,8 @@ func TestInitConfigError(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			assert := assert.New(t)
-			cim := &configInitializerMock{tc.loadEnvFileError, tc.initEnvConfigError}
-			_, err := config.Init(cim)
+			di = &configInitializerMock{tc.loadEnvFileError, tc.initEnvConfigError}
+			_, err := Init()
 			if tc.expectError {
 				assert.Error(err)
 			} else {
@@ -56,15 +54,15 @@ func TestInitConfigSuccess(t *testing.T) {
 
 	envMap := map[string]string{}
 
-	expected := &config.Config{}
+	expected := &Config{}
 
 	for k, v := range envMap {
 		if err := os.Setenv(k, v); err != nil {
 			t.Fatalf("error setting environment variable %v: %v", k, err)
 		}
 	}
-	cim := &configInitializerMock{}
-	c, err := config.Init(cim)
+	di = &configInitializerMock{}
+	c, err := Init()
 	assert.NoError(err)
 	assert.Equal(expected, c)
 }
