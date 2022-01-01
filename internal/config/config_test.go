@@ -2,7 +2,6 @@ package config_test
 
 import (
 	"io/fs"
-	"os"
 	"testing"
 
 	"github.com/cailloumajor/opcua-centrifugo/internal/config"
@@ -11,7 +10,7 @@ import (
 )
 
 // Tests the error return of InitConfig
-func TestInitConfigError(t *testing.T) {
+func TestInit(t *testing.T) {
 	tests := []struct {
 		name               string
 		loadEnvFileError   error
@@ -36,22 +35,4 @@ func TestInitConfigError(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestInitConfigSuccess(t *testing.T) {
-	assert := assert.New(t)
-
-	envMap := map[string]string{}
-
-	expected := &config.Config{}
-
-	for k, v := range envMap {
-		if err := os.Setenv(k, v); err != nil {
-			t.Fatalf("error setting environment variable %v: %v", k, err)
-		}
-	}
-	config.MockInitializer(nil, nil)
-	c, err := config.Init()
-	assert.NoError(err)
-	assert.Equal(expected, c)
 }
