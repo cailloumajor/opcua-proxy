@@ -30,8 +30,19 @@ func init() {
 	di = defaultInitializer{}
 }
 
+// OpcUaConfig holds the OPC-UA part of the configuration
+type OpcUaConfig struct {
+	ServerURL string
+	User      string `envconfig:"optional"`
+	Password  string `envconfig:"optional"`
+	CertFile  string `envconfig:"optional"`
+	KeyFile   string `envconfig:"optional"`
+}
+
 // Config holds the configuration of the application
-type Config struct{}
+type Config struct {
+	Opcua OpcUaConfig
+}
 
 // Init initializes and returns the application configuration
 func Init() (*Config, error) {

@@ -22,3 +22,15 @@ A microservice to proxy OPC-UA data change subscription through Centrifugo.
 ## Data flow
 
 ![Data flow](/assets/data_flow.png)
+
+## Configuration
+
+The service is configured with following environment variables.
+
+| Key              | Description                                                   |
+|------------------|---------------------------------------------------------------|
+| OPCUA_SERVER_URL | URL of the OPC-UA server endpoint                             |
+| OPCUA_USER       | (Optional) OPC-UA authentication username                     |
+| OPCUA_PASSWORD   | (Optional) OPC-UA authentication password                     |
+| OPCUA_CERT_FILE  | (Optional) Path of the OPC-UA secure channel certificate file |
+| OPCUA_KEY_FILE   | (Optional) Path of the OPC-UA secure channel private key file |
