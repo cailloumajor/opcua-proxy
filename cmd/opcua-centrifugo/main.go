@@ -32,6 +32,6 @@ func main() {
 	}
 
 	// TODO: remove lines below
-	fmt.Println(cfg)
+	fmt.Printf("%#v\n", cfg)
 	<-ctx.Done()
 }
