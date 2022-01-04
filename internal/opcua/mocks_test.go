@@ -12,160 +12,6 @@ import (
 	"sync"
 )
 
-// Ensure, that EndpointsGetterMock does implement internalopcua.EndpointsGetter.
-// If this is not the case, regenerate this file with moq.
-var _ internalopcua.EndpointsGetter = &EndpointsGetterMock{}
-
-// EndpointsGetterMock is a mock implementation of internalopcua.EndpointsGetter.
-//
-// 	func TestSomethingThatUsesEndpointsGetter(t *testing.T) {
-//
-// 		// make and configure a mocked internalopcua.EndpointsGetter
-// 		mockedEndpointsGetter := &EndpointsGetterMock{
-// 			GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...gopcuaopcua.Option) ([]*ua.EndpointDescription, error) {
-// 				panic("mock out the GetEndpoints method")
-// 			},
-// 		}
-//
-// 		// use mockedEndpointsGetter in code that requires internalopcua.EndpointsGetter
-// 		// and then make assertions.
-//
-// 	}
-type EndpointsGetterMock struct {
-	// GetEndpointsFunc mocks the GetEndpoints method.
-	GetEndpointsFunc func(ctx context.Context, endpoint string, opts ...gopcuaopcua.Option) ([]*ua.EndpointDescription, error)
-
-	// calls tracks calls to the methods.
-	calls struct {
-		// GetEndpoints holds details about calls to the GetEndpoints method.
-		GetEndpoints []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-			// Endpoint is the endpoint argument value.
-			Endpoint string
-			// Opts is the opts argument value.
-			Opts []gopcuaopcua.Option
-		}
-	}
-	lockGetEndpoints sync.RWMutex
-}
-
-// GetEndpoints calls GetEndpointsFunc.
-func (mock *EndpointsGetterMock) GetEndpoints(ctx context.Context, endpoint string, opts ...gopcuaopcua.Option) ([]*ua.EndpointDescription, error) {
-	if mock.GetEndpointsFunc == nil {
-		panic("EndpointsGetterMock.GetEndpointsFunc: method is nil but EndpointsGetter.GetEndpoints was just called")
-	}
-	callInfo := struct {
-		Ctx      context.Context
-		Endpoint string
-		Opts     []gopcuaopcua.Option
-	}{
-		Ctx:      ctx,
-		Endpoint: endpoint,
-		Opts:     opts,
-	}
-	mock.lockGetEndpoints.Lock()
-	mock.calls.GetEndpoints = append(mock.calls.GetEndpoints, callInfo)
-	mock.lockGetEndpoints.Unlock()
-	return mock.GetEndpointsFunc(ctx, endpoint, opts...)
-}
-
-// GetEndpointsCalls gets all the calls that were made to GetEndpoints.
-// Check the length with:
-//     len(mockedEndpointsGetter.GetEndpointsCalls())
-func (mock *EndpointsGetterMock) GetEndpointsCalls() []struct {
-	Ctx      context.Context
-	Endpoint string
-	Opts     []gopcuaopcua.Option
-} {
-	var calls []struct {
-		Ctx      context.Context
-		Endpoint string
-		Opts     []gopcuaopcua.Option
-	}
-	mock.lockGetEndpoints.RLock()
-	calls = mock.calls.GetEndpoints
-	mock.lockGetEndpoints.RUnlock()
-	return calls
-}
-
-// Ensure, that EndpointSelectorMock does implement internalopcua.EndpointSelector.
-// If this is not the case, regenerate this file with moq.
-var _ internalopcua.EndpointSelector = &EndpointSelectorMock{}
-
-// EndpointSelectorMock is a mock implementation of internalopcua.EndpointSelector.
-//
-// 	func TestSomethingThatUsesEndpointSelector(t *testing.T) {
-//
-// 		// make and configure a mocked internalopcua.EndpointSelector
-// 		mockedEndpointSelector := &EndpointSelectorMock{
-// 			SelectEndpointFunc: func(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
-// 				panic("mock out the SelectEndpoint method")
-// 			},
-// 		}
-//
-// 		// use mockedEndpointSelector in code that requires internalopcua.EndpointSelector
-// 		// and then make assertions.
-//
-// 	}
-type EndpointSelectorMock struct {
-	// SelectEndpointFunc mocks the SelectEndpoint method.
-	SelectEndpointFunc func(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription
-
-	// calls tracks calls to the methods.
-	calls struct {
-		// SelectEndpoint holds details about calls to the SelectEndpoint method.
-		SelectEndpoint []struct {
-			// Endpoints is the endpoints argument value.
-			Endpoints []*ua.EndpointDescription
-			// Policy is the policy argument value.
-			Policy string
-			// Mode is the mode argument value.
-			Mode ua.MessageSecurityMode
-		}
-	}
-	lockSelectEndpoint sync.RWMutex
-}
-
-// SelectEndpoint calls SelectEndpointFunc.
-func (mock *EndpointSelectorMock) SelectEndpoint(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
-	if mock.SelectEndpointFunc == nil {
-		panic("EndpointSelectorMock.SelectEndpointFunc: method is nil but EndpointSelector.SelectEndpoint was just called")
-	}
-	callInfo := struct {
-		Endpoints []*ua.EndpointDescription
-		Policy    string
-		Mode      ua.MessageSecurityMode
-	}{
-		Endpoints: endpoints,
-		Policy:    policy,
-		Mode:      mode,
-	}
-	mock.lockSelectEndpoint.Lock()
-	mock.calls.SelectEndpoint = append(mock.calls.SelectEndpoint, callInfo)
-	mock.lockSelectEndpoint.Unlock()
-	return mock.SelectEndpointFunc(endpoints, policy, mode)
-}
-
-// SelectEndpointCalls gets all the calls that were made to SelectEndpoint.
-// Check the length with:
-//     len(mockedEndpointSelector.SelectEndpointCalls())
-func (mock *EndpointSelectorMock) SelectEndpointCalls() []struct {
-	Endpoints []*ua.EndpointDescription
-	Policy    string
-	Mode      ua.MessageSecurityMode
-} {
-	var calls []struct {
-		Endpoints []*ua.EndpointDescription
-		Policy    string
-		Mode      ua.MessageSecurityMode
-	}
-	mock.lockSelectEndpoint.RLock()
-	calls = mock.calls.SelectEndpoint
-	mock.lockSelectEndpoint.RUnlock()
-	return calls
-}
-
 // Ensure, that ClientMock does implement internalopcua.Client.
 // If this is not the case, regenerate this file with moq.
 var _ internalopcua.Client = &ClientMock{}
@@ -228,77 +74,6 @@ func (mock *ClientMock) ConnectCalls() []struct {
 	mock.lockConnect.RLock()
 	calls = mock.calls.Connect
 	mock.lockConnect.RUnlock()
-	return calls
-}
-
-// Ensure, that ClientCreatorMock does implement internalopcua.ClientCreator.
-// If this is not the case, regenerate this file with moq.
-var _ internalopcua.ClientCreator = &ClientCreatorMock{}
-
-// ClientCreatorMock is a mock implementation of internalopcua.ClientCreator.
-//
-// 	func TestSomethingThatUsesClientCreator(t *testing.T) {
-//
-// 		// make and configure a mocked internalopcua.ClientCreator
-// 		mockedClientCreator := &ClientCreatorMock{
-// 			NewClientFunc: func(endpoint string, opts ...gopcuaopcua.Option) internalopcua.Client {
-// 				panic("mock out the NewClient method")
-// 			},
-// 		}
-//
-// 		// use mockedClientCreator in code that requires internalopcua.ClientCreator
-// 		// and then make assertions.
-//
-// 	}
-type ClientCreatorMock struct {
-	// NewClientFunc mocks the NewClient method.
-	NewClientFunc func(endpoint string, opts ...gopcuaopcua.Option) internalopcua.Client
-
-	// calls tracks calls to the methods.
-	calls struct {
-		// NewClient holds details about calls to the NewClient method.
-		NewClient []struct {
-			// Endpoint is the endpoint argument value.
-			Endpoint string
-			// Opts is the opts argument value.
-			Opts []gopcuaopcua.Option
-		}
-	}
-	lockNewClient sync.RWMutex
-}
-
-// NewClient calls NewClientFunc.
-func (mock *ClientCreatorMock) NewClient(endpoint string, opts ...gopcuaopcua.Option) internalopcua.Client {
-	if mock.NewClientFunc == nil {
-		panic("ClientCreatorMock.NewClientFunc: method is nil but ClientCreator.NewClient was just called")
-	}
-	callInfo := struct {
-		Endpoint string
-		Opts     []gopcuaopcua.Option
-	}{
-		Endpoint: endpoint,
-		Opts:     opts,
-	}
-	mock.lockNewClient.Lock()
-	mock.calls.NewClient = append(mock.calls.NewClient, callInfo)
-	mock.lockNewClient.Unlock()
-	return mock.NewClientFunc(endpoint, opts...)
-}
-
-// NewClientCalls gets all the calls that were made to NewClient.
-// Check the length with:
-//     len(mockedClientCreator.NewClientCalls())
-func (mock *ClientCreatorMock) NewClientCalls() []struct {
-	Endpoint string
-	Opts     []gopcuaopcua.Option
-} {
-	var calls []struct {
-		Endpoint string
-		Opts     []gopcuaopcua.Option
-	}
-	mock.lockNewClient.RLock()
-	calls = mock.calls.NewClient
-	mock.lockNewClient.RUnlock()
 	return calls
 }
 
@@ -385,44 +160,164 @@ func (mock *NodeMonitorMock) ChanSubscribeCalls() []struct {
 	return calls
 }
 
-// Ensure, that NodeMonitorCreatorMock does implement internalopcua.NodeMonitorCreator.
+// Ensure, that DependenciesMock does implement internalopcua.Dependencies.
 // If this is not the case, regenerate this file with moq.
-var _ internalopcua.NodeMonitorCreator = &NodeMonitorCreatorMock{}
+var _ internalopcua.Dependencies = &DependenciesMock{}
 
-// NodeMonitorCreatorMock is a mock implementation of internalopcua.NodeMonitorCreator.
+// DependenciesMock is a mock implementation of internalopcua.Dependencies.
 //
-// 	func TestSomethingThatUsesNodeMonitorCreator(t *testing.T) {
+// 	func TestSomethingThatUsesDependencies(t *testing.T) {
 //
-// 		// make and configure a mocked internalopcua.NodeMonitorCreator
-// 		mockedNodeMonitorCreator := &NodeMonitorCreatorMock{
+// 		// make and configure a mocked internalopcua.Dependencies
+// 		mockedDependencies := &DependenciesMock{
+// 			GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...gopcuaopcua.Option) ([]*ua.EndpointDescription, error) {
+// 				panic("mock out the GetEndpoints method")
+// 			},
+// 			NewClientFunc: func(endpoint string, opts ...gopcuaopcua.Option) internalopcua.Client {
+// 				panic("mock out the NewClient method")
+// 			},
 // 			NewNodeMonitorFunc: func(client internalopcua.Client) (internalopcua.NodeMonitor, error) {
 // 				panic("mock out the NewNodeMonitor method")
 // 			},
+// 			SelectEndpointFunc: func(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
+// 				panic("mock out the SelectEndpoint method")
+// 			},
 // 		}
 //
-// 		// use mockedNodeMonitorCreator in code that requires internalopcua.NodeMonitorCreator
+// 		// use mockedDependencies in code that requires internalopcua.Dependencies
 // 		// and then make assertions.
 //
 // 	}
-type NodeMonitorCreatorMock struct {
+type DependenciesMock struct {
+	// GetEndpointsFunc mocks the GetEndpoints method.
+	GetEndpointsFunc func(ctx context.Context, endpoint string, opts ...gopcuaopcua.Option) ([]*ua.EndpointDescription, error)
+
+	// NewClientFunc mocks the NewClient method.
+	NewClientFunc func(endpoint string, opts ...gopcuaopcua.Option) internalopcua.Client
+
 	// NewNodeMonitorFunc mocks the NewNodeMonitor method.
 	NewNodeMonitorFunc func(client internalopcua.Client) (internalopcua.NodeMonitor, error)
 
+	// SelectEndpointFunc mocks the SelectEndpoint method.
+	SelectEndpointFunc func(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription
+
 	// calls tracks calls to the methods.
 	calls struct {
+		// GetEndpoints holds details about calls to the GetEndpoints method.
+		GetEndpoints []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Endpoint is the endpoint argument value.
+			Endpoint string
+			// Opts is the opts argument value.
+			Opts []gopcuaopcua.Option
+		}
+		// NewClient holds details about calls to the NewClient method.
+		NewClient []struct {
+			// Endpoint is the endpoint argument value.
+			Endpoint string
+			// Opts is the opts argument value.
+			Opts []gopcuaopcua.Option
+		}
 		// NewNodeMonitor holds details about calls to the NewNodeMonitor method.
 		NewNodeMonitor []struct {
 			// Client is the client argument value.
 			Client internalopcua.Client
 		}
+		// SelectEndpoint holds details about calls to the SelectEndpoint method.
+		SelectEndpoint []struct {
+			// Endpoints is the endpoints argument value.
+			Endpoints []*ua.EndpointDescription
+			// Policy is the policy argument value.
+			Policy string
+			// Mode is the mode argument value.
+			Mode ua.MessageSecurityMode
+		}
 	}
+	lockGetEndpoints   sync.RWMutex
+	lockNewClient      sync.RWMutex
 	lockNewNodeMonitor sync.RWMutex
+	lockSelectEndpoint sync.RWMutex
+}
+
+// GetEndpoints calls GetEndpointsFunc.
+func (mock *DependenciesMock) GetEndpoints(ctx context.Context, endpoint string, opts ...gopcuaopcua.Option) ([]*ua.EndpointDescription, error) {
+	if mock.GetEndpointsFunc == nil {
+		panic("DependenciesMock.GetEndpointsFunc: method is nil but Dependencies.GetEndpoints was just called")
+	}
+	callInfo := struct {
+		Ctx      context.Context
+		Endpoint string
+		Opts     []gopcuaopcua.Option
+	}{
+		Ctx:      ctx,
+		Endpoint: endpoint,
+		Opts:     opts,
+	}
+	mock.lockGetEndpoints.Lock()
+	mock.calls.GetEndpoints = append(mock.calls.GetEndpoints, callInfo)
+	mock.lockGetEndpoints.Unlock()
+	return mock.GetEndpointsFunc(ctx, endpoint, opts...)
+}
+
+// GetEndpointsCalls gets all the calls that were made to GetEndpoints.
+// Check the length with:
+//     len(mockedDependencies.GetEndpointsCalls())
+func (mock *DependenciesMock) GetEndpointsCalls() []struct {
+	Ctx      context.Context
+	Endpoint string
+	Opts     []gopcuaopcua.Option
+} {
+	var calls []struct {
+		Ctx      context.Context
+		Endpoint string
+		Opts     []gopcuaopcua.Option
+	}
+	mock.lockGetEndpoints.RLock()
+	calls = mock.calls.GetEndpoints
+	mock.lockGetEndpoints.RUnlock()
+	return calls
+}
+
+// NewClient calls NewClientFunc.
+func (mock *DependenciesMock) NewClient(endpoint string, opts ...gopcuaopcua.Option) internalopcua.Client {
+	if mock.NewClientFunc == nil {
+		panic("DependenciesMock.NewClientFunc: method is nil but Dependencies.NewClient was just called")
+	}
+	callInfo := struct {
+		Endpoint string
+		Opts     []gopcuaopcua.Option
+	}{
+		Endpoint: endpoint,
+		Opts:     opts,
+	}
+	mock.lockNewClient.Lock()
+	mock.calls.NewClient = append(mock.calls.NewClient, callInfo)
+	mock.lockNewClient.Unlock()
+	return mock.NewClientFunc(endpoint, opts...)
+}
+
+// NewClientCalls gets all the calls that were made to NewClient.
+// Check the length with:
+//     len(mockedDependencies.NewClientCalls())
+func (mock *DependenciesMock) NewClientCalls() []struct {
+	Endpoint string
+	Opts     []gopcuaopcua.Option
+} {
+	var calls []struct {
+		Endpoint string
+		Opts     []gopcuaopcua.Option
+	}
+	mock.lockNewClient.RLock()
+	calls = mock.calls.NewClient
+	mock.lockNewClient.RUnlock()
+	return calls
 }
 
 // NewNodeMonitor calls NewNodeMonitorFunc.
-func (mock *NodeMonitorCreatorMock) NewNodeMonitor(client internalopcua.Client) (internalopcua.NodeMonitor, error) {
+func (mock *DependenciesMock) NewNodeMonitor(client internalopcua.Client) (internalopcua.NodeMonitor, error) {
 	if mock.NewNodeMonitorFunc == nil {
-		panic("NodeMonitorCreatorMock.NewNodeMonitorFunc: method is nil but NodeMonitorCreator.NewNodeMonitor was just called")
+		panic("DependenciesMock.NewNodeMonitorFunc: method is nil but Dependencies.NewNodeMonitor was just called")
 	}
 	callInfo := struct {
 		Client internalopcua.Client
@@ -437,8 +332,8 @@ func (mock *NodeMonitorCreatorMock) NewNodeMonitor(client internalopcua.Client) 
 
 // NewNodeMonitorCalls gets all the calls that were made to NewNodeMonitor.
 // Check the length with:
-//     len(mockedNodeMonitorCreator.NewNodeMonitorCalls())
-func (mock *NodeMonitorCreatorMock) NewNodeMonitorCalls() []struct {
+//     len(mockedDependencies.NewNodeMonitorCalls())
+func (mock *DependenciesMock) NewNodeMonitorCalls() []struct {
 	Client internalopcua.Client
 } {
 	var calls []struct {
@@ -447,5 +342,44 @@ func (mock *NodeMonitorCreatorMock) NewNodeMonitorCalls() []struct {
 	mock.lockNewNodeMonitor.RLock()
 	calls = mock.calls.NewNodeMonitor
 	mock.lockNewNodeMonitor.RUnlock()
+	return calls
+}
+
+// SelectEndpoint calls SelectEndpointFunc.
+func (mock *DependenciesMock) SelectEndpoint(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
+	if mock.SelectEndpointFunc == nil {
+		panic("DependenciesMock.SelectEndpointFunc: method is nil but Dependencies.SelectEndpoint was just called")
+	}
+	callInfo := struct {
+		Endpoints []*ua.EndpointDescription
+		Policy    string
+		Mode      ua.MessageSecurityMode
+	}{
+		Endpoints: endpoints,
+		Policy:    policy,
+		Mode:      mode,
+	}
+	mock.lockSelectEndpoint.Lock()
+	mock.calls.SelectEndpoint = append(mock.calls.SelectEndpoint, callInfo)
+	mock.lockSelectEndpoint.Unlock()
+	return mock.SelectEndpointFunc(endpoints, policy, mode)
+}
+
+// SelectEndpointCalls gets all the calls that were made to SelectEndpoint.
+// Check the length with:
+//     len(mockedDependencies.SelectEndpointCalls())
+func (mock *DependenciesMock) SelectEndpointCalls() []struct {
+	Endpoints []*ua.EndpointDescription
+	Policy    string
+	Mode      ua.MessageSecurityMode
+} {
+	var calls []struct {
+		Endpoints []*ua.EndpointDescription
+		Policy    string
+		Mode      ua.MessageSecurityMode
+	}
+	mock.lockSelectEndpoint.RLock()
+	calls = mock.calls.SelectEndpoint
+	mock.lockSelectEndpoint.RUnlock()
 	return calls
 }

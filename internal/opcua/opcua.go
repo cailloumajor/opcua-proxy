@@ -8,26 +8,11 @@ import (
 	"github.com/gopcua/opcua/ua"
 )
 
-//go:generate moq -out mocks_test.go -pkg opcua_test . EndpointsGetter EndpointSelector Client ClientCreator NodeMonitor NodeMonitorCreator
-
-// EndpointsGetter models an OPC-UA server endpoints getter
-type EndpointsGetter interface {
-	GetEndpoints(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error)
-}
-
-// EndpointSelector models an OPC-UA server endpoint selector
-type EndpointSelector interface {
-	SelectEndpoint(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription
-}
+//go:generate moq -out mocks_test.go -pkg opcua_test . Client NodeMonitor Dependencies
 
 // Client models an OPC-UA client
 type Client interface {
 	Connect(context.Context) (err error)
-}
-
-// ClientCreator models an OPC-UA client creator
-type ClientCreator interface {
-	NewClient(endpoint string, opts ...opcua.Option) Client
 }
 
 // NodeMonitor models an OPC-UA node monitor
@@ -35,8 +20,11 @@ type NodeMonitor interface {
 	ChanSubscribe(context.Context, *opcua.SubscriptionParameters, chan<- *monitor.DataChangeMessage, ...string) (*monitor.Subscription, error)
 }
 
-// NodeMonitorCreator models an OPC-UA node monitor creator
-type NodeMonitorCreator interface {
+// Dependencies models the dependencies of NewMonitor
+type Dependencies interface {
+	GetEndpoints(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error)
+	SelectEndpoint(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription
+	NewClient(endpoint string, opts ...opcua.Option) Client
 	NewNodeMonitor(client Client) (NodeMonitor, error)
 }
 
