@@ -101,7 +101,6 @@ func TestNewMonitorSuccess(t *testing.T) {
 					return nil
 				},
 			}
-			mockedNodeMonitor := &NodeMonitorMock{}
 			mockedNewMonitorDeps := &NewMonitorDepsMock{
 				GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
 					return []*ua.EndpointDescription{}, nil
@@ -132,7 +131,7 @@ func TestNewMonitorSuccess(t *testing.T) {
 					return mockedClient
 				},
 				NewNodeMonitorFunc: func(client Client) (NodeMonitor, error) {
-					return mockedNodeMonitor, nil
+					return &NodeMonitorMock{}, nil
 				},
 			}
 
@@ -205,8 +204,8 @@ func TestNewMonitorSuccess(t *testing.T) {
 				t.Errorf("NewNodeMonitor client argument: want %+v, got %+v", want, got)
 			}
 			// Assertions about NewMonitor
-			if got, want := m, mockedNodeMonitor; got != want {
-				t.Errorf("NewMonitor return: want %+v, got %+v", want, got)
+			if m == nil {
+				t.Errorf("NewMonitor return, got nil")
 			}
 			if got := err; got != nil {
 				t.Errorf("NewMonitor error return: want nil, got %v", got)
