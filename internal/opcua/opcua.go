@@ -23,6 +23,7 @@ type Config struct {
 // Client models an OPC-UA client
 type Client interface {
 	Connect(context.Context) (err error)
+	Close() error
 }
 
 // NodeMonitor models an OPC-UA node monitor
@@ -42,8 +43,14 @@ type NewMonitorDeps interface {
 	NewNodeMonitor(client Client) (NodeMonitor, error)
 }
 
+// Monitor is an OPC-UA node monitor
+type Monitor struct {
+	client      Client
+	nodeMonitor NodeMonitor
+}
+
 // NewMonitor creates an OPC-UA node monitor
-func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps) (NodeMonitor, error) {
+func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps) (*Monitor, error) {
 	eps, err := deps.GetEndpoints(ctx, cfg.ServerURL)
 	if err != nil {
 		return nil, fmt.Errorf("NewMonitor: error getting endpoints: %w", err)
@@ -82,10 +89,15 @@ func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps) (NodeMoni
 		return nil, fmt.Errorf("NewMonitor: failed to connect: %w", err)
 	}
 
-	m, err := deps.NewNodeMonitor(c)
+	nm, err := deps.NewNodeMonitor(c)
 	if err != nil {
 		return nil, fmt.Errorf("NewMonitor: failed to create a node monitor: %w", err)
 	}
 
-	return m, nil
+	return &Monitor{client: c, nodeMonitor: nm}, nil
+}
+
+// CloseClient closes the OPC-UA client
+func (m *Monitor) CloseClient() error {
+	return m.client.Close()
 }

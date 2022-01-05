@@ -302,3 +302,46 @@ func TestNewMonitorError(t *testing.T) {
 		})
 	}
 }
+
+func TestMonitorClientClose(t *testing.T) {
+	cases := []struct {
+		name       string
+		closeError bool
+	}{
+		{
+			name:       "CloseError",
+			closeError: true,
+		},
+		{
+			name:       "CloseSuccess",
+			closeError: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockedClient := &ClientMock{
+				CloseFunc: func() error {
+					if tc.closeError {
+						return errTesting
+					}
+					return nil
+				},
+			}
+			mockedNodeMonitor := &NodeMonitorMock{}
+
+			m := NewTestMonitor(mockedClient, mockedNodeMonitor)
+			err := m.CloseClient()
+
+			if got, want := len(mockedClient.CloseCalls()), 1; got != want {
+				t.Errorf("client.Close call count: want %d, got %d", want, got)
+			}
+			if tc.closeError && err == nil {
+				t.Error("want an error, got nil")
+			}
+			if !tc.closeError && err != nil {
+				t.Error("want nil, got an error")
+			}
+		})
+	}
+}

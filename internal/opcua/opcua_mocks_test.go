@@ -21,6 +21,9 @@ var _ Client = &ClientMock{}
 //
 // 		// make and configure a mocked Client
 // 		mockedClient := &ClientMock{
+// 			CloseFunc: func() error {
+// 				panic("mock out the Close method")
+// 			},
 // 			ConnectFunc: func(contextMoqParam context.Context) error {
 // 				panic("mock out the Connect method")
 // 			},
@@ -31,18 +34,51 @@ var _ Client = &ClientMock{}
 //
 // 	}
 type ClientMock struct {
+	// CloseFunc mocks the Close method.
+	CloseFunc func() error
+
 	// ConnectFunc mocks the Connect method.
 	ConnectFunc func(contextMoqParam context.Context) error
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// Close holds details about calls to the Close method.
+		Close []struct {
+		}
 		// Connect holds details about calls to the Connect method.
 		Connect []struct {
 			// ContextMoqParam is the contextMoqParam argument value.
 			ContextMoqParam context.Context
 		}
 	}
+	lockClose   sync.RWMutex
 	lockConnect sync.RWMutex
+}
+
+// Close calls CloseFunc.
+func (mock *ClientMock) Close() error {
+	if mock.CloseFunc == nil {
+		panic("ClientMock.CloseFunc: method is nil but Client.Close was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockClose.Lock()
+	mock.calls.Close = append(mock.calls.Close, callInfo)
+	mock.lockClose.Unlock()
+	return mock.CloseFunc()
+}
+
+// CloseCalls gets all the calls that were made to Close.
+// Check the length with:
+//     len(mockedClient.CloseCalls())
+func (mock *ClientMock) CloseCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockClose.RLock()
+	calls = mock.calls.Close
+	mock.lockClose.RUnlock()
+	return calls
 }
 
 // Connect calls ConnectFunc.
