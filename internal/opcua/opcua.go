@@ -53,7 +53,7 @@ type Monitor struct {
 func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps) (*Monitor, error) {
 	eps, err := deps.GetEndpoints(ctx, cfg.ServerURL)
 	if err != nil {
-		return nil, fmt.Errorf("NewMonitor: error getting endpoints: %w", err)
+		return nil, fmt.Errorf("error getting endpoints: %w", err)
 	}
 
 	var opts []opcua.Option
@@ -71,7 +71,7 @@ func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps) (*Monitor
 
 	ep := deps.SelectEndpoint(eps, p, msm)
 	if ep == nil {
-		return nil, fmt.Errorf("NewMonitor: failed to select an endpoint")
+		return nil, fmt.Errorf("failed to select an endpoint")
 	}
 
 	var utt ua.UserTokenType
@@ -86,12 +86,12 @@ func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps) (*Monitor
 	c := deps.NewClient(ep.EndpointURL, opts...)
 
 	if err := c.Connect(ctx); err != nil {
-		return nil, fmt.Errorf("NewMonitor: failed to connect: %w", err)
+		return nil, fmt.Errorf("failed to connect: %w", err)
 	}
 
 	nm, err := deps.NewNodeMonitor(c)
 	if err != nil {
-		return nil, fmt.Errorf("NewMonitor: failed to create a node monitor: %w", err)
+		return nil, fmt.Errorf("failed to create a node monitor: %w", err)
 	}
 
 	return &Monitor{client: c, nodeMonitor: nm}, nil
