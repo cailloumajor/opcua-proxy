@@ -7,8 +7,9 @@ import (
 	"testing"
 
 	. "github.com/cailloumajor/opcua-centrifugo/internal/opcua"
-
+	"github.com/go-kit/log"
 	"github.com/gopcua/opcua"
+	"github.com/gopcua/opcua/monitor"
 	"github.com/gopcua/opcua/ua"
 )
 
@@ -101,6 +102,9 @@ func TestNewMonitorSuccess(t *testing.T) {
 					return nil
 				},
 			}
+			mockedNodeMonitor := &NodeMonitorMock{
+				SetErrorHandlerFunc: func(cb monitor.ErrHandler) {},
+			}
 			mockedNewMonitorDeps := &NewMonitorDepsMock{
 				GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
 					return []*ua.EndpointDescription{}, nil
@@ -131,14 +135,14 @@ func TestNewMonitorSuccess(t *testing.T) {
 					return mockedClient
 				},
 				NewNodeMonitorFunc: func(client Client) (NodeMonitor, error) {
-					return &NodeMonitorMock{}, nil
+					return mockedNodeMonitor, nil
 				},
 			}
 
 			tc.config.ServerURL = "serverURL"
 
 			// Target of the test
-			m, err := NewMonitor(context.Background(), &tc.config, mockedNewMonitorDeps)
+			m, err := NewMonitor(context.Background(), &tc.config, mockedNewMonitorDeps, log.NewNopLogger())
 
 			// Assertions about GetEndpoints
 			if got, want := len(mockedNewMonitorDeps.GetEndpointsCalls()), 1; got != want {
@@ -202,6 +206,10 @@ func TestNewMonitorSuccess(t *testing.T) {
 			}
 			if got, want := mockedNewMonitorDeps.NewNodeMonitorCalls()[0].Client, mockedClient; got != want {
 				t.Errorf("NewNodeMonitor client argument: want %+v, got %+v", want, got)
+			}
+			// Assertions about NodeMonitor.SetErrorHandler
+			if got, want := len(mockedNodeMonitor.SetErrorHandlerCalls()), 1; got != want {
+				t.Errorf("NodeMonitor.SetErrorHandler call count: want %d, got %d", want, got)
 			}
 			// Assertions about NewMonitor
 			if m == nil {
@@ -290,7 +298,7 @@ func TestNewMonitorError(t *testing.T) {
 			}
 
 			// Target of the test
-			m, err := NewMonitor(context.Background(), &Config{}, mockedNewMonitorDeps)
+			m, err := NewMonitor(context.Background(), &Config{}, mockedNewMonitorDeps, log.NewNopLogger())
 
 			// Assertions about NewMonitor
 			if got := m; got != nil {

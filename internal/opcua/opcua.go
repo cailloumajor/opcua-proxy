@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/monitor"
 	"github.com/gopcua/opcua/ua"
@@ -29,6 +31,7 @@ type Client interface {
 // NodeMonitor models an OPC-UA node monitor
 type NodeMonitor interface {
 	ChanSubscribe(context.Context, *opcua.SubscriptionParameters, chan<- *monitor.DataChangeMessage, ...string) (*monitor.Subscription, error)
+	SetErrorHandler(cb monitor.ErrHandler)
 }
 
 // NewMonitorDeps models the dependencies of NewMonitor
@@ -50,7 +53,7 @@ type Monitor struct {
 }
 
 // NewMonitor creates an OPC-UA node monitor
-func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps) (*Monitor, error) {
+func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps, logger log.Logger) (*Monitor, error) {
 	eps, err := deps.GetEndpoints(ctx, cfg.ServerURL)
 	if err != nil {
 		return nil, fmt.Errorf("error getting endpoints: %w", err)
@@ -93,6 +96,10 @@ func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps) (*Monitor
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a node monitor: %w", err)
 	}
+
+	nm.SetErrorHandler(func(c *opcua.Client, s *monitor.Subscription, e error) {
+		level.Info(logger).Log("from", "subscription", "sub_id", s.SubscriptionID(), "msg", e)
+	})
 
 	return &Monitor{client: c, nodeMonitor: nm}, nil
 }

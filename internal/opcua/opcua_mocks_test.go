@@ -125,6 +125,9 @@ var _ NodeMonitor = &NodeMonitorMock{}
 // 			ChanSubscribeFunc: func(contextMoqParam context.Context, subscriptionParameters *opcua.SubscriptionParameters, dataChangeMessageCh chan<- *monitor.DataChangeMessage, strings ...string) (*monitor.Subscription, error) {
 // 				panic("mock out the ChanSubscribe method")
 // 			},
+// 			SetErrorHandlerFunc: func(cb monitor.ErrHandler)  {
+// 				panic("mock out the SetErrorHandler method")
+// 			},
 // 		}
 //
 // 		// use mockedNodeMonitor in code that requires NodeMonitor
@@ -134,6 +137,9 @@ var _ NodeMonitor = &NodeMonitorMock{}
 type NodeMonitorMock struct {
 	// ChanSubscribeFunc mocks the ChanSubscribe method.
 	ChanSubscribeFunc func(contextMoqParam context.Context, subscriptionParameters *opcua.SubscriptionParameters, dataChangeMessageCh chan<- *monitor.DataChangeMessage, strings ...string) (*monitor.Subscription, error)
+
+	// SetErrorHandlerFunc mocks the SetErrorHandler method.
+	SetErrorHandlerFunc func(cb monitor.ErrHandler)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -148,8 +154,14 @@ type NodeMonitorMock struct {
 			// Strings is the strings argument value.
 			Strings []string
 		}
+		// SetErrorHandler holds details about calls to the SetErrorHandler method.
+		SetErrorHandler []struct {
+			// Cb is the cb argument value.
+			Cb monitor.ErrHandler
+		}
 	}
-	lockChanSubscribe sync.RWMutex
+	lockChanSubscribe   sync.RWMutex
+	lockSetErrorHandler sync.RWMutex
 }
 
 // ChanSubscribe calls ChanSubscribeFunc.
@@ -192,6 +204,37 @@ func (mock *NodeMonitorMock) ChanSubscribeCalls() []struct {
 	mock.lockChanSubscribe.RLock()
 	calls = mock.calls.ChanSubscribe
 	mock.lockChanSubscribe.RUnlock()
+	return calls
+}
+
+// SetErrorHandler calls SetErrorHandlerFunc.
+func (mock *NodeMonitorMock) SetErrorHandler(cb monitor.ErrHandler) {
+	if mock.SetErrorHandlerFunc == nil {
+		panic("NodeMonitorMock.SetErrorHandlerFunc: method is nil but NodeMonitor.SetErrorHandler was just called")
+	}
+	callInfo := struct {
+		Cb monitor.ErrHandler
+	}{
+		Cb: cb,
+	}
+	mock.lockSetErrorHandler.Lock()
+	mock.calls.SetErrorHandler = append(mock.calls.SetErrorHandler, callInfo)
+	mock.lockSetErrorHandler.Unlock()
+	mock.SetErrorHandlerFunc(cb)
+}
+
+// SetErrorHandlerCalls gets all the calls that were made to SetErrorHandler.
+// Check the length with:
+//     len(mockedNodeMonitor.SetErrorHandlerCalls())
+func (mock *NodeMonitorMock) SetErrorHandlerCalls() []struct {
+	Cb monitor.ErrHandler
+} {
+	var calls []struct {
+		Cb monitor.ErrHandler
+	}
+	mock.lockSetErrorHandler.RLock()
+	calls = mock.calls.SetErrorHandler
+	mock.lockSetErrorHandler.RUnlock()
 	return calls
 }
 
