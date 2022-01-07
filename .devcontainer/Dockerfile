@@ -24,7 +24,7 @@ RUN bash /tmp/library-scripts/go-debian.sh "none" "${GOROOT}" "${GOPATH}" \
 RUN rm -rf /tmp/library-scripts
 
 # [Optional] Uncomment the next line to use go get to install anything else you need
-RUN go install github.com/matryer/moq@latest
+# RUN go get -x <your-dependency-or-tool>
 
 # [Optional] Uncomment this section to install additional OS packages.
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
