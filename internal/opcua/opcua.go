@@ -104,7 +104,13 @@ func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps, logger lo
 	return &Monitor{client: c, nodeMonitor: nm}, nil
 }
 
-// CloseClient closes the OPC-UA client
-func (m *Monitor) CloseClient() error {
-	return m.client.Close()
+// Stop does all the needed job to stop OPC-UA related elements
+func (m *Monitor) Stop(ctx context.Context) []error {
+	var errs []error
+
+	if err := m.client.Close(); err != nil {
+		errs = append(errs, err)
+	}
+
+	return errs
 }
