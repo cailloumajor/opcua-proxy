@@ -98,7 +98,7 @@ func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps, logger lo
 	}
 
 	nm.SetErrorHandler(func(c *opcua.Client, s *monitor.Subscription, e error) {
-		level.Info(logger).Log("from", "subscription", "sub_id", s.SubscriptionID(), "msg", e)
+		level.Info(logger).Log("from", "subscription", "sub_id", s.SubscriptionID(), "err", e)
 	})
 
 	return &Monitor{client: c, nodeMonitor: nm}, nil
