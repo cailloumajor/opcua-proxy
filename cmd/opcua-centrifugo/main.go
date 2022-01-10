@@ -40,8 +40,6 @@ func usageFor(fs *flag.FlagSet, out io.Writer) func() {
 		if err := tw.Flush(); err != nil {
 			panic(err)
 		}
-
-		fmt.Fprintln(out)
 	}
 }
 
