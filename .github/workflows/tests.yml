@@ -15,11 +15,14 @@ jobs:
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
     steps:
+      - name: Delay push triggered run
+        if: github.event_name == 'push'
+        run: sleep 30s
       - id: skip_check
         uses: fkirc/skip-duplicate-actions@v3
         with:
           concurrent_skipping: same_content
-          do_not_skip: '["pull_request", "release", "workflow_dispatch", "schedule"]'
+          do_not_skip: '["pull_request", "workflow_dispatch", "schedule"]'
           skip_after_successful_duplicate: true
   lint:
     runs-on: ubuntu-latest
