@@ -311,8 +311,8 @@ func TestNewMonitorError(t *testing.T) {
 	}
 }
 
-func TestMonitorClientClose(t *testing.T) {
-	const ExpectedChannelLength = 1
+func TestMonitorStop(t *testing.T) {
+	const ExpectedErrors = 1
 
 	mockedClient := &ClientMock{
 		CloseFunc: func() error {
@@ -327,7 +327,7 @@ func TestMonitorClientClose(t *testing.T) {
 	if got, want := len(mockedClient.CloseCalls()), 1; got != want {
 		t.Errorf("client.Close call count: want %d, got %d", want, got)
 	}
-	if got, want := len(errs), ExpectedChannelLength; got != want {
-		t.Errorf("error channel count: want %d, got %d", want, got)
+	if got, want := len(errs), ExpectedErrors; got != want {
+		t.Errorf("errors count: want %d, got %d", want, got)
 	}
 }
