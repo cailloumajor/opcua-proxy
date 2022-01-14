@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	. "github.com/cailloumajor/opcua-centrifugo/internal/opcua"
 	"github.com/go-kit/log"
@@ -311,22 +312,57 @@ func TestNewMonitorError(t *testing.T) {
 }
 
 func TestMonitorStop(t *testing.T) {
-	const ExpectedErrors = 1
-
 	mockedClient := &ClientMock{
+		ConnectFunc: func(contextMoqParam context.Context) error {
+			return nil
+		},
 		CloseFunc: func() error {
 			return errTesting
 		},
 	}
-	mockedNodeMonitor := &NodeMonitorMock{}
+	mockedNewMonitorDeps := &NewMonitorDepsMock{
+		GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
+			return []*ua.EndpointDescription{}, nil
+		},
+		SelectEndpointFunc: func(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
+			return &ua.EndpointDescription{}
+		},
+		SecurityFromEndpointFunc: func(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option {
+			return func(c *opcua.Config) {}
+		},
+		NewClientFunc: func(endpoint string, opts ...opcua.Option) Client {
+			return mockedClient
+		},
+		NewNodeMonitorFunc: func(client Client) (NodeMonitor, error) {
+			return &NodeMonitorMock{
+				SetErrorHandlerFunc: func(cb monitor.ErrHandler) {},
+			}, nil
+		},
+	}
 
-	m := NewTestMonitor(mockedClient, mockedNodeMonitor)
+	m, _ := NewMonitor(context.Background(), &Config{}, mockedNewMonitorDeps, log.NewNopLogger())
+	var mockedSubscriptions [5]*SubscriptionMock
+	for i := range mockedSubscriptions {
+		mockedSubscription := &SubscriptionMock{
+			UnsubscribeFunc: func(ctx context.Context) error {
+				return errTesting
+			},
+		}
+		mockedSubscriptions[i] = mockedSubscription
+		m.AddSubscription(time.Duration(i)*time.Second, mockedSubscription)
+	}
+
 	errs := m.Stop(context.Background())
 
 	if got, want := len(mockedClient.CloseCalls()), 1; got != want {
 		t.Errorf("client.Close call count: want %d, got %d", want, got)
 	}
-	if got, want := len(errs), ExpectedErrors; got != want {
+	for _, v := range mockedSubscriptions {
+		if got, want := len(v.UnsubscribeCalls()), 1; got != want {
+			t.Errorf("Subscription.Unsubscribe call count: want %d, got %d", want, got)
+		}
+	}
+	if got, want := len(errs), 6; got != want {
 		t.Errorf("errors count: want %d, got %d", want, got)
 	}
 }

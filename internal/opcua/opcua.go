@@ -3,6 +3,8 @@ package opcua
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
@@ -11,7 +13,7 @@ import (
 	"github.com/gopcua/opcua/ua"
 )
 
-//go:generate moq -out opcua_mocks_test.go . Client NodeMonitor NewMonitorDeps
+//go:generate moq -out opcua_mocks_test.go . Client NodeMonitor Subscription NewMonitorDeps
 
 // Config holds the OPC-UA part of the configuration
 type Config struct {
@@ -34,6 +36,13 @@ type NodeMonitor interface {
 	SetErrorHandler(cb monitor.ErrHandler)
 }
 
+// Subscription models an OPC-UA subscription
+type Subscription interface {
+	AddNodes(nodes ...string) error
+	RemoveNodes(nodes ...string) error
+	Unsubscribe(ctx context.Context) error
+}
+
 // NewMonitorDeps models the dependencies of NewMonitor
 type NewMonitorDeps interface {
 	GetEndpoints(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error)
@@ -50,6 +59,9 @@ type NewMonitorDeps interface {
 type Monitor struct {
 	client      Client
 	nodeMonitor NodeMonitor
+
+	mu   sync.Mutex
+	subs map[time.Duration]Subscription
 }
 
 // NewMonitor creates an OPC-UA node monitor
@@ -101,7 +113,11 @@ func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps, logger lo
 		level.Info(logger).Log("from", "subscription", "sub_id", s.SubscriptionID(), "err", e)
 	})
 
-	return &Monitor{client: c, nodeMonitor: nm}, nil
+	return &Monitor{
+		client:      c,
+		nodeMonitor: nm,
+		subs:        make(map[time.Duration]Subscription),
+	}, nil
 }
 
 // Stop does all the needed job to stop OPC-UA related elements
@@ -111,6 +127,16 @@ func (m *Monitor) Stop(ctx context.Context) []error {
 	if err := m.client.Close(); err != nil {
 		errs = append(errs, err)
 	}
+
+	for _, v := range m.subs {
+		if err := v.Unsubscribe(ctx); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.subs = make(map[time.Duration]Subscription)
 
 	return errs
 }

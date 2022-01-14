@@ -1,5 +1,7 @@
 package opcua
 
-func NewTestMonitor(c Client, m NodeMonitor) *Monitor {
-	return &Monitor{client: c, nodeMonitor: m}
+import "time"
+
+func (m *Monitor) AddSubscription(interval time.Duration, sub Subscription) {
+	m.subs[interval] = sub
 }

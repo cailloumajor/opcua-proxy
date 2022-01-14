@@ -238,6 +238,157 @@ func (mock *NodeMonitorMock) SetErrorHandlerCalls() []struct {
 	return calls
 }
 
+// Ensure, that SubscriptionMock does implement Subscription.
+// If this is not the case, regenerate this file with moq.
+var _ Subscription = &SubscriptionMock{}
+
+// SubscriptionMock is a mock implementation of Subscription.
+//
+// 	func TestSomethingThatUsesSubscription(t *testing.T) {
+//
+// 		// make and configure a mocked Subscription
+// 		mockedSubscription := &SubscriptionMock{
+// 			AddNodesFunc: func(nodes ...string) error {
+// 				panic("mock out the AddNodes method")
+// 			},
+// 			RemoveNodesFunc: func(nodes ...string) error {
+// 				panic("mock out the RemoveNodes method")
+// 			},
+// 			UnsubscribeFunc: func(ctx context.Context) error {
+// 				panic("mock out the Unsubscribe method")
+// 			},
+// 		}
+//
+// 		// use mockedSubscription in code that requires Subscription
+// 		// and then make assertions.
+//
+// 	}
+type SubscriptionMock struct {
+	// AddNodesFunc mocks the AddNodes method.
+	AddNodesFunc func(nodes ...string) error
+
+	// RemoveNodesFunc mocks the RemoveNodes method.
+	RemoveNodesFunc func(nodes ...string) error
+
+	// UnsubscribeFunc mocks the Unsubscribe method.
+	UnsubscribeFunc func(ctx context.Context) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// AddNodes holds details about calls to the AddNodes method.
+		AddNodes []struct {
+			// Nodes is the nodes argument value.
+			Nodes []string
+		}
+		// RemoveNodes holds details about calls to the RemoveNodes method.
+		RemoveNodes []struct {
+			// Nodes is the nodes argument value.
+			Nodes []string
+		}
+		// Unsubscribe holds details about calls to the Unsubscribe method.
+		Unsubscribe []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
+	}
+	lockAddNodes    sync.RWMutex
+	lockRemoveNodes sync.RWMutex
+	lockUnsubscribe sync.RWMutex
+}
+
+// AddNodes calls AddNodesFunc.
+func (mock *SubscriptionMock) AddNodes(nodes ...string) error {
+	if mock.AddNodesFunc == nil {
+		panic("SubscriptionMock.AddNodesFunc: method is nil but Subscription.AddNodes was just called")
+	}
+	callInfo := struct {
+		Nodes []string
+	}{
+		Nodes: nodes,
+	}
+	mock.lockAddNodes.Lock()
+	mock.calls.AddNodes = append(mock.calls.AddNodes, callInfo)
+	mock.lockAddNodes.Unlock()
+	return mock.AddNodesFunc(nodes...)
+}
+
+// AddNodesCalls gets all the calls that were made to AddNodes.
+// Check the length with:
+//     len(mockedSubscription.AddNodesCalls())
+func (mock *SubscriptionMock) AddNodesCalls() []struct {
+	Nodes []string
+} {
+	var calls []struct {
+		Nodes []string
+	}
+	mock.lockAddNodes.RLock()
+	calls = mock.calls.AddNodes
+	mock.lockAddNodes.RUnlock()
+	return calls
+}
+
+// RemoveNodes calls RemoveNodesFunc.
+func (mock *SubscriptionMock) RemoveNodes(nodes ...string) error {
+	if mock.RemoveNodesFunc == nil {
+		panic("SubscriptionMock.RemoveNodesFunc: method is nil but Subscription.RemoveNodes was just called")
+	}
+	callInfo := struct {
+		Nodes []string
+	}{
+		Nodes: nodes,
+	}
+	mock.lockRemoveNodes.Lock()
+	mock.calls.RemoveNodes = append(mock.calls.RemoveNodes, callInfo)
+	mock.lockRemoveNodes.Unlock()
+	return mock.RemoveNodesFunc(nodes...)
+}
+
+// RemoveNodesCalls gets all the calls that were made to RemoveNodes.
+// Check the length with:
+//     len(mockedSubscription.RemoveNodesCalls())
+func (mock *SubscriptionMock) RemoveNodesCalls() []struct {
+	Nodes []string
+} {
+	var calls []struct {
+		Nodes []string
+	}
+	mock.lockRemoveNodes.RLock()
+	calls = mock.calls.RemoveNodes
+	mock.lockRemoveNodes.RUnlock()
+	return calls
+}
+
+// Unsubscribe calls UnsubscribeFunc.
+func (mock *SubscriptionMock) Unsubscribe(ctx context.Context) error {
+	if mock.UnsubscribeFunc == nil {
+		panic("SubscriptionMock.UnsubscribeFunc: method is nil but Subscription.Unsubscribe was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockUnsubscribe.Lock()
+	mock.calls.Unsubscribe = append(mock.calls.Unsubscribe, callInfo)
+	mock.lockUnsubscribe.Unlock()
+	return mock.UnsubscribeFunc(ctx)
+}
+
+// UnsubscribeCalls gets all the calls that were made to Unsubscribe.
+// Check the length with:
+//     len(mockedSubscription.UnsubscribeCalls())
+func (mock *SubscriptionMock) UnsubscribeCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockUnsubscribe.RLock()
+	calls = mock.calls.Unsubscribe
+	mock.lockUnsubscribe.RUnlock()
+	return calls
+}
+
 // Ensure, that NewMonitorDepsMock does implement NewMonitorDeps.
 // If this is not the case, regenerate this file with moq.
 var _ NewMonitorDeps = &NewMonitorDepsMock{}
