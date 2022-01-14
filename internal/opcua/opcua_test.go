@@ -262,14 +262,6 @@ func TestNewMonitorError(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockedClient := &ClientMock{
-				ConnectFunc: func(contextMoqParam context.Context) error {
-					if tc.clientConnectError {
-						return errTesting
-					}
-					return nil
-				},
-			}
 			mockedNewMonitorDeps := &NewMonitorDepsMock{
 				GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
 					if tc.getEndpointsError {
@@ -287,7 +279,14 @@ func TestNewMonitorError(t *testing.T) {
 					return func(c *opcua.Config) {}
 				},
 				NewClientFunc: func(endpoint string, opts ...opcua.Option) Client {
-					return mockedClient
+					return &ClientMock{
+						ConnectFunc: func(contextMoqParam context.Context) error {
+							if tc.clientConnectError {
+								return errTesting
+							}
+							return nil
+						},
+					}
 				},
 				NewNodeMonitorFunc: func(client Client) (NodeMonitor, error) {
 					if tc.newNodeMonitorError {
