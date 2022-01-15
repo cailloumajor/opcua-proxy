@@ -3,5 +3,8 @@
   "extends": [
     "config:base"
   ],
+  "postUpdateOptions": [
+    "gomodTidy"
+  ],
   "semanticCommits": "enabled"
 }
