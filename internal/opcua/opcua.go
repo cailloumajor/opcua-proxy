@@ -32,7 +32,6 @@ type Client interface {
 
 // NodeMonitor models an OPC-UA node monitor
 type NodeMonitor interface {
-	ChanSubscribe(context.Context, *opcua.SubscriptionParameters, chan<- *monitor.DataChangeMessage, ...string) (*monitor.Subscription, error)
 	SetErrorHandler(cb monitor.ErrHandler)
 }
 

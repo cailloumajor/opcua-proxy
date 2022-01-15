@@ -122,9 +122,6 @@ var _ NodeMonitor = &NodeMonitorMock{}
 //
 // 		// make and configure a mocked NodeMonitor
 // 		mockedNodeMonitor := &NodeMonitorMock{
-// 			ChanSubscribeFunc: func(contextMoqParam context.Context, subscriptionParameters *opcua.SubscriptionParameters, dataChangeMessageCh chan<- *monitor.DataChangeMessage, strings ...string) (*monitor.Subscription, error) {
-// 				panic("mock out the ChanSubscribe method")
-// 			},
 // 			SetErrorHandlerFunc: func(cb monitor.ErrHandler)  {
 // 				panic("mock out the SetErrorHandler method")
 // 			},
@@ -135,76 +132,18 @@ var _ NodeMonitor = &NodeMonitorMock{}
 //
 // 	}
 type NodeMonitorMock struct {
-	// ChanSubscribeFunc mocks the ChanSubscribe method.
-	ChanSubscribeFunc func(contextMoqParam context.Context, subscriptionParameters *opcua.SubscriptionParameters, dataChangeMessageCh chan<- *monitor.DataChangeMessage, strings ...string) (*monitor.Subscription, error)
-
 	// SetErrorHandlerFunc mocks the SetErrorHandler method.
 	SetErrorHandlerFunc func(cb monitor.ErrHandler)
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// ChanSubscribe holds details about calls to the ChanSubscribe method.
-		ChanSubscribe []struct {
-			// ContextMoqParam is the contextMoqParam argument value.
-			ContextMoqParam context.Context
-			// SubscriptionParameters is the subscriptionParameters argument value.
-			SubscriptionParameters *opcua.SubscriptionParameters
-			// DataChangeMessageCh is the dataChangeMessageCh argument value.
-			DataChangeMessageCh chan<- *monitor.DataChangeMessage
-			// Strings is the strings argument value.
-			Strings []string
-		}
 		// SetErrorHandler holds details about calls to the SetErrorHandler method.
 		SetErrorHandler []struct {
 			// Cb is the cb argument value.
 			Cb monitor.ErrHandler
 		}
 	}
-	lockChanSubscribe   sync.RWMutex
 	lockSetErrorHandler sync.RWMutex
-}
-
-// ChanSubscribe calls ChanSubscribeFunc.
-func (mock *NodeMonitorMock) ChanSubscribe(contextMoqParam context.Context, subscriptionParameters *opcua.SubscriptionParameters, dataChangeMessageCh chan<- *monitor.DataChangeMessage, strings ...string) (*monitor.Subscription, error) {
-	if mock.ChanSubscribeFunc == nil {
-		panic("NodeMonitorMock.ChanSubscribeFunc: method is nil but NodeMonitor.ChanSubscribe was just called")
-	}
-	callInfo := struct {
-		ContextMoqParam        context.Context
-		SubscriptionParameters *opcua.SubscriptionParameters
-		DataChangeMessageCh    chan<- *monitor.DataChangeMessage
-		Strings                []string
-	}{
-		ContextMoqParam:        contextMoqParam,
-		SubscriptionParameters: subscriptionParameters,
-		DataChangeMessageCh:    dataChangeMessageCh,
-		Strings:                strings,
-	}
-	mock.lockChanSubscribe.Lock()
-	mock.calls.ChanSubscribe = append(mock.calls.ChanSubscribe, callInfo)
-	mock.lockChanSubscribe.Unlock()
-	return mock.ChanSubscribeFunc(contextMoqParam, subscriptionParameters, dataChangeMessageCh, strings...)
-}
-
-// ChanSubscribeCalls gets all the calls that were made to ChanSubscribe.
-// Check the length with:
-//     len(mockedNodeMonitor.ChanSubscribeCalls())
-func (mock *NodeMonitorMock) ChanSubscribeCalls() []struct {
-	ContextMoqParam        context.Context
-	SubscriptionParameters *opcua.SubscriptionParameters
-	DataChangeMessageCh    chan<- *monitor.DataChangeMessage
-	Strings                []string
-} {
-	var calls []struct {
-		ContextMoqParam        context.Context
-		SubscriptionParameters *opcua.SubscriptionParameters
-		DataChangeMessageCh    chan<- *monitor.DataChangeMessage
-		Strings                []string
-	}
-	mock.lockChanSubscribe.RLock()
-	calls = mock.calls.ChanSubscribe
-	mock.lockChanSubscribe.RUnlock()
-	return calls
 }
 
 // SetErrorHandler calls SetErrorHandlerFunc.
