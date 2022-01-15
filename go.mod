@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/go-kit/log v0.2.0
-	github.com/gopcua/opcua v0.2.4
+	github.com/gopcua/opcua v0.2.6
 	github.com/oklog/run v1.1.0
 	github.com/peterbourgon/ff v1.7.1
 )
