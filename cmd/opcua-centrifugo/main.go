@@ -80,13 +80,13 @@ func main() {
 	debug := fs.Bool("debug", false, "log debug information")
 	fs.Usage = usageFor(fs, os.Stderr)
 
-	_ = ff.Parse(
-		fs,
-		os.Args[1:],
-		ff.WithEnvVarNoPrefix(),
-	)
-
 	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
+
+	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVarNoPrefix()); err != nil {
+		level.Info(logger).Log("during", "flags parsing", "err", err)
+		os.Exit(2)
+	}
+
 	loglevel := level.AllowInfo()
 	if *debug {
 		loglevel = level.AllowDebug()
