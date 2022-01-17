@@ -25,12 +25,20 @@ A microservice to proxy OPC-UA data change subscription through Centrifugo.
 
 ## Configuration
 
-The service is configured with following environment variables.
+This project uses standard library's [flag](https://pkg.go.dev/flag) and <https://github.com/peterbourgon/ff>
+packages, configuration can be provided by flags or environment variables.
 
-| Key              | Description                                                   |
-|------------------|---------------------------------------------------------------|
-| OPCUA_SERVER_URL | URL of the OPC-UA server endpoint                             |
-| OPCUA_USER       | (Optional) OPC-UA authentication username                     |
-| OPCUA_PASSWORD   | (Optional) OPC-UA authentication password                     |
-| OPCUA_CERT_FILE  | (Optional) Path of the OPC-UA secure channel certificate file |
-| OPCUA_KEY_FILE   | (Optional) Path of the OPC-UA secure channel private key file |
+```ShellSession
+$ opcua-centrifugo -help
+USAGE
+  opcua-centrifugo [options]
+
+OPTIONS
+  Flag               Env Var           Description
+  -debug                               log debug information (default: false)
+  -opcua-cert-file   OPCUA_CERT_FILE   certificate file path for OPC-UA secure channel (optional)
+  -opcua-key-file    OPCUA_KEY_FILE    private key file path for OPC-UA secure channel (optional)
+  -opcua-password    OPCUA_PASSWORD    password for OPC-UA authentication (optional)
+  -opcua-server-url  OPCUA_SERVER_URL  OPC-UA server endpoint URL (default: opc.tcp://127.0.0.1:4840)
+  -opcua-user        OPCUA_USER        user name for OPC-UA authentication (optional)
+```

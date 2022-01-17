@@ -55,3 +55,8 @@ jobs:
         with:
           flags: unittests
           fail_ci_if_error: true
+      - name: Check command usage in README.md
+        # Thanks to https://unix.stackexchange.com/a/17405
+        run: diff
+          <(sed '1,/\$ opcua-centrifugo -help/d;/```/,$d' README.md)
+          <(go run ./cmd/opcua-centrifugo -help 2>&1)
