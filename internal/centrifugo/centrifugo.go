@@ -2,7 +2,6 @@ package centrifugo
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -18,7 +17,7 @@ const ErrNotOpcUaChannel = sentinelError("not an OPC-UA suitable channel")
 
 // Channel represents a Centrifugo channel suitable for OPC-UA.
 type Channel struct {
-	Node     string        // OPC-UA node to monitor
+	Node     string        // Identifier of the OPC-UA node to monitor
 	Interval time.Duration // Subscription interval
 }
 
@@ -29,15 +28,12 @@ func ParseChannel(s string) (*Channel, error) {
 		return nil, ErrNotOpcUaChannel
 	}
 
-	node, err := url.PathUnescape(split[1])
-	if err != nil {
-		return nil, fmt.Errorf("error unescaping node: %w", err)
+	split = strings.Split(split[1], ";")
+	if len(split) < 2 || len(split) > 3 {
+		return nil, fmt.Errorf("bad channel name format")
 	}
 
-	split = strings.SplitN(split[0], "@", 2)
-	if len(split) < 2 {
-		return nil, fmt.Errorf("bad channel namespace format")
-	}
+	node := split[0]
 
 	interval, err := time.ParseDuration(split[1])
 	if err != nil {

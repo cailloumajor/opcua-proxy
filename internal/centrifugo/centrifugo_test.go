@@ -19,45 +19,38 @@ func TestParseChannel(t *testing.T) {
 	}{
 		{
 			name:                  "NoNamespace",
-			input:                 "chan",
+			input:                 `s="node1"."node2"`,
 			expectError:           true,
 			expectNotOpcUaChannel: true,
 			expectChannel:         nil,
 		},
 		{
 			name:                  "NotOpcUaNamespace",
-			input:                 "ns:chan",
+			input:                 `ns:s="node1"."node2"`,
 			expectError:           true,
 			expectNotOpcUaChannel: true,
 			expectChannel:         nil,
 		},
 		{
-			name:                  "NodeUnescapeFailure",
-			input:                 "opcua@1s:chan%2znode1%22.%22node2%22",
-			expectError:           true,
-			expectNotOpcUaChannel: false,
-			expectChannel:         nil,
-		},
-		{
 			name:                  "MissingInterval",
-			input:                 "opcua:chan",
+			input:                 `opcua:s="node1"."node2"`,
 			expectError:           true,
 			expectNotOpcUaChannel: false,
 			expectChannel:         nil,
 		},
 		{
 			name:                  "WrongInterval",
-			input:                 "opcua@interval:chan",
+			input:                 `opcua:s="node1"."node2";interval`,
 			expectError:           true,
 			expectNotOpcUaChannel: false,
 			expectChannel:         nil,
 		},
 		{
 			name:                  "Success",
-			input:                 "opcua@30m:%22node1%22.%22node2%22",
+			input:                 `opcua:s="node1"."node2";30m`,
 			expectError:           false,
 			expectNotOpcUaChannel: false,
-			expectChannel:         &Channel{Node: `"node1"."node2"`, Interval: 30 * time.Minute},
+			expectChannel:         &Channel{Node: `s="node1"."node2"`, Interval: 30 * time.Minute},
 		},
 	}
 
