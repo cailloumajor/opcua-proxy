@@ -37,8 +37,6 @@ type NodeMonitor interface {
 
 // Subscription models an OPC-UA subscription
 type Subscription interface {
-	AddNodes(nodes ...string) error
-	RemoveNodes(nodes ...string) error
 	Unsubscribe(ctx context.Context) error
 }
 
