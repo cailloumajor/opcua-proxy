@@ -15,9 +15,6 @@ jobs:
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
     steps:
-      - name: Delay push triggered run
-        if: github.event_name == 'push'
-        run: sleep 30s
       - id: skip_check
         uses: fkirc/skip-duplicate-actions@v3
         with:
