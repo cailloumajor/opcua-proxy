@@ -17,8 +17,8 @@ const ErrNotOpcUaChannel = sentinelError("not an OPC-UA suitable channel")
 
 // Channel represents a Centrifugo channel suitable for OPC-UA.
 type Channel struct {
-	Node     string        // Identifier of the OPC-UA node to monitor
-	Interval time.Duration // Subscription interval
+	node     string
+	interval time.Duration
 }
 
 // ParseChannel parses a Centrifugo channel name into a channel structure.
@@ -40,5 +40,15 @@ func ParseChannel(s string) (*Channel, error) {
 		return nil, fmt.Errorf("error parsing interval: %w", err)
 	}
 
-	return &Channel{Node: node, Interval: interval}, nil
+	return &Channel{node: node, interval: interval}, nil
+}
+
+// Node returns the OPC-UA node of the channel.
+func (c *Channel) Node() string {
+	return c.node
+}
+
+// Interval returns the subscription interval of the channel.
+func (c *Channel) Interval() time.Duration {
+	return c.interval
 }
