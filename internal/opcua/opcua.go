@@ -15,7 +15,7 @@ import (
 
 //go:generate moq -out opcua_mocks_test.go . Client NodeMonitor Subscription NewMonitorDeps
 
-// Config holds the OPC-UA part of the configuration
+// Config holds the OPC-UA part of the configuration.
 type Config struct {
 	ServerURL string
 	User      string
@@ -24,23 +24,23 @@ type Config struct {
 	KeyFile   string
 }
 
-// Client models an OPC-UA client
+// Client models an OPC-UA client.
 type Client interface {
 	Connect(context.Context) (err error)
 	Close() error
 }
 
-// NodeMonitor models an OPC-UA node monitor
+// NodeMonitor models an OPC-UA node monitor.
 type NodeMonitor interface {
 	SetErrorHandler(cb monitor.ErrHandler)
 }
 
-// Subscription models an OPC-UA subscription
+// Subscription models an OPC-UA subscription.
 type Subscription interface {
 	Unsubscribe(ctx context.Context) error
 }
 
-// NewMonitorDeps models the dependencies of NewMonitor
+// NewMonitorDeps models the dependencies of NewMonitor.
 type NewMonitorDeps interface {
 	GetEndpoints(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error)
 	SelectEndpoint(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription
@@ -52,7 +52,7 @@ type NewMonitorDeps interface {
 	NewNodeMonitor(client Client) (NodeMonitor, error)
 }
 
-// Monitor is an OPC-UA node monitor
+// Monitor is an OPC-UA node monitor.
 type Monitor struct {
 	client      Client
 	nodeMonitor NodeMonitor
@@ -61,7 +61,7 @@ type Monitor struct {
 	subs map[time.Duration]Subscription
 }
 
-// NewMonitor creates an OPC-UA node monitor
+// NewMonitor creates an OPC-UA node monitor.
 func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps, logger log.Logger) (*Monitor, error) {
 	eps, err := deps.GetEndpoints(ctx, cfg.ServerURL)
 	if err != nil {
@@ -117,7 +117,7 @@ func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps, logger lo
 	}, nil
 }
 
-// Stop does all the needed job to stop OPC-UA related elements
+// Stop does all the needed job to stop OPC-UA related elements.
 func (m *Monitor) Stop(ctx context.Context) []error {
 	var errs []error
 
