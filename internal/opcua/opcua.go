@@ -13,16 +13,7 @@ import (
 	"github.com/gopcua/opcua/ua"
 )
 
-//go:generate moq -out opcua_mocks_test.go . Client NodeMonitor Subscription NewMonitorDeps
-
-// Config holds the OPC-UA part of the configuration.
-type Config struct {
-	ServerURL string
-	User      string
-	Password  string
-	CertFile  string
-	KeyFile   string
-}
+//go:generate moq -out opcua_mocks_test.go . Client NodeMonitor Subscription NewMonitorDeps SecurityProvider
 
 // Client models an OPC-UA client.
 type Client interface {
@@ -44,12 +35,24 @@ type Subscription interface {
 type NewMonitorDeps interface {
 	GetEndpoints(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error)
 	SelectEndpoint(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription
-	AuthUsername(user, pass string) opcua.Option
-	CertificateFile(filename string) opcua.Option
-	PrivateKeyFile(filename string) opcua.Option
-	SecurityFromEndpoint(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option
 	NewClient(endpoint string, opts ...opcua.Option) Client
 	NewNodeMonitor(client Client) (NodeMonitor, error)
+}
+
+// SecurityProvider is a consumer contract modelling an OPC-UA security provider.
+type SecurityProvider interface {
+	MessageSecurityMode() ua.MessageSecurityMode
+	Policy() string
+	Options(ep *ua.EndpointDescription) []opcua.Option
+}
+
+// Config holds the OPC-UA part of the configuration.
+type Config struct {
+	ServerURL string
+	User      string
+	Password  string
+	CertFile  string
+	KeyFile   string
 }
 
 // Monitor is an OPC-UA node monitor.
@@ -62,39 +65,18 @@ type Monitor struct {
 }
 
 // NewMonitor creates an OPC-UA node monitor.
-func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps, logger log.Logger) (*Monitor, error) {
+func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps, sec SecurityProvider, logger log.Logger) (*Monitor, error) {
 	eps, err := deps.GetEndpoints(ctx, cfg.ServerURL)
 	if err != nil {
 		return nil, fmt.Errorf("error getting endpoints: %w", err)
 	}
 
-	var opts []opcua.Option
-
-	var p string
-	var msm ua.MessageSecurityMode
-	if cfg.CertFile != "" || cfg.KeyFile != "" {
-		p = "Basic256Sha256"
-		msm = ua.MessageSecurityModeSignAndEncrypt
-		opts = append(opts, deps.CertificateFile(cfg.CertFile), deps.PrivateKeyFile(cfg.KeyFile))
-	} else {
-		p = "None"
-		msm = ua.MessageSecurityModeNone
-	}
-
-	ep := deps.SelectEndpoint(eps, p, msm)
+	ep := deps.SelectEndpoint(eps, sec.Policy(), sec.MessageSecurityMode())
 	if ep == nil {
 		return nil, fmt.Errorf("failed to select an endpoint")
 	}
 
-	var utt ua.UserTokenType
-	if cfg.User == "" {
-		utt = ua.UserTokenTypeAnonymous
-	} else {
-		utt = ua.UserTokenTypeUserName
-		opts = append(opts, deps.AuthUsername(cfg.User, cfg.Password))
-	}
-	opts = append(opts, deps.SecurityFromEndpoint(ep, utt))
-
+	opts := sec.Options(ep)
 	c := deps.NewClient(ep.EndpointURL, opts...)
 
 	if err := c.Connect(ctx); err != nil {

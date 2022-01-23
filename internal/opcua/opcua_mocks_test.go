@@ -252,12 +252,6 @@ var _ NewMonitorDeps = &NewMonitorDepsMock{}
 //
 // 		// make and configure a mocked NewMonitorDeps
 // 		mockedNewMonitorDeps := &NewMonitorDepsMock{
-// 			AuthUsernameFunc: func(user string, pass string) opcua.Option {
-// 				panic("mock out the AuthUsername method")
-// 			},
-// 			CertificateFileFunc: func(filename string) opcua.Option {
-// 				panic("mock out the CertificateFile method")
-// 			},
 // 			GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
 // 				panic("mock out the GetEndpoints method")
 // 			},
@@ -266,12 +260,6 @@ var _ NewMonitorDeps = &NewMonitorDepsMock{}
 // 			},
 // 			NewNodeMonitorFunc: func(client Client) (NodeMonitor, error) {
 // 				panic("mock out the NewNodeMonitor method")
-// 			},
-// 			PrivateKeyFileFunc: func(filename string) opcua.Option {
-// 				panic("mock out the PrivateKeyFile method")
-// 			},
-// 			SecurityFromEndpointFunc: func(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option {
-// 				panic("mock out the SecurityFromEndpoint method")
 // 			},
 // 			SelectEndpointFunc: func(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
 // 				panic("mock out the SelectEndpoint method")
@@ -283,12 +271,6 @@ var _ NewMonitorDeps = &NewMonitorDepsMock{}
 //
 // 	}
 type NewMonitorDepsMock struct {
-	// AuthUsernameFunc mocks the AuthUsername method.
-	AuthUsernameFunc func(user string, pass string) opcua.Option
-
-	// CertificateFileFunc mocks the CertificateFile method.
-	CertificateFileFunc func(filename string) opcua.Option
-
 	// GetEndpointsFunc mocks the GetEndpoints method.
 	GetEndpointsFunc func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error)
 
@@ -298,29 +280,11 @@ type NewMonitorDepsMock struct {
 	// NewNodeMonitorFunc mocks the NewNodeMonitor method.
 	NewNodeMonitorFunc func(client Client) (NodeMonitor, error)
 
-	// PrivateKeyFileFunc mocks the PrivateKeyFile method.
-	PrivateKeyFileFunc func(filename string) opcua.Option
-
-	// SecurityFromEndpointFunc mocks the SecurityFromEndpoint method.
-	SecurityFromEndpointFunc func(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option
-
 	// SelectEndpointFunc mocks the SelectEndpoint method.
 	SelectEndpointFunc func(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// AuthUsername holds details about calls to the AuthUsername method.
-		AuthUsername []struct {
-			// User is the user argument value.
-			User string
-			// Pass is the pass argument value.
-			Pass string
-		}
-		// CertificateFile holds details about calls to the CertificateFile method.
-		CertificateFile []struct {
-			// Filename is the filename argument value.
-			Filename string
-		}
 		// GetEndpoints holds details about calls to the GetEndpoints method.
 		GetEndpoints []struct {
 			// Ctx is the ctx argument value.
@@ -342,18 +306,6 @@ type NewMonitorDepsMock struct {
 			// Client is the client argument value.
 			Client Client
 		}
-		// PrivateKeyFile holds details about calls to the PrivateKeyFile method.
-		PrivateKeyFile []struct {
-			// Filename is the filename argument value.
-			Filename string
-		}
-		// SecurityFromEndpoint holds details about calls to the SecurityFromEndpoint method.
-		SecurityFromEndpoint []struct {
-			// Ep is the ep argument value.
-			Ep *ua.EndpointDescription
-			// AuthType is the authType argument value.
-			AuthType ua.UserTokenType
-		}
 		// SelectEndpoint holds details about calls to the SelectEndpoint method.
 		SelectEndpoint []struct {
 			// Endpoints is the endpoints argument value.
@@ -364,80 +316,10 @@ type NewMonitorDepsMock struct {
 			Mode ua.MessageSecurityMode
 		}
 	}
-	lockAuthUsername         sync.RWMutex
-	lockCertificateFile      sync.RWMutex
-	lockGetEndpoints         sync.RWMutex
-	lockNewClient            sync.RWMutex
-	lockNewNodeMonitor       sync.RWMutex
-	lockPrivateKeyFile       sync.RWMutex
-	lockSecurityFromEndpoint sync.RWMutex
-	lockSelectEndpoint       sync.RWMutex
-}
-
-// AuthUsername calls AuthUsernameFunc.
-func (mock *NewMonitorDepsMock) AuthUsername(user string, pass string) opcua.Option {
-	if mock.AuthUsernameFunc == nil {
-		panic("NewMonitorDepsMock.AuthUsernameFunc: method is nil but NewMonitorDeps.AuthUsername was just called")
-	}
-	callInfo := struct {
-		User string
-		Pass string
-	}{
-		User: user,
-		Pass: pass,
-	}
-	mock.lockAuthUsername.Lock()
-	mock.calls.AuthUsername = append(mock.calls.AuthUsername, callInfo)
-	mock.lockAuthUsername.Unlock()
-	return mock.AuthUsernameFunc(user, pass)
-}
-
-// AuthUsernameCalls gets all the calls that were made to AuthUsername.
-// Check the length with:
-//     len(mockedNewMonitorDeps.AuthUsernameCalls())
-func (mock *NewMonitorDepsMock) AuthUsernameCalls() []struct {
-	User string
-	Pass string
-} {
-	var calls []struct {
-		User string
-		Pass string
-	}
-	mock.lockAuthUsername.RLock()
-	calls = mock.calls.AuthUsername
-	mock.lockAuthUsername.RUnlock()
-	return calls
-}
-
-// CertificateFile calls CertificateFileFunc.
-func (mock *NewMonitorDepsMock) CertificateFile(filename string) opcua.Option {
-	if mock.CertificateFileFunc == nil {
-		panic("NewMonitorDepsMock.CertificateFileFunc: method is nil but NewMonitorDeps.CertificateFile was just called")
-	}
-	callInfo := struct {
-		Filename string
-	}{
-		Filename: filename,
-	}
-	mock.lockCertificateFile.Lock()
-	mock.calls.CertificateFile = append(mock.calls.CertificateFile, callInfo)
-	mock.lockCertificateFile.Unlock()
-	return mock.CertificateFileFunc(filename)
-}
-
-// CertificateFileCalls gets all the calls that were made to CertificateFile.
-// Check the length with:
-//     len(mockedNewMonitorDeps.CertificateFileCalls())
-func (mock *NewMonitorDepsMock) CertificateFileCalls() []struct {
-	Filename string
-} {
-	var calls []struct {
-		Filename string
-	}
-	mock.lockCertificateFile.RLock()
-	calls = mock.calls.CertificateFile
-	mock.lockCertificateFile.RUnlock()
-	return calls
+	lockGetEndpoints   sync.RWMutex
+	lockNewClient      sync.RWMutex
+	lockNewNodeMonitor sync.RWMutex
+	lockSelectEndpoint sync.RWMutex
 }
 
 // GetEndpoints calls GetEndpointsFunc.
@@ -545,72 +427,6 @@ func (mock *NewMonitorDepsMock) NewNodeMonitorCalls() []struct {
 	return calls
 }
 
-// PrivateKeyFile calls PrivateKeyFileFunc.
-func (mock *NewMonitorDepsMock) PrivateKeyFile(filename string) opcua.Option {
-	if mock.PrivateKeyFileFunc == nil {
-		panic("NewMonitorDepsMock.PrivateKeyFileFunc: method is nil but NewMonitorDeps.PrivateKeyFile was just called")
-	}
-	callInfo := struct {
-		Filename string
-	}{
-		Filename: filename,
-	}
-	mock.lockPrivateKeyFile.Lock()
-	mock.calls.PrivateKeyFile = append(mock.calls.PrivateKeyFile, callInfo)
-	mock.lockPrivateKeyFile.Unlock()
-	return mock.PrivateKeyFileFunc(filename)
-}
-
-// PrivateKeyFileCalls gets all the calls that were made to PrivateKeyFile.
-// Check the length with:
-//     len(mockedNewMonitorDeps.PrivateKeyFileCalls())
-func (mock *NewMonitorDepsMock) PrivateKeyFileCalls() []struct {
-	Filename string
-} {
-	var calls []struct {
-		Filename string
-	}
-	mock.lockPrivateKeyFile.RLock()
-	calls = mock.calls.PrivateKeyFile
-	mock.lockPrivateKeyFile.RUnlock()
-	return calls
-}
-
-// SecurityFromEndpoint calls SecurityFromEndpointFunc.
-func (mock *NewMonitorDepsMock) SecurityFromEndpoint(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option {
-	if mock.SecurityFromEndpointFunc == nil {
-		panic("NewMonitorDepsMock.SecurityFromEndpointFunc: method is nil but NewMonitorDeps.SecurityFromEndpoint was just called")
-	}
-	callInfo := struct {
-		Ep       *ua.EndpointDescription
-		AuthType ua.UserTokenType
-	}{
-		Ep:       ep,
-		AuthType: authType,
-	}
-	mock.lockSecurityFromEndpoint.Lock()
-	mock.calls.SecurityFromEndpoint = append(mock.calls.SecurityFromEndpoint, callInfo)
-	mock.lockSecurityFromEndpoint.Unlock()
-	return mock.SecurityFromEndpointFunc(ep, authType)
-}
-
-// SecurityFromEndpointCalls gets all the calls that were made to SecurityFromEndpoint.
-// Check the length with:
-//     len(mockedNewMonitorDeps.SecurityFromEndpointCalls())
-func (mock *NewMonitorDepsMock) SecurityFromEndpointCalls() []struct {
-	Ep       *ua.EndpointDescription
-	AuthType ua.UserTokenType
-} {
-	var calls []struct {
-		Ep       *ua.EndpointDescription
-		AuthType ua.UserTokenType
-	}
-	mock.lockSecurityFromEndpoint.RLock()
-	calls = mock.calls.SecurityFromEndpoint
-	mock.lockSecurityFromEndpoint.RUnlock()
-	return calls
-}
-
 // SelectEndpoint calls SelectEndpointFunc.
 func (mock *NewMonitorDepsMock) SelectEndpoint(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
 	if mock.SelectEndpointFunc == nil {
@@ -647,5 +463,142 @@ func (mock *NewMonitorDepsMock) SelectEndpointCalls() []struct {
 	mock.lockSelectEndpoint.RLock()
 	calls = mock.calls.SelectEndpoint
 	mock.lockSelectEndpoint.RUnlock()
+	return calls
+}
+
+// Ensure, that SecurityProviderMock does implement SecurityProvider.
+// If this is not the case, regenerate this file with moq.
+var _ SecurityProvider = &SecurityProviderMock{}
+
+// SecurityProviderMock is a mock implementation of SecurityProvider.
+//
+// 	func TestSomethingThatUsesSecurityProvider(t *testing.T) {
+//
+// 		// make and configure a mocked SecurityProvider
+// 		mockedSecurityProvider := &SecurityProviderMock{
+// 			MessageSecurityModeFunc: func() ua.MessageSecurityMode {
+// 				panic("mock out the MessageSecurityMode method")
+// 			},
+// 			OptionsFunc: func(ep *ua.EndpointDescription) []opcua.Option {
+// 				panic("mock out the Options method")
+// 			},
+// 			PolicyFunc: func() string {
+// 				panic("mock out the Policy method")
+// 			},
+// 		}
+//
+// 		// use mockedSecurityProvider in code that requires SecurityProvider
+// 		// and then make assertions.
+//
+// 	}
+type SecurityProviderMock struct {
+	// MessageSecurityModeFunc mocks the MessageSecurityMode method.
+	MessageSecurityModeFunc func() ua.MessageSecurityMode
+
+	// OptionsFunc mocks the Options method.
+	OptionsFunc func(ep *ua.EndpointDescription) []opcua.Option
+
+	// PolicyFunc mocks the Policy method.
+	PolicyFunc func() string
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// MessageSecurityMode holds details about calls to the MessageSecurityMode method.
+		MessageSecurityMode []struct {
+		}
+		// Options holds details about calls to the Options method.
+		Options []struct {
+			// Ep is the ep argument value.
+			Ep *ua.EndpointDescription
+		}
+		// Policy holds details about calls to the Policy method.
+		Policy []struct {
+		}
+	}
+	lockMessageSecurityMode sync.RWMutex
+	lockOptions             sync.RWMutex
+	lockPolicy              sync.RWMutex
+}
+
+// MessageSecurityMode calls MessageSecurityModeFunc.
+func (mock *SecurityProviderMock) MessageSecurityMode() ua.MessageSecurityMode {
+	if mock.MessageSecurityModeFunc == nil {
+		panic("SecurityProviderMock.MessageSecurityModeFunc: method is nil but SecurityProvider.MessageSecurityMode was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockMessageSecurityMode.Lock()
+	mock.calls.MessageSecurityMode = append(mock.calls.MessageSecurityMode, callInfo)
+	mock.lockMessageSecurityMode.Unlock()
+	return mock.MessageSecurityModeFunc()
+}
+
+// MessageSecurityModeCalls gets all the calls that were made to MessageSecurityMode.
+// Check the length with:
+//     len(mockedSecurityProvider.MessageSecurityModeCalls())
+func (mock *SecurityProviderMock) MessageSecurityModeCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockMessageSecurityMode.RLock()
+	calls = mock.calls.MessageSecurityMode
+	mock.lockMessageSecurityMode.RUnlock()
+	return calls
+}
+
+// Options calls OptionsFunc.
+func (mock *SecurityProviderMock) Options(ep *ua.EndpointDescription) []opcua.Option {
+	if mock.OptionsFunc == nil {
+		panic("SecurityProviderMock.OptionsFunc: method is nil but SecurityProvider.Options was just called")
+	}
+	callInfo := struct {
+		Ep *ua.EndpointDescription
+	}{
+		Ep: ep,
+	}
+	mock.lockOptions.Lock()
+	mock.calls.Options = append(mock.calls.Options, callInfo)
+	mock.lockOptions.Unlock()
+	return mock.OptionsFunc(ep)
+}
+
+// OptionsCalls gets all the calls that were made to Options.
+// Check the length with:
+//     len(mockedSecurityProvider.OptionsCalls())
+func (mock *SecurityProviderMock) OptionsCalls() []struct {
+	Ep *ua.EndpointDescription
+} {
+	var calls []struct {
+		Ep *ua.EndpointDescription
+	}
+	mock.lockOptions.RLock()
+	calls = mock.calls.Options
+	mock.lockOptions.RUnlock()
+	return calls
+}
+
+// Policy calls PolicyFunc.
+func (mock *SecurityProviderMock) Policy() string {
+	if mock.PolicyFunc == nil {
+		panic("SecurityProviderMock.PolicyFunc: method is nil but SecurityProvider.Policy was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockPolicy.Lock()
+	mock.calls.Policy = append(mock.calls.Policy, callInfo)
+	mock.lockPolicy.Unlock()
+	return mock.PolicyFunc()
+}
+
+// PolicyCalls gets all the calls that were made to Policy.
+// Check the length with:
+//     len(mockedSecurityProvider.PolicyCalls())
+func (mock *SecurityProviderMock) PolicyCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockPolicy.RLock()
+	calls = mock.calls.Policy
+	mock.lockPolicy.RUnlock()
 	return calls
 }
