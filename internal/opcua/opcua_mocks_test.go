@@ -242,16 +242,16 @@ func (mock *SubscriptionMock) UnsubscribeCalls() []struct {
 	return calls
 }
 
-// Ensure, that NewMonitorDepsMock does implement NewMonitorDeps.
+// Ensure, that MonitorExtDepsMock does implement MonitorExtDeps.
 // If this is not the case, regenerate this file with moq.
-var _ NewMonitorDeps = &NewMonitorDepsMock{}
+var _ MonitorExtDeps = &MonitorExtDepsMock{}
 
-// NewMonitorDepsMock is a mock implementation of NewMonitorDeps.
+// MonitorExtDepsMock is a mock implementation of MonitorExtDeps.
 //
-// 	func TestSomethingThatUsesNewMonitorDeps(t *testing.T) {
+// 	func TestSomethingThatUsesMonitorExtDeps(t *testing.T) {
 //
-// 		// make and configure a mocked NewMonitorDeps
-// 		mockedNewMonitorDeps := &NewMonitorDepsMock{
+// 		// make and configure a mocked MonitorExtDeps
+// 		mockedMonitorExtDeps := &MonitorExtDepsMock{
 // 			GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
 // 				panic("mock out the GetEndpoints method")
 // 			},
@@ -266,11 +266,11 @@ var _ NewMonitorDeps = &NewMonitorDepsMock{}
 // 			},
 // 		}
 //
-// 		// use mockedNewMonitorDeps in code that requires NewMonitorDeps
+// 		// use mockedMonitorExtDeps in code that requires MonitorExtDeps
 // 		// and then make assertions.
 //
 // 	}
-type NewMonitorDepsMock struct {
+type MonitorExtDepsMock struct {
 	// GetEndpointsFunc mocks the GetEndpoints method.
 	GetEndpointsFunc func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error)
 
@@ -323,9 +323,9 @@ type NewMonitorDepsMock struct {
 }
 
 // GetEndpoints calls GetEndpointsFunc.
-func (mock *NewMonitorDepsMock) GetEndpoints(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
+func (mock *MonitorExtDepsMock) GetEndpoints(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
 	if mock.GetEndpointsFunc == nil {
-		panic("NewMonitorDepsMock.GetEndpointsFunc: method is nil but NewMonitorDeps.GetEndpoints was just called")
+		panic("MonitorExtDepsMock.GetEndpointsFunc: method is nil but MonitorExtDeps.GetEndpoints was just called")
 	}
 	callInfo := struct {
 		Ctx      context.Context
@@ -344,8 +344,8 @@ func (mock *NewMonitorDepsMock) GetEndpoints(ctx context.Context, endpoint strin
 
 // GetEndpointsCalls gets all the calls that were made to GetEndpoints.
 // Check the length with:
-//     len(mockedNewMonitorDeps.GetEndpointsCalls())
-func (mock *NewMonitorDepsMock) GetEndpointsCalls() []struct {
+//     len(mockedMonitorExtDeps.GetEndpointsCalls())
+func (mock *MonitorExtDepsMock) GetEndpointsCalls() []struct {
 	Ctx      context.Context
 	Endpoint string
 	Opts     []opcua.Option
@@ -362,9 +362,9 @@ func (mock *NewMonitorDepsMock) GetEndpointsCalls() []struct {
 }
 
 // NewClient calls NewClientFunc.
-func (mock *NewMonitorDepsMock) NewClient(endpoint string, opts ...opcua.Option) Client {
+func (mock *MonitorExtDepsMock) NewClient(endpoint string, opts ...opcua.Option) Client {
 	if mock.NewClientFunc == nil {
-		panic("NewMonitorDepsMock.NewClientFunc: method is nil but NewMonitorDeps.NewClient was just called")
+		panic("MonitorExtDepsMock.NewClientFunc: method is nil but MonitorExtDeps.NewClient was just called")
 	}
 	callInfo := struct {
 		Endpoint string
@@ -381,8 +381,8 @@ func (mock *NewMonitorDepsMock) NewClient(endpoint string, opts ...opcua.Option)
 
 // NewClientCalls gets all the calls that were made to NewClient.
 // Check the length with:
-//     len(mockedNewMonitorDeps.NewClientCalls())
-func (mock *NewMonitorDepsMock) NewClientCalls() []struct {
+//     len(mockedMonitorExtDeps.NewClientCalls())
+func (mock *MonitorExtDepsMock) NewClientCalls() []struct {
 	Endpoint string
 	Opts     []opcua.Option
 } {
@@ -397,9 +397,9 @@ func (mock *NewMonitorDepsMock) NewClientCalls() []struct {
 }
 
 // NewNodeMonitor calls NewNodeMonitorFunc.
-func (mock *NewMonitorDepsMock) NewNodeMonitor(client Client) (NodeMonitor, error) {
+func (mock *MonitorExtDepsMock) NewNodeMonitor(client Client) (NodeMonitor, error) {
 	if mock.NewNodeMonitorFunc == nil {
-		panic("NewMonitorDepsMock.NewNodeMonitorFunc: method is nil but NewMonitorDeps.NewNodeMonitor was just called")
+		panic("MonitorExtDepsMock.NewNodeMonitorFunc: method is nil but MonitorExtDeps.NewNodeMonitor was just called")
 	}
 	callInfo := struct {
 		Client Client
@@ -414,8 +414,8 @@ func (mock *NewMonitorDepsMock) NewNodeMonitor(client Client) (NodeMonitor, erro
 
 // NewNodeMonitorCalls gets all the calls that were made to NewNodeMonitor.
 // Check the length with:
-//     len(mockedNewMonitorDeps.NewNodeMonitorCalls())
-func (mock *NewMonitorDepsMock) NewNodeMonitorCalls() []struct {
+//     len(mockedMonitorExtDeps.NewNodeMonitorCalls())
+func (mock *MonitorExtDepsMock) NewNodeMonitorCalls() []struct {
 	Client Client
 } {
 	var calls []struct {
@@ -428,9 +428,9 @@ func (mock *NewMonitorDepsMock) NewNodeMonitorCalls() []struct {
 }
 
 // SelectEndpoint calls SelectEndpointFunc.
-func (mock *NewMonitorDepsMock) SelectEndpoint(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
+func (mock *MonitorExtDepsMock) SelectEndpoint(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
 	if mock.SelectEndpointFunc == nil {
-		panic("NewMonitorDepsMock.SelectEndpointFunc: method is nil but NewMonitorDeps.SelectEndpoint was just called")
+		panic("MonitorExtDepsMock.SelectEndpointFunc: method is nil but MonitorExtDeps.SelectEndpoint was just called")
 	}
 	callInfo := struct {
 		Endpoints []*ua.EndpointDescription
@@ -449,8 +449,8 @@ func (mock *NewMonitorDepsMock) SelectEndpoint(endpoints []*ua.EndpointDescripti
 
 // SelectEndpointCalls gets all the calls that were made to SelectEndpoint.
 // Check the length with:
-//     len(mockedNewMonitorDeps.SelectEndpointCalls())
-func (mock *NewMonitorDepsMock) SelectEndpointCalls() []struct {
+//     len(mockedMonitorExtDeps.SelectEndpointCalls())
+func (mock *MonitorExtDepsMock) SelectEndpointCalls() []struct {
 	Endpoints []*ua.EndpointDescription
 	Policy    string
 	Mode      ua.MessageSecurityMode

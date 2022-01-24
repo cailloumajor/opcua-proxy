@@ -13,7 +13,7 @@ import (
 	"github.com/gopcua/opcua/ua"
 )
 
-//go:generate moq -out opcua_mocks_test.go . Client NodeMonitor Subscription NewMonitorDeps SecurityProvider
+//go:generate moq -out opcua_mocks_test.go . Client NodeMonitor Subscription MonitorExtDeps SecurityProvider
 
 // Client models an OPC-UA client.
 type Client interface {
@@ -31,8 +31,8 @@ type Subscription interface {
 	Unsubscribe(ctx context.Context) error
 }
 
-// NewMonitorDeps models the dependencies of NewMonitor.
-type NewMonitorDeps interface {
+// MonitorExtDeps is a consumer contract modelling external dependencies.
+type MonitorExtDeps interface {
 	GetEndpoints(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error)
 	SelectEndpoint(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription
 	NewClient(endpoint string, opts ...opcua.Option) Client
@@ -65,7 +65,7 @@ type Monitor struct {
 }
 
 // NewMonitor creates an OPC-UA node monitor.
-func NewMonitor(ctx context.Context, cfg *Config, deps NewMonitorDeps, sec SecurityProvider, logger log.Logger) (*Monitor, error) {
+func NewMonitor(ctx context.Context, cfg *Config, deps MonitorExtDeps, sec SecurityProvider, logger log.Logger) (*Monitor, error) {
 	eps, err := deps.GetEndpoints(ctx, cfg.ServerURL)
 	if err != nil {
 		return nil, fmt.Errorf("error getting endpoints: %w", err)

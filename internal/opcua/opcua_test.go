@@ -25,7 +25,7 @@ func TestNewMonitorSuccess(t *testing.T) {
 	mockedNodeMonitor := &NodeMonitorMock{
 		SetErrorHandlerFunc: func(cb monitor.ErrHandler) {},
 	}
-	mockedNewMonitorDeps := &NewMonitorDepsMock{
+	mockedNewMonitorDeps := &MonitorExtDepsMock{
 		GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
 			return []*ua.EndpointDescription{}, nil
 		},
@@ -156,7 +156,7 @@ func TestNewMonitorError(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockedNewMonitorDeps := &NewMonitorDepsMock{
+			mockedNewMonitorDeps := &MonitorExtDepsMock{
 				GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
 					if tc.getEndpointsError {
 						return nil, errTesting
@@ -225,7 +225,7 @@ func TestMonitorStop(t *testing.T) {
 			return errTesting
 		},
 	}
-	mockedNewMonitorDeps := &NewMonitorDepsMock{
+	mockedNewMonitorDeps := &MonitorExtDepsMock{
 		GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
 			return []*ua.EndpointDescription{}, nil
 		},
