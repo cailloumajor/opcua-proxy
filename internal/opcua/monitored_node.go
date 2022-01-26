@@ -1,4 +1,4 @@
-package centrifugo
+package opcua
 
 import (
 	"fmt"
@@ -15,14 +15,14 @@ func (e sentinelError) Error() string {
 // ErrNotOpcUaChannel is issued when the channel is not suitable for OPC-UA.
 const ErrNotOpcUaChannel = sentinelError("not an OPC-UA suitable channel")
 
-// Channel represents a Centrifugo channel suitable for OPC-UA.
-type Channel struct {
-	node     string
-	interval time.Duration
+// MonitoredNode represents a monitored OPC-UA node.
+type MonitoredNode struct {
+	Node     string        // Node identifier without namespace
+	Interval time.Duration // Subscription interval
 }
 
-// ParseChannel parses a Centrifugo channel name into a channel structure.
-func ParseChannel(s string) (*Channel, error) {
+// ParseChannel parses a Centrifugo channel name into an OPC-UA monitored node.
+func ParseChannel(s string) (*MonitoredNode, error) {
 	split := strings.SplitN(s, ":", 2)
 	if len(split) < 2 || !strings.HasPrefix(split[0], "opcua") {
 		return nil, ErrNotOpcUaChannel
@@ -33,22 +33,15 @@ func ParseChannel(s string) (*Channel, error) {
 		return nil, fmt.Errorf("bad channel name format")
 	}
 
-	node := split[0]
+	n := split[0]
 
-	interval, err := time.ParseDuration(split[1])
+	i, err := time.ParseDuration(split[1])
 	if err != nil {
 		return nil, fmt.Errorf("error parsing interval: %w", err)
 	}
 
-	return &Channel{node: node, interval: interval}, nil
-}
-
-// Node returns the OPC-UA node of the channel.
-func (c *Channel) Node() string {
-	return c.node
-}
-
-// Interval returns the subscription interval of the channel.
-func (c *Channel) Interval() time.Duration {
-	return c.interval
+	return &MonitoredNode{
+		Node:     n,
+		Interval: i,
+	}, nil
 }

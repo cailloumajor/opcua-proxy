@@ -1,11 +1,11 @@
-package centrifugo_test
+package opcua_test
 
 import (
 	"errors"
 	"testing"
 	"time"
 
-	. "github.com/cailloumajor/opcua-centrifugo/internal/centrifugo"
+	. "github.com/cailloumajor/opcua-centrifugo/internal/opcua"
 	"github.com/cailloumajor/opcua-centrifugo/internal/testutils"
 )
 
@@ -15,10 +15,10 @@ func TestParseChannelSuccess(t *testing.T) {
 	if msg := testutils.AssertError(t, err, false); msg != "" {
 		t.Errorf("Node() method: %s", msg)
 	}
-	if got, want := c.Node(), `s="node1"."node2"`; got != want {
+	if got, want := c.Node, `s="node1"."node2"`; got != want {
 		t.Errorf("Node() method: want %q, got %q", want, got)
 	}
-	if got, want := c.Interval(), 30*time.Minute; got != want {
+	if got, want := c.Interval, 30*time.Minute; got != want {
 		t.Errorf("Interval() method: want %v, got %v", want, got)
 	}
 }
