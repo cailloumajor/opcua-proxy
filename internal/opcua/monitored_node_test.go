@@ -45,6 +45,11 @@ func TestParseChannelError(t *testing.T) {
 			expectNotOpcUaChannel: false,
 		},
 		{
+			name:                  "TooManySemicolons",
+			input:                 `opcua:ns=2;s="node1"."node2";30m`,
+			expectNotOpcUaChannel: false,
+		},
+		{
 			name:                  "WrongInterval",
 			input:                 `opcua:s="node1"."node2";interval`,
 			expectNotOpcUaChannel: false,

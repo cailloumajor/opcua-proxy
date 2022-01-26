@@ -23,25 +23,29 @@ type MonitoredNode struct {
 
 // ParseChannel parses a Centrifugo channel name into an OPC-UA monitored node.
 func ParseChannel(s string) (*MonitoredNode, error) {
-	split := strings.SplitN(s, ":", 2)
-	if len(split) < 2 || !strings.HasPrefix(split[0], "opcua") {
+	const ChannelPrefix = "opcua:"
+
+	if !strings.HasPrefix(s, ChannelPrefix) {
 		return nil, ErrNotOpcUaChannel
 	}
 
-	split = strings.Split(split[1], ";")
-	if len(split) < 2 || len(split) > 3 {
-		return nil, fmt.Errorf("bad channel name format")
+	cn := strings.TrimPrefix(s, ChannelPrefix)
+
+	p := strings.Split(cn, ";")
+	switch {
+	case len(p) < 2:
+		return nil, fmt.Errorf("missing interval in channel name %q", cn)
+	case len(p) > 2:
+		return nil, fmt.Errorf("too many semicolons in channel name %q", cn)
 	}
 
-	n := split[0]
-
-	i, err := time.ParseDuration(split[1])
+	i, err := time.ParseDuration(p[1])
 	if err != nil {
 		return nil, fmt.Errorf("error parsing interval: %w", err)
 	}
 
 	return &MonitoredNode{
-		Node:     n,
+		Node:     p[0],
 		Interval: i,
 	}, nil
 }
