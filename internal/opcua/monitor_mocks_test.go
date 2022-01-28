@@ -6,7 +6,6 @@ package opcua
 import (
 	"context"
 	"github.com/gopcua/opcua"
-	"github.com/gopcua/opcua/monitor"
 	"github.com/gopcua/opcua/ua"
 	"sync"
 )
@@ -112,71 +111,6 @@ func (mock *ClientMock) ConnectCalls() []struct {
 	return calls
 }
 
-// Ensure, that NodeMonitorMock does implement NodeMonitor.
-// If this is not the case, regenerate this file with moq.
-var _ NodeMonitor = &NodeMonitorMock{}
-
-// NodeMonitorMock is a mock implementation of NodeMonitor.
-//
-// 	func TestSomethingThatUsesNodeMonitor(t *testing.T) {
-//
-// 		// make and configure a mocked NodeMonitor
-// 		mockedNodeMonitor := &NodeMonitorMock{
-// 			SetErrorHandlerFunc: func(cb monitor.ErrHandler)  {
-// 				panic("mock out the SetErrorHandler method")
-// 			},
-// 		}
-//
-// 		// use mockedNodeMonitor in code that requires NodeMonitor
-// 		// and then make assertions.
-//
-// 	}
-type NodeMonitorMock struct {
-	// SetErrorHandlerFunc mocks the SetErrorHandler method.
-	SetErrorHandlerFunc func(cb monitor.ErrHandler)
-
-	// calls tracks calls to the methods.
-	calls struct {
-		// SetErrorHandler holds details about calls to the SetErrorHandler method.
-		SetErrorHandler []struct {
-			// Cb is the cb argument value.
-			Cb monitor.ErrHandler
-		}
-	}
-	lockSetErrorHandler sync.RWMutex
-}
-
-// SetErrorHandler calls SetErrorHandlerFunc.
-func (mock *NodeMonitorMock) SetErrorHandler(cb monitor.ErrHandler) {
-	if mock.SetErrorHandlerFunc == nil {
-		panic("NodeMonitorMock.SetErrorHandlerFunc: method is nil but NodeMonitor.SetErrorHandler was just called")
-	}
-	callInfo := struct {
-		Cb monitor.ErrHandler
-	}{
-		Cb: cb,
-	}
-	mock.lockSetErrorHandler.Lock()
-	mock.calls.SetErrorHandler = append(mock.calls.SetErrorHandler, callInfo)
-	mock.lockSetErrorHandler.Unlock()
-	mock.SetErrorHandlerFunc(cb)
-}
-
-// SetErrorHandlerCalls gets all the calls that were made to SetErrorHandler.
-// Check the length with:
-//     len(mockedNodeMonitor.SetErrorHandlerCalls())
-func (mock *NodeMonitorMock) SetErrorHandlerCalls() []struct {
-	Cb monitor.ErrHandler
-} {
-	var calls []struct {
-		Cb monitor.ErrHandler
-	}
-	mock.lockSetErrorHandler.RLock()
-	calls = mock.calls.SetErrorHandler
-	mock.lockSetErrorHandler.RUnlock()
-	return calls
-}
-
 // Ensure, that SubscriptionMock does implement Subscription.
 // If this is not the case, regenerate this file with moq.
 var _ Subscription = &SubscriptionMock{}
@@ -187,8 +121,8 @@ var _ Subscription = &SubscriptionMock{}
 //
 // 		// make and configure a mocked Subscription
 // 		mockedSubscription := &SubscriptionMock{
-// 			UnsubscribeFunc: func(ctx context.Context) error {
-// 				panic("mock out the Unsubscribe method")
+// 			CancelFunc: func(ctx context.Context) error {
+// 				panic("mock out the Cancel method")
 // 			},
 // 		}
 //
@@ -197,48 +131,48 @@ var _ Subscription = &SubscriptionMock{}
 //
 // 	}
 type SubscriptionMock struct {
-	// UnsubscribeFunc mocks the Unsubscribe method.
-	UnsubscribeFunc func(ctx context.Context) error
+	// CancelFunc mocks the Cancel method.
+	CancelFunc func(ctx context.Context) error
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// Unsubscribe holds details about calls to the Unsubscribe method.
-		Unsubscribe []struct {
+		// Cancel holds details about calls to the Cancel method.
+		Cancel []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 		}
 	}
-	lockUnsubscribe sync.RWMutex
+	lockCancel sync.RWMutex
 }
 
-// Unsubscribe calls UnsubscribeFunc.
-func (mock *SubscriptionMock) Unsubscribe(ctx context.Context) error {
-	if mock.UnsubscribeFunc == nil {
-		panic("SubscriptionMock.UnsubscribeFunc: method is nil but Subscription.Unsubscribe was just called")
+// Cancel calls CancelFunc.
+func (mock *SubscriptionMock) Cancel(ctx context.Context) error {
+	if mock.CancelFunc == nil {
+		panic("SubscriptionMock.CancelFunc: method is nil but Subscription.Cancel was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
 	}{
 		Ctx: ctx,
 	}
-	mock.lockUnsubscribe.Lock()
-	mock.calls.Unsubscribe = append(mock.calls.Unsubscribe, callInfo)
-	mock.lockUnsubscribe.Unlock()
-	return mock.UnsubscribeFunc(ctx)
+	mock.lockCancel.Lock()
+	mock.calls.Cancel = append(mock.calls.Cancel, callInfo)
+	mock.lockCancel.Unlock()
+	return mock.CancelFunc(ctx)
 }
 
-// UnsubscribeCalls gets all the calls that were made to Unsubscribe.
+// CancelCalls gets all the calls that were made to Cancel.
 // Check the length with:
-//     len(mockedSubscription.UnsubscribeCalls())
-func (mock *SubscriptionMock) UnsubscribeCalls() []struct {
+//     len(mockedSubscription.CancelCalls())
+func (mock *SubscriptionMock) CancelCalls() []struct {
 	Ctx context.Context
 } {
 	var calls []struct {
 		Ctx context.Context
 	}
-	mock.lockUnsubscribe.RLock()
-	calls = mock.calls.Unsubscribe
-	mock.lockUnsubscribe.RUnlock()
+	mock.lockCancel.RLock()
+	calls = mock.calls.Cancel
+	mock.lockCancel.RUnlock()
 	return calls
 }
 
@@ -258,9 +192,6 @@ var _ MonitorExtDeps = &MonitorExtDepsMock{}
 // 			NewClientFunc: func(endpoint string, opts ...opcua.Option) Client {
 // 				panic("mock out the NewClient method")
 // 			},
-// 			NewNodeMonitorFunc: func(client Client) (NodeMonitor, error) {
-// 				panic("mock out the NewNodeMonitor method")
-// 			},
 // 			SelectEndpointFunc: func(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
 // 				panic("mock out the SelectEndpoint method")
 // 			},
@@ -276,9 +207,6 @@ type MonitorExtDepsMock struct {
 
 	// NewClientFunc mocks the NewClient method.
 	NewClientFunc func(endpoint string, opts ...opcua.Option) Client
-
-	// NewNodeMonitorFunc mocks the NewNodeMonitor method.
-	NewNodeMonitorFunc func(client Client) (NodeMonitor, error)
 
 	// SelectEndpointFunc mocks the SelectEndpoint method.
 	SelectEndpointFunc func(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription
@@ -301,11 +229,6 @@ type MonitorExtDepsMock struct {
 			// Opts is the opts argument value.
 			Opts []opcua.Option
 		}
-		// NewNodeMonitor holds details about calls to the NewNodeMonitor method.
-		NewNodeMonitor []struct {
-			// Client is the client argument value.
-			Client Client
-		}
 		// SelectEndpoint holds details about calls to the SelectEndpoint method.
 		SelectEndpoint []struct {
 			// Endpoints is the endpoints argument value.
@@ -318,7 +241,6 @@ type MonitorExtDepsMock struct {
 	}
 	lockGetEndpoints   sync.RWMutex
 	lockNewClient      sync.RWMutex
-	lockNewNodeMonitor sync.RWMutex
 	lockSelectEndpoint sync.RWMutex
 }
 
@@ -393,37 +315,6 @@ func (mock *MonitorExtDepsMock) NewClientCalls() []struct {
 	mock.lockNewClient.RLock()
 	calls = mock.calls.NewClient
 	mock.lockNewClient.RUnlock()
-	return calls
-}
-
-// NewNodeMonitor calls NewNodeMonitorFunc.
-func (mock *MonitorExtDepsMock) NewNodeMonitor(client Client) (NodeMonitor, error) {
-	if mock.NewNodeMonitorFunc == nil {
-		panic("MonitorExtDepsMock.NewNodeMonitorFunc: method is nil but MonitorExtDeps.NewNodeMonitor was just called")
-	}
-	callInfo := struct {
-		Client Client
-	}{
-		Client: client,
-	}
-	mock.lockNewNodeMonitor.Lock()
-	mock.calls.NewNodeMonitor = append(mock.calls.NewNodeMonitor, callInfo)
-	mock.lockNewNodeMonitor.Unlock()
-	return mock.NewNodeMonitorFunc(client)
-}
-
-// NewNodeMonitorCalls gets all the calls that were made to NewNodeMonitor.
-// Check the length with:
-//     len(mockedMonitorExtDeps.NewNodeMonitorCalls())
-func (mock *MonitorExtDepsMock) NewNodeMonitorCalls() []struct {
-	Client Client
-} {
-	var calls []struct {
-		Client Client
-	}
-	mock.lockNewNodeMonitor.RLock()
-	calls = mock.calls.NewNodeMonitor
-	mock.lockNewNodeMonitor.RUnlock()
 	return calls
 }
 

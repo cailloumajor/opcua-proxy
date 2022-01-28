@@ -7,9 +7,7 @@ import (
 	"time"
 
 	. "github.com/cailloumajor/opcua-centrifugo/internal/opcua"
-	"github.com/go-kit/log"
 	"github.com/gopcua/opcua"
-	"github.com/gopcua/opcua/monitor"
 	"github.com/gopcua/opcua/ua"
 )
 
@@ -22,9 +20,6 @@ func TestNewMonitorSuccess(t *testing.T) {
 			return nil
 		},
 	}
-	mockedNodeMonitor := &NodeMonitorMock{
-		SetErrorHandlerFunc: func(cb monitor.ErrHandler) {},
-	}
 	mockedNewMonitorDeps := &MonitorExtDepsMock{
 		GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
 			return []*ua.EndpointDescription{}, nil
@@ -34,9 +29,6 @@ func TestNewMonitorSuccess(t *testing.T) {
 		},
 		NewClientFunc: func(endpoint string, opts ...opcua.Option) Client {
 			return mockedClient
-		},
-		NewNodeMonitorFunc: func(client Client) (NodeMonitor, error) {
-			return mockedNodeMonitor, nil
 		},
 	}
 	mockedSecurityProvider := &SecurityProviderMock{
@@ -59,7 +51,6 @@ func TestNewMonitorSuccess(t *testing.T) {
 		cfg,
 		mockedNewMonitorDeps,
 		mockedSecurityProvider,
-		log.NewNopLogger(),
 	)
 
 	// Assertions about GetEndpoints
@@ -96,17 +87,6 @@ func TestNewMonitorSuccess(t *testing.T) {
 	if got, want := len(mockedClient.ConnectCalls()), 1; got != want {
 		t.Errorf("Client.Connect call count: want %d, got %d", want, got)
 	}
-	// Assertions about NewNodeMonitor
-	if got, want := len(mockedNewMonitorDeps.NewNodeMonitorCalls()), 1; got != want {
-		t.Errorf("NewNodeMonitor call count: want %d, got %d", want, got)
-	}
-	if got, want := mockedNewMonitorDeps.NewNodeMonitorCalls()[0].Client, mockedClient; got != want {
-		t.Errorf("NewNodeMonitor client argument: want %+v, got %+v", want, got)
-	}
-	// Assertions about NodeMonitor.SetErrorHandler
-	if got, want := len(mockedNodeMonitor.SetErrorHandlerCalls()), 1; got != want {
-		t.Errorf("NodeMonitor.SetErrorHandler call count: want %d, got %d", want, got)
-	}
 	// Assertions about NewMonitor
 	if m == nil {
 		t.Errorf("NewMonitor return, got nil")
@@ -118,39 +98,28 @@ func TestNewMonitorSuccess(t *testing.T) {
 
 func TestNewMonitorError(t *testing.T) {
 	cases := []struct {
-		name                string
-		getEndpointsError   bool
-		selectEndpointNil   bool
-		clientConnectError  bool
-		newNodeMonitorError bool
+		name               string
+		getEndpointsError  bool
+		selectEndpointNil  bool
+		clientConnectError bool
 	}{
 		{
-			name:                "GetEndpointsError",
-			getEndpointsError:   true,
-			selectEndpointNil:   false,
-			clientConnectError:  false,
-			newNodeMonitorError: false,
+			name:               "GetEndpointsError",
+			getEndpointsError:  true,
+			selectEndpointNil:  false,
+			clientConnectError: false,
 		},
 		{
-			name:                "SelectEndpointNil",
-			getEndpointsError:   false,
-			selectEndpointNil:   true,
-			clientConnectError:  false,
-			newNodeMonitorError: false,
+			name:               "SelectEndpointNil",
+			getEndpointsError:  false,
+			selectEndpointNil:  true,
+			clientConnectError: false,
 		},
 		{
-			name:                "ClientConnectError",
-			getEndpointsError:   false,
-			selectEndpointNil:   false,
-			clientConnectError:  true,
-			newNodeMonitorError: false,
-		},
-		{
-			name:                "NewNodeMonitorError",
-			getEndpointsError:   false,
-			selectEndpointNil:   false,
-			clientConnectError:  false,
-			newNodeMonitorError: true,
+			name:               "ClientConnectError",
+			getEndpointsError:  false,
+			selectEndpointNil:  false,
+			clientConnectError: true,
 		},
 	}
 
@@ -179,12 +148,6 @@ func TestNewMonitorError(t *testing.T) {
 						},
 					}
 				},
-				NewNodeMonitorFunc: func(client Client) (NodeMonitor, error) {
-					if tc.newNodeMonitorError {
-						return nil, errTesting
-					}
-					return &NodeMonitorMock{}, nil
-				},
 			}
 			mockedSecurityProvider := &SecurityProviderMock{
 				MessageSecurityModeFunc: func() ua.MessageSecurityMode {
@@ -202,7 +165,6 @@ func TestNewMonitorError(t *testing.T) {
 				&Config{},
 				mockedNewMonitorDeps,
 				mockedSecurityProvider,
-				log.NewNopLogger(),
 			)
 
 			// Assertions about NewMonitor
@@ -235,11 +197,6 @@ func TestMonitorStop(t *testing.T) {
 		NewClientFunc: func(endpoint string, opts ...opcua.Option) Client {
 			return mockedClient
 		},
-		NewNodeMonitorFunc: func(client Client) (NodeMonitor, error) {
-			return &NodeMonitorMock{
-				SetErrorHandlerFunc: func(cb monitor.ErrHandler) {},
-			}, nil
-		},
 	}
 	mockedSecurityProvider := &SecurityProviderMock{
 		MessageSecurityModeFunc: func() ua.MessageSecurityMode {
@@ -256,12 +213,11 @@ func TestMonitorStop(t *testing.T) {
 		&Config{},
 		mockedNewMonitorDeps,
 		mockedSecurityProvider,
-		log.NewNopLogger(),
 	)
 	var mockedSubscriptions [5]*SubscriptionMock
 	for i := range mockedSubscriptions {
 		mockedSubscription := &SubscriptionMock{
-			UnsubscribeFunc: func(ctx context.Context) error {
+			CancelFunc: func(ctx context.Context) error {
 				return errTesting
 			},
 		}
@@ -275,7 +231,7 @@ func TestMonitorStop(t *testing.T) {
 		t.Errorf("client.Close call count: want %d, got %d", want, got)
 	}
 	for _, v := range mockedSubscriptions {
-		if got, want := len(v.UnsubscribeCalls()), 1; got != want {
+		if got, want := len(v.CancelCalls()), 1; got != want {
 			t.Errorf("Subscription.Unsubscribe call count: want %d, got %d", want, got)
 		}
 	}

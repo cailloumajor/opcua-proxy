@@ -6,29 +6,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-kit/log"
-	"github.com/go-kit/log/level"
 	"github.com/gopcua/opcua"
-	"github.com/gopcua/opcua/monitor"
 	"github.com/gopcua/opcua/ua"
 )
 
-//go:generate moq -out monitor_mocks_test.go . Client NodeMonitor Subscription MonitorExtDeps SecurityProvider
+//go:generate moq -out monitor_mocks_test.go . Client Subscription MonitorExtDeps SecurityProvider
 
-// Client models an OPC-UA client.
+// Client is a consumer contract modelling an OPC-UA client.
 type Client interface {
 	Connect(context.Context) (err error)
 	Close() error
 }
 
-// NodeMonitor models an OPC-UA node monitor.
-type NodeMonitor interface {
-	SetErrorHandler(cb monitor.ErrHandler)
-}
-
-// Subscription models an OPC-UA subscription.
+// Subscription is a consumer contract modelling an OPC-UA subscription.
 type Subscription interface {
-	Unsubscribe(ctx context.Context) error
+	Cancel(ctx context.Context) error
 }
 
 // MonitorExtDeps is a consumer contract modelling external dependencies.
@@ -36,7 +28,6 @@ type MonitorExtDeps interface {
 	GetEndpoints(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error)
 	SelectEndpoint(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription
 	NewClient(endpoint string, opts ...opcua.Option) Client
-	NewNodeMonitor(client Client) (NodeMonitor, error)
 }
 
 // SecurityProvider is a consumer contract modelling an OPC-UA security provider.
@@ -57,15 +48,14 @@ type Config struct {
 
 // Monitor is an OPC-UA node monitor.
 type Monitor struct {
-	client      Client
-	nodeMonitor NodeMonitor
+	client Client
 
 	mu   sync.Mutex
 	subs map[time.Duration]Subscription
 }
 
 // NewMonitor creates an OPC-UA node monitor.
-func NewMonitor(ctx context.Context, cfg *Config, deps MonitorExtDeps, sec SecurityProvider, logger log.Logger) (*Monitor, error) {
+func NewMonitor(ctx context.Context, cfg *Config, deps MonitorExtDeps, sec SecurityProvider) (*Monitor, error) {
 	eps, err := deps.GetEndpoints(ctx, cfg.ServerURL)
 	if err != nil {
 		return nil, fmt.Errorf("error getting endpoints: %w", err)
@@ -83,19 +73,9 @@ func NewMonitor(ctx context.Context, cfg *Config, deps MonitorExtDeps, sec Secur
 		return nil, fmt.Errorf("failed to connect: %w", err)
 	}
 
-	nm, err := deps.NewNodeMonitor(c)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create a node monitor: %w", err)
-	}
-
-	nm.SetErrorHandler(func(c *opcua.Client, s *monitor.Subscription, e error) {
-		level.Info(logger).Log("from", "subscription", "sub_id", s.SubscriptionID(), "err", e)
-	})
-
 	return &Monitor{
-		client:      c,
-		nodeMonitor: nm,
-		subs:        make(map[time.Duration]Subscription),
+		client: c,
+		subs:   make(map[time.Duration]Subscription),
 	}, nil
 }
 
@@ -108,7 +88,7 @@ func (m *Monitor) Stop(ctx context.Context) []error {
 	}
 
 	for _, v := range m.subs {
-		if err := v.Unsubscribe(ctx); err != nil {
+		if err := v.Cancel(ctx); err != nil {
 			errs = append(errs, err)
 		}
 	}
