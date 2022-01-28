@@ -13,7 +13,7 @@ import (
 	"github.com/gopcua/opcua/ua"
 )
 
-//go:generate moq -out opcua_mocks_test.go . Client NodeMonitor Subscription MonitorExtDeps SecurityProvider
+//go:generate moq -out monitor_mocks_test.go . Client NodeMonitor Subscription MonitorExtDeps SecurityProvider
 
 // Client models an OPC-UA client.
 type Client interface {
