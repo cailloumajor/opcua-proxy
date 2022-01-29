@@ -2,16 +2,14 @@ package opcua_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
 	. "github.com/cailloumajor/opcua-centrifugo/internal/opcua"
+	"github.com/cailloumajor/opcua-centrifugo/internal/testutils"
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
 )
-
-var errTesting = errors.New("general error for testing")
 
 func TestNewMonitorSuccess(t *testing.T) {
 	mockedEndpointDescription := &ua.EndpointDescription{EndpointURL: "selectedEndpointURL"}
@@ -128,7 +126,7 @@ func TestNewMonitorError(t *testing.T) {
 			mockedNewMonitorDeps := &MonitorExtDepsMock{
 				GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
 					if tc.getEndpointsError {
-						return nil, errTesting
+						return nil, testutils.ErrTesting
 					}
 					return []*ua.EndpointDescription{}, nil
 				},
@@ -142,7 +140,7 @@ func TestNewMonitorError(t *testing.T) {
 					return &ClientMock{
 						ConnectFunc: func(contextMoqParam context.Context) error {
 							if tc.clientConnectError {
-								return errTesting
+								return testutils.ErrTesting
 							}
 							return nil
 						},
@@ -184,7 +182,7 @@ func TestMonitorStop(t *testing.T) {
 			return nil
 		},
 		CloseFunc: func() error {
-			return errTesting
+			return testutils.ErrTesting
 		},
 	}
 	mockedNewMonitorDeps := &MonitorExtDepsMock{
@@ -218,7 +216,7 @@ func TestMonitorStop(t *testing.T) {
 	for i := range mockedSubscriptions {
 		mockedSubscription := &SubscriptionMock{
 			CancelFunc: func(ctx context.Context) error {
-				return errTesting
+				return testutils.ErrTesting
 			},
 		}
 		mockedSubscriptions[i] = mockedSubscription
