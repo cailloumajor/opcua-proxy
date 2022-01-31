@@ -28,6 +28,9 @@ func TestMonitorStop(t *testing.T) {
 	for i := range mockedSubscriptions {
 		mockedSubscription := &SubscriptionMock{
 			CancelFunc: func(ctx context.Context) error {
+				if len(mockedClientProvider.CloseCalls()) > 0 {
+					t.Errorf("client has been closed before subscription cancel call")
+				}
 				return testutils.ErrTesting
 			},
 		}

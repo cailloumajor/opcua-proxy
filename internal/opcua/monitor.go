@@ -36,12 +36,13 @@ func NewMonitor(ctx context.Context, cfg *Config, c ClientProvider) *Monitor {
 }
 
 // Stop cancels all subscriptions and closes the wrapped client.
+//
+// Monitor must not be used after calling Stop().
 func (m *Monitor) Stop(ctx context.Context) []error {
 	var errs []error
 
-	if err := m.client.Close(); err != nil {
-		errs = append(errs, err)
-	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	for _, v := range m.subs {
 		if err := v.Cancel(ctx); err != nil {
@@ -49,9 +50,9 @@ func (m *Monitor) Stop(ctx context.Context) []error {
 		}
 	}
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.subs = make(map[time.Duration]Subscription)
+	if err := m.client.Close(); err != nil {
+		errs = append(errs, err)
+	}
 
 	return errs
 }
