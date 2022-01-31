@@ -10,7 +10,6 @@ import (
 
 // ClientProvider is a consumer contract modelling an OPC-UA client provider.
 type ClientProvider interface {
-	RawClientProvider
 	Close() error
 }
 

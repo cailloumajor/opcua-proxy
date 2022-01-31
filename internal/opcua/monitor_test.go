@@ -11,9 +11,6 @@ import (
 
 func TestMonitorStop(t *testing.T) {
 	mockedClientProvider := &ClientProviderMock{
-		ConnectFunc: func(contextMoqParam context.Context) error {
-			return nil
-		},
 		CloseFunc: func() error {
 			return testutils.ErrTesting
 		},

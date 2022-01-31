@@ -21,9 +21,6 @@ var _ ClientProvider = &ClientProviderMock{}
 // 			CloseFunc: func() error {
 // 				panic("mock out the Close method")
 // 			},
-// 			ConnectFunc: func(contextMoqParam context.Context) error {
-// 				panic("mock out the Connect method")
-// 			},
 // 		}
 //
 // 		// use mockedClientProvider in code that requires ClientProvider
@@ -34,22 +31,13 @@ type ClientProviderMock struct {
 	// CloseFunc mocks the Close method.
 	CloseFunc func() error
 
-	// ConnectFunc mocks the Connect method.
-	ConnectFunc func(contextMoqParam context.Context) error
-
 	// calls tracks calls to the methods.
 	calls struct {
 		// Close holds details about calls to the Close method.
 		Close []struct {
 		}
-		// Connect holds details about calls to the Connect method.
-		Connect []struct {
-			// ContextMoqParam is the contextMoqParam argument value.
-			ContextMoqParam context.Context
-		}
 	}
-	lockClose   sync.RWMutex
-	lockConnect sync.RWMutex
+	lockClose sync.RWMutex
 }
 
 // Close calls CloseFunc.
@@ -75,37 +63,6 @@ func (mock *ClientProviderMock) CloseCalls() []struct {
 	mock.lockClose.RLock()
 	calls = mock.calls.Close
 	mock.lockClose.RUnlock()
-	return calls
-}
-
-// Connect calls ConnectFunc.
-func (mock *ClientProviderMock) Connect(contextMoqParam context.Context) error {
-	if mock.ConnectFunc == nil {
-		panic("ClientProviderMock.ConnectFunc: method is nil but ClientProvider.Connect was just called")
-	}
-	callInfo := struct {
-		ContextMoqParam context.Context
-	}{
-		ContextMoqParam: contextMoqParam,
-	}
-	mock.lockConnect.Lock()
-	mock.calls.Connect = append(mock.calls.Connect, callInfo)
-	mock.lockConnect.Unlock()
-	return mock.ConnectFunc(contextMoqParam)
-}
-
-// ConnectCalls gets all the calls that were made to Connect.
-// Check the length with:
-//     len(mockedClientProvider.ConnectCalls())
-func (mock *ClientProviderMock) ConnectCalls() []struct {
-	ContextMoqParam context.Context
-} {
-	var calls []struct {
-		ContextMoqParam context.Context
-	}
-	mock.lockConnect.RLock()
-	calls = mock.calls.Connect
-	mock.lockConnect.RUnlock()
 	return calls
 }
 
