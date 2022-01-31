@@ -2,9 +2,12 @@ package opcua
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
+
+const channelPrefix = "opcua:"
 
 type sentinelError string
 
@@ -21,15 +24,15 @@ type MonitoredNode struct {
 	Interval time.Duration // Subscription interval
 }
 
-// ParseChannel parses a Centrifugo channel name into an OPC-UA monitored node.
+// ParseChannel parses a Centrifugo channel into an OPC-UA monitored node.
+//
+// See "Specifications" section in README.md for the format of the channel.
 func ParseChannel(s string) (*MonitoredNode, error) {
-	const ChannelPrefix = "opcua:"
-
-	if !strings.HasPrefix(s, ChannelPrefix) {
+	if !strings.HasPrefix(s, channelPrefix) {
 		return nil, ErrNotOpcUaChannel
 	}
 
-	cn := strings.TrimPrefix(s, ChannelPrefix)
+	cn := strings.TrimPrefix(s, channelPrefix)
 
 	p := strings.Split(cn, ";")
 	switch {
@@ -39,13 +42,21 @@ func ParseChannel(s string) (*MonitoredNode, error) {
 		return nil, fmt.Errorf("too many semicolons in channel name %q", cn)
 	}
 
-	i, err := time.ParseDuration(p[1])
-	if err != nil {
+	ms, err := strconv.ParseUint(p[1], 10, 64)
+	switch {
+	case err != nil:
 		return nil, fmt.Errorf("error parsing interval: %w", err)
+	case ms > uint64(time.Duration(1<<63-1).Milliseconds()):
+		return nil, fmt.Errorf("interval too big: %d", ms)
 	}
 
 	return &MonitoredNode{
 		Node:     p[0],
-		Interval: i,
+		Interval: time.Duration(ms) * time.Millisecond,
 	}, nil
+}
+
+// Channel returns the Centrifugo channel name for this monitored node.
+func (m *MonitoredNode) Channel() string {
+	return fmt.Sprint(channelPrefix, m.Node, ";", m.Interval.Milliseconds())
 }

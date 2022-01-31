@@ -8,14 +8,13 @@ A microservice to proxy OPC-UA data change subscription through Centrifugo.
 
 [1]: https://centrifugal.dev/docs/server/proxy#subscribe-proxy
 [2]: https://centrifugal.dev/docs/server/channels#channel-namespaces
-[3]: https://pkg.go.dev/time?utm_source=gopls#ParseDuration
 
 - A Centrifugo server is configured to [proxy subscriptions][1] to this service.
 - Clients must subscribe to Centrifugo channels with following characteristics:
   - [Namespace][2]: `opcua`
-  - Channel name: semicolon-separated fields (e.g. `s=MyNode;30s`), as following, in the same order:
+  - Channel name: semicolon-separated fields (e.g. `s=MyNode;30000`), as following, in the same order:
     - string notation of the OPC-UA NodeID identifier type and identifier
-    - publishing interval of OPC-UA notification messages (string suitable for Go's [time.ParseDuration][3])
+    - publishing interval of OPC-UA notification messages (integer, in milliseconds)
 
 ## Data flow
 
