@@ -255,10 +255,10 @@ func TestGetMonitoredItems(t *testing.T) {
 			}
 			callReq := mockedRawClientProvider.CallCalls()[0].Req
 			if got, want := callReq.ObjectID.String(), "i=2253"; got != want {
-				t.Errorf("Call() req argument ObjectID member: want %s, got %s", want, got)
+				t.Errorf("Call() req argument ObjectID member: want %q, got %q", want, got)
 			}
 			if got, want := callReq.MethodID.String(), "i=11492"; got != want {
-				t.Errorf("Call() req argument MethodID member: want %s, got %s", want, got)
+				t.Errorf("Call() req argument MethodID member: want %q, got %q", want, got)
 			}
 			if got, want := len(callReq.InputArguments), 1; got != want {
 				t.Errorf("Call() req argument InputArguments length: want %d, got %d", want, got)
