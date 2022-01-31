@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/gopcua/opcua"
+	"github.com/gopcua/opcua/id"
 	"github.com/gopcua/opcua/ua"
 )
 
@@ -19,6 +20,7 @@ type ClientExtDeps interface {
 
 // RawClientProvider is a consumer contract modelling a raw OPC-UA client.
 type RawClientProvider interface {
+	Call(req *ua.CallMethodRequest) (*ua.CallMethodResult, error)
 	Connect(context.Context) (err error)
 }
 
@@ -56,4 +58,32 @@ func NewClient(ctx context.Context, cfg *Config, deps ClientExtDeps, sec Securit
 	return &Client{
 		RawClientProvider: c,
 	}, nil
+}
+
+// GetMonitoredItems executes the eponymous method on the provided caller.
+//
+// See https://reference.opcfoundation.org/Core/docs/Part5/9.1
+//
+// Upon success, it returns a slice of monitored items server handles.
+func (c *Client) GetMonitoredItems(subID uint32) ([]uint32, error) {
+	req := &ua.CallMethodRequest{
+		ObjectID:       ua.NewNumericNodeID(0, id.Server),
+		MethodID:       ua.NewNumericNodeID(0, id.Server_GetMonitoredItems),
+		InputArguments: []*ua.Variant{ua.MustVariant(subID)},
+	}
+
+	res, err := c.Call(req)
+	if err != nil {
+		return nil, fmt.Errorf("error calling the method: %w", err)
+	}
+	if res.StatusCode != ua.StatusOK {
+		return nil, fmt.Errorf("method call failed: %w", res.StatusCode)
+	}
+
+	sh := make([]uint32, len(res.OutputArguments))
+	for i, o := range res.OutputArguments {
+		sh[i] = uint32(o.Uint())
+	}
+
+	return sh, nil
 }

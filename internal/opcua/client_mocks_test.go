@@ -201,6 +201,9 @@ var _ RawClientProvider = &RawClientProviderMock{}
 //
 // 		// make and configure a mocked RawClientProvider
 // 		mockedRawClientProvider := &RawClientProviderMock{
+// 			CallFunc: func(req *ua.CallMethodRequest) (*ua.CallMethodResult, error) {
+// 				panic("mock out the Call method")
+// 			},
 // 			ConnectFunc: func(contextMoqParam context.Context) error {
 // 				panic("mock out the Connect method")
 // 			},
@@ -211,18 +214,58 @@ var _ RawClientProvider = &RawClientProviderMock{}
 //
 // 	}
 type RawClientProviderMock struct {
+	// CallFunc mocks the Call method.
+	CallFunc func(req *ua.CallMethodRequest) (*ua.CallMethodResult, error)
+
 	// ConnectFunc mocks the Connect method.
 	ConnectFunc func(contextMoqParam context.Context) error
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// Call holds details about calls to the Call method.
+		Call []struct {
+			// Req is the req argument value.
+			Req *ua.CallMethodRequest
+		}
 		// Connect holds details about calls to the Connect method.
 		Connect []struct {
 			// ContextMoqParam is the contextMoqParam argument value.
 			ContextMoqParam context.Context
 		}
 	}
+	lockCall    sync.RWMutex
 	lockConnect sync.RWMutex
+}
+
+// Call calls CallFunc.
+func (mock *RawClientProviderMock) Call(req *ua.CallMethodRequest) (*ua.CallMethodResult, error) {
+	if mock.CallFunc == nil {
+		panic("RawClientProviderMock.CallFunc: method is nil but RawClientProvider.Call was just called")
+	}
+	callInfo := struct {
+		Req *ua.CallMethodRequest
+	}{
+		Req: req,
+	}
+	mock.lockCall.Lock()
+	mock.calls.Call = append(mock.calls.Call, callInfo)
+	mock.lockCall.Unlock()
+	return mock.CallFunc(req)
+}
+
+// CallCalls gets all the calls that were made to Call.
+// Check the length with:
+//     len(mockedRawClientProvider.CallCalls())
+func (mock *RawClientProviderMock) CallCalls() []struct {
+	Req *ua.CallMethodRequest
+} {
+	var calls []struct {
+		Req *ua.CallMethodRequest
+	}
+	mock.lockCall.RLock()
+	calls = mock.calls.Call
+	mock.lockCall.RUnlock()
+	return calls
 }
 
 // Connect calls ConnectFunc.

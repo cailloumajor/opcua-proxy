@@ -2,6 +2,7 @@ package opcua_test
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	. "github.com/cailloumajor/opcua-centrifugo/internal/opcua"
@@ -170,6 +171,107 @@ func TestNewClientError(t *testing.T) {
 			}
 			if err == nil {
 				t.Error("NewClient error return: want an error, got nil")
+			}
+		})
+	}
+}
+
+func TestGetMonitoredItems(t *testing.T) {
+	cases := []struct {
+		name             string
+		callMethodResult *ua.CallMethodResult
+		callError        bool
+		expectError      bool
+		expectHandles    []uint32
+	}{
+		{
+			name:             "CallError",
+			callMethodResult: &ua.CallMethodResult{},
+			callError:        true,
+			expectError:      true,
+			expectHandles:    nil,
+		},
+		{
+			name:             "CallBadResult",
+			callMethodResult: &ua.CallMethodResult{StatusCode: ua.StatusBadUserAccessDenied},
+			callError:        false,
+			expectError:      true,
+			expectHandles:    nil,
+		},
+		{
+			name: "Success",
+			callMethodResult: &ua.CallMethodResult{
+				StatusCode: ua.StatusOK,
+				OutputArguments: []*ua.Variant{
+					ua.MustVariant(uint32(45145)),
+					ua.MustVariant(uint32(89743)),
+				},
+			},
+			callError:     false,
+			expectError:   false,
+			expectHandles: []uint32{45145, 89743},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockedRawClientProvider := &RawClientProviderMock{
+				ConnectFunc: func(contextMoqParam context.Context) error { return nil },
+				CallFunc: func(req *ua.CallMethodRequest) (*ua.CallMethodResult, error) {
+					if tc.callError {
+						return nil, testutils.ErrTesting
+					}
+					return tc.callMethodResult, nil
+				},
+			}
+			mockedClientExtDeps := &ClientExtDepsMock{
+				GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
+					return []*ua.EndpointDescription{}, nil
+				},
+				SelectEndpointFunc: func(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
+					return &ua.EndpointDescription{}
+				},
+				NewClientFunc: func(endpoint string, opts ...opcua.Option) RawClientProvider {
+					return mockedRawClientProvider
+				},
+			}
+			mockedSecurityProvider := &SecurityProviderMock{
+				MessageSecurityModeFunc: func() ua.MessageSecurityMode {
+					return ua.MessageSecurityModeInvalid
+				},
+				PolicyFunc: func() string { return "" },
+				OptionsFunc: func(ep *ua.EndpointDescription) []opcua.Option {
+					return []opcua.Option{}
+				},
+			}
+
+			c, _ := NewClient(context.Background(), &Config{}, mockedClientExtDeps, mockedSecurityProvider)
+
+			h, err := c.GetMonitoredItems(85165)
+
+			// Assertions about Call()
+			if got, want := len(mockedRawClientProvider.CallCalls()), 1; got != want {
+				t.Errorf("Call() calls count: want %d, got %d", want, got)
+			}
+			callReq := mockedRawClientProvider.CallCalls()[0].Req
+			if got, want := callReq.ObjectID.String(), "i=2253"; got != want {
+				t.Errorf("Call() req argument ObjectID member: want %s, got %s", want, got)
+			}
+			if got, want := callReq.MethodID.String(), "i=11492"; got != want {
+				t.Errorf("Call() req argument MethodID member: want %s, got %s", want, got)
+			}
+			if got, want := len(callReq.InputArguments), 1; got != want {
+				t.Errorf("Call() req argument InputArguments length: want %d, got %d", want, got)
+			}
+			if got, want := callReq.InputArguments[0].Uint(), uint64(85165); got != want {
+				t.Errorf("Call() req argument InputArguments member: want %d, got %d", want, got)
+			}
+			// Assertions about GetMonitoredItems return values
+			if msg := testutils.AssertError(t, err, tc.expectError); msg != "" {
+				t.Errorf("GetMonitoredItems() call: %s", msg)
+			}
+			if got, want := h, tc.expectHandles; !reflect.DeepEqual(got, want) {
+				t.Errorf("GetMonitoredItems() call: want %v, got %v", want, got)
 			}
 		})
 	}
