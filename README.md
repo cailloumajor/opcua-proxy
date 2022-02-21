@@ -18,7 +18,37 @@ A microservice to proxy OPC-UA data change subscription through Centrifugo.
 
 ## Data flow
 
-![Data flow](/assets/data_flow.png)
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Centrifugo as Centrifugo server
+    participant Proxy as Centrifugo / OPC-UA proxy
+    participant OPCServer as OPC-UA server
+    alt unrecognized channel
+        Client->>+Centrifugo: Subscribes to a channel
+        Centrifugo->>+Proxy: Proxies the subscription request
+        Proxy-->>-Centrifugo: Subscription allowed
+        Centrifugo-->>-Client: Success
+    else OPC-UA related channel
+        Client->>+Centrifugo: Subscribes to a channel
+        Centrifugo->>+Proxy: Proxies the subscription request
+        opt No subscription for this refresh interval
+            Proxy->>+OPCServer: Create subscription
+            OPCServer-->-Proxy: Subscription created
+        end
+        Proxy->>+OPCServer: Create monitored item
+        OPCServer-->>-Proxy: Monitored item created
+        Proxy-->>-Centrifugo: Subscription allowed
+        Centrifugo-->>-Client: Success
+    end
+    OPCServer-)Proxy: Data change notification
+    activate Proxy
+    Proxy-)Centrifugo: Publish
+    deactivate Proxy
+    activate Centrifugo
+    Centrifugo-)Client: Publication
+    deactivate Centrifugo
+```
 
 ## Configuration
 
