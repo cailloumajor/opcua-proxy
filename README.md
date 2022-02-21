@@ -22,7 +22,7 @@ A microservice to proxy OPC-UA data change subscription through Centrifugo.
 sequenceDiagram
     participant Client
     participant Centrifugo as Centrifugo server
-    participant Proxy as Centrifugo / OPC-UA proxy
+    participant Proxy as Centrifugo / OPC-UA<br>proxy
     participant OPCServer as OPC-UA server
     alt unrecognized channel
         Client->>+Centrifugo: Subscribes to a channel
