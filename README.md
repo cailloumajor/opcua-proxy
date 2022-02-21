@@ -34,7 +34,7 @@ sequenceDiagram
         Centrifugo->>+Proxy: Proxies the subscription request
         opt No subscription for this refresh interval
             Proxy->>+OPCServer: Create subscription
-            OPCServer-->-Proxy: Subscription created
+            OPCServer-->>-Proxy: Subscription created
         end
         Proxy->>+OPCServer: Create monitored item
         OPCServer-->>-Proxy: Monitored item created
