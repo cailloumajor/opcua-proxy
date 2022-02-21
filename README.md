@@ -1,5 +1,6 @@
 # OPC-UA / Centrifugo proxy
 
+[![Tests and code quality](https://github.com/cailloumajor/opcua-centrifugo/actions/workflows/tests.yml/badge.svg)](https://github.com/cailloumajor/opcua-centrifugo/actions/workflows/tests.yml)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 
 A microservice to proxy OPC-UA data change subscription through Centrifugo.
