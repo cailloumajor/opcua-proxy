@@ -1,10 +1,21 @@
-# Created by https://www.toptal.com/developers/gitignore/api/go,visualstudiocode,dotenv
-# Edit at https://www.toptal.com/developers/gitignore?templates=go,visualstudiocode,dotenv
+# Created by https://www.toptal.com/developers/gitignore/api/go,dotenv,visualstudiocode,certificates
+# Edit at https://www.toptal.com/developers/gitignore?templates=go,dotenv,visualstudiocode,certificates
+
+### certificates ###
+*.pem
+*.key
+*.crt
+*.cer
+*.der
+*.priv
 
 ### dotenv ###
 .env
 
 ### Go ###
+# If you prefer the allow list template instead of the deny list, see community template:
+# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
+#
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -21,6 +32,9 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
+# Go workspace file
+go.work
+
 ### Go Patch ###
 /vendor/
 /Godeps/
@@ -31,10 +45,13 @@
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
-*.code-workspace
+!.vscode/*.code-snippets
 
 # Local History for Visual Studio Code
 .history/
+
+# Built Visual Studio Code Extensions
+*.vsix
 
 ### VisualStudioCode Patch ###
 # Ignore all local history of files
@@ -42,9 +59,8 @@
 .ionide
 
 # Support for Project snippet scope
-!.vscode/*.code-snippets
 
-# End of https://www.toptal.com/developers/gitignore/api/go,visualstudiocode,dotenv
+# End of https://www.toptal.com/developers/gitignore/api/go,dotenv,visualstudiocode,certificates
 
 # Binaries
 /bin/
