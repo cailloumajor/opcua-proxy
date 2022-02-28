@@ -32,7 +32,7 @@ func TestMonitorStop(t *testing.T) {
 			},
 		}
 		mockedSubscriptions[i] = mockedSubscription
-		m.AddSubscription(time.Duration(i+1)*time.Second, mockedSubscription)
+		m.AddSubscription(PublishingInterval(time.Duration(i+1)*time.Second), mockedSubscription)
 	}
 
 	errs := m.Stop(context.Background())

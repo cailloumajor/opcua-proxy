@@ -23,14 +23,14 @@ type Monitor struct {
 	client ClientProvider
 
 	mu   sync.Mutex
-	subs map[time.Duration]Subscription
+	subs map[PublishingInterval]Subscription
 }
 
 // NewMonitor creates an OPC-UA node monitor.
 func NewMonitor(ctx context.Context, cfg *Config, c ClientProvider) *Monitor {
 	return &Monitor{
 		client: c,
-		subs:   make(map[time.Duration]Subscription),
+		subs:   make(map[PublishingInterval]Subscription),
 	}
 }
 
