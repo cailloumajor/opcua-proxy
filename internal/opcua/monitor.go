@@ -2,11 +2,18 @@ package opcua
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"sync"
-	"time"
+
+	"github.com/gopcua/opcua"
+	"github.com/gopcua/opcua/ua"
 )
 
 //go:generate moq -out monitor_mocks_test.go . ClientProvider Subscription
+
+// QueueSize represents the size of the buffered channel for data change notifications.
+const QueueSize = 8
 
 // ClientProvider is a consumer contract modelling an OPC-UA client provider.
 type ClientProvider interface {
@@ -22,16 +29,50 @@ type Subscription interface {
 type Monitor struct {
 	client ClientProvider
 
-	mu   sync.Mutex
-	subs map[PublishingInterval]Subscription
+	notifyCh chan *opcua.PublishNotificationData
+
+	mu    sync.RWMutex
+	subs  map[PublishingInterval]Subscription
+	items map[uint32]string
 }
 
 // NewMonitor creates an OPC-UA node monitor.
 func NewMonitor(ctx context.Context, cfg *Config, c ClientProvider) *Monitor {
 	return &Monitor{
-		client: c,
-		subs:   make(map[PublishingInterval]Subscription),
+		client:   c,
+		notifyCh: make(chan *opcua.PublishNotificationData, QueueSize),
+		subs:     make(map[PublishingInterval]Subscription),
+		items:    make(map[uint32]string),
 	}
+}
+
+// GetDataChange returns a JSON string from the next dequeued data change notification.
+func (m *Monitor) GetDataChange() (string, error) {
+	notif := <-m.notifyCh
+
+	if notif.Error != nil {
+		return "", fmt.Errorf("notification data error: %w", notif.Error)
+	}
+
+	d, ok := notif.Value.(*ua.DataChangeNotification)
+	if !ok {
+		return "", fmt.Errorf("not a data change notification")
+	}
+
+	im := make(map[string]interface{})
+	m.mu.RLock()
+	for _, mi := range d.MonitoredItems {
+		n := m.items[mi.ClientHandle]
+		im[n] = mi.Value.Value.Value()
+	}
+	m.mu.RUnlock()
+
+	j, err := json.Marshal(im)
+	if err != nil {
+		return "", fmt.Errorf("JSON marshalling error: %w", err)
+	}
+
+	return string(j), nil
 }
 
 // Stop cancels all subscriptions and closes the wrapped client.
