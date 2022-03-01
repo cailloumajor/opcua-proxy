@@ -64,7 +64,7 @@ func NewClient(ctx context.Context, cfg *Config, deps ClientExtDeps, sec Securit
 //
 // See https://reference.opcfoundation.org/Core/docs/Part5/9.1
 //
-// Upon success, it returns a slice of monitored items server handles.
+// Upon success, it returns a slice of monitored items client handles.
 func (c *Client) GetMonitoredItems(ctx context.Context, subID uint32) ([]uint32, error) {
 	req := &ua.CallMethodRequest{
 		ObjectID:       ua.NewNumericNodeID(0, id.Server),
@@ -80,10 +80,5 @@ func (c *Client) GetMonitoredItems(ctx context.Context, subID uint32) ([]uint32,
 		return nil, fmt.Errorf("method call failed: %w", res.StatusCode)
 	}
 
-	sh := make([]uint32, len(res.OutputArguments))
-	for i, o := range res.OutputArguments {
-		sh[i] = uint32(o.Uint())
-	}
-
-	return sh, nil
+	return res.OutputArguments[1].Value().([]uint32), nil
 }

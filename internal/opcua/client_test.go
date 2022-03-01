@@ -203,8 +203,8 @@ func TestGetMonitoredItems(t *testing.T) {
 			callMethodResult: &ua.CallMethodResult{
 				StatusCode: ua.StatusOK,
 				OutputArguments: []*ua.Variant{
-					ua.MustVariant(uint32(45145)),
-					ua.MustVariant(uint32(89743)),
+					ua.MustVariant([]uint32{1, 2}),
+					ua.MustVariant([]uint32{45145, 89743}),
 				},
 			},
 			callError:     false,
