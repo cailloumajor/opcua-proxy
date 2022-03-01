@@ -217,7 +217,7 @@ func TestGetMonitoredItems(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			mockedRawClientProvider := &RawClientProviderMock{
 				ConnectFunc: func(contextMoqParam context.Context) error { return nil },
-				CallFunc: func(req *ua.CallMethodRequest) (*ua.CallMethodResult, error) {
+				CallWithContextFunc: func(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error) {
 					if tc.callError {
 						return nil, testutils.ErrTesting
 					}
@@ -247,13 +247,13 @@ func TestGetMonitoredItems(t *testing.T) {
 
 			c, _ := NewClient(context.Background(), &Config{}, mockedClientExtDeps, mockedSecurityProvider)
 
-			h, err := c.GetMonitoredItems(85165)
+			h, err := c.GetMonitoredItems(context.Background(), 85165)
 
 			// Assertions about Call()
-			if got, want := len(mockedRawClientProvider.CallCalls()), 1; got != want {
+			if got, want := len(mockedRawClientProvider.CallWithContextCalls()), 1; got != want {
 				t.Errorf("Call() calls count: want %d, got %d", want, got)
 			}
-			callReq := mockedRawClientProvider.CallCalls()[0].Req
+			callReq := mockedRawClientProvider.CallWithContextCalls()[0].Req
 			if got, want := callReq.ObjectID.String(), "i=2253"; got != want {
 				t.Errorf("Call() req argument ObjectID member: want %q, got %q", want, got)
 			}

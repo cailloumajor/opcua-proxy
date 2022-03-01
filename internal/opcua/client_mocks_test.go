@@ -201,8 +201,8 @@ var _ RawClientProvider = &RawClientProviderMock{}
 //
 // 		// make and configure a mocked RawClientProvider
 // 		mockedRawClientProvider := &RawClientProviderMock{
-// 			CallFunc: func(req *ua.CallMethodRequest) (*ua.CallMethodResult, error) {
-// 				panic("mock out the Call method")
+// 			CallWithContextFunc: func(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error) {
+// 				panic("mock out the CallWithContext method")
 // 			},
 // 			ConnectFunc: func(contextMoqParam context.Context) error {
 // 				panic("mock out the Connect method")
@@ -214,16 +214,18 @@ var _ RawClientProvider = &RawClientProviderMock{}
 //
 // 	}
 type RawClientProviderMock struct {
-	// CallFunc mocks the Call method.
-	CallFunc func(req *ua.CallMethodRequest) (*ua.CallMethodResult, error)
+	// CallWithContextFunc mocks the CallWithContext method.
+	CallWithContextFunc func(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error)
 
 	// ConnectFunc mocks the Connect method.
 	ConnectFunc func(contextMoqParam context.Context) error
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// Call holds details about calls to the Call method.
-		Call []struct {
+		// CallWithContext holds details about calls to the CallWithContext method.
+		CallWithContext []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
 			// Req is the req argument value.
 			Req *ua.CallMethodRequest
 		}
@@ -233,38 +235,42 @@ type RawClientProviderMock struct {
 			ContextMoqParam context.Context
 		}
 	}
-	lockCall    sync.RWMutex
-	lockConnect sync.RWMutex
+	lockCallWithContext sync.RWMutex
+	lockConnect         sync.RWMutex
 }
 
-// Call calls CallFunc.
-func (mock *RawClientProviderMock) Call(req *ua.CallMethodRequest) (*ua.CallMethodResult, error) {
-	if mock.CallFunc == nil {
-		panic("RawClientProviderMock.CallFunc: method is nil but RawClientProvider.Call was just called")
+// CallWithContext calls CallWithContextFunc.
+func (mock *RawClientProviderMock) CallWithContext(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error) {
+	if mock.CallWithContextFunc == nil {
+		panic("RawClientProviderMock.CallWithContextFunc: method is nil but RawClientProvider.CallWithContext was just called")
 	}
 	callInfo := struct {
+		Ctx context.Context
 		Req *ua.CallMethodRequest
 	}{
+		Ctx: ctx,
 		Req: req,
 	}
-	mock.lockCall.Lock()
-	mock.calls.Call = append(mock.calls.Call, callInfo)
-	mock.lockCall.Unlock()
-	return mock.CallFunc(req)
+	mock.lockCallWithContext.Lock()
+	mock.calls.CallWithContext = append(mock.calls.CallWithContext, callInfo)
+	mock.lockCallWithContext.Unlock()
+	return mock.CallWithContextFunc(ctx, req)
 }
 
-// CallCalls gets all the calls that were made to Call.
+// CallWithContextCalls gets all the calls that were made to CallWithContext.
 // Check the length with:
-//     len(mockedRawClientProvider.CallCalls())
-func (mock *RawClientProviderMock) CallCalls() []struct {
+//     len(mockedRawClientProvider.CallWithContextCalls())
+func (mock *RawClientProviderMock) CallWithContextCalls() []struct {
+	Ctx context.Context
 	Req *ua.CallMethodRequest
 } {
 	var calls []struct {
+		Ctx context.Context
 		Req *ua.CallMethodRequest
 	}
-	mock.lockCall.RLock()
-	calls = mock.calls.Call
-	mock.lockCall.RUnlock()
+	mock.lockCallWithContext.RLock()
+	calls = mock.calls.CallWithContext
+	mock.lockCallWithContext.RUnlock()
 	return calls
 }
 

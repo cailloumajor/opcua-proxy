@@ -18,15 +18,15 @@ const QueueSize = 8
 
 // ClientProvider is a consumer contract modelling an OPC-UA client provider.
 type ClientProvider interface {
-	Close() error
-	NamespaceArray() ([]string, error)
-	Subscribe(params *opcua.SubscriptionParameters, notifyCh chan *opcua.PublishNotificationData) (Subscription, error)
+	CloseWithContext(ctx context.Context) error
+	NamespaceArrayWithContext(ctx context.Context) ([]string, error)
+	SubscribeWithContext(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error)
 }
 
 // Subscription is a consumer contract modelling an OPC-UA subscription.
 type Subscription interface {
 	Cancel(ctx context.Context) error
-	Monitor(ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error)
+	MonitorWithContext(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error)
 }
 
 // Monitor is an OPC-UA node monitor wrapping an client.
@@ -41,6 +41,7 @@ type Monitor struct {
 }
 
 // NewMonitor creates an OPC-UA node monitor.
+// TODO: remove ctx argument, not used.
 func NewMonitor(ctx context.Context, cfg *Config, c ClientProvider) *Monitor {
 	return &Monitor{
 		client:   c,
@@ -54,7 +55,7 @@ func NewMonitor(ctx context.Context, cfg *Config, c ClientProvider) *Monitor {
 //
 // Provided nodes are string node identifiers.
 func (m *Monitor) Subscribe(ctx context.Context, p PublishingInterval, nsURI string, nodes ...string) error {
-	nsa, err := m.client.NamespaceArray()
+	nsa, err := m.client.NamespaceArrayWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting namespace array: %w", err)
 	}
@@ -75,7 +76,7 @@ func (m *Monitor) Subscribe(ctx context.Context, p PublishingInterval, nsURI str
 		p := &opcua.SubscriptionParameters{
 			Interval: time.Duration(p),
 		}
-		sub, err = m.client.Subscribe(p, m.notifyCh)
+		sub, err = m.client.SubscribeWithContext(ctx, p, m.notifyCh)
 		if err != nil {
 			return fmt.Errorf("error creating subscription: %w", err)
 		}
@@ -99,7 +100,7 @@ func (m *Monitor) Subscribe(ctx context.Context, p PublishingInterval, nsURI str
 		m.items[handle] = node
 	}
 
-	res, err := sub.Monitor(ua.TimestampsToReturnNeither, reqs...)
+	res, err := sub.MonitorWithContext(ctx, ua.TimestampsToReturnNeither, reqs...)
 	if err != nil {
 		return fmt.Errorf("error creating monitored items: %w", err)
 	}
@@ -157,7 +158,7 @@ func (m *Monitor) Stop(ctx context.Context) []error {
 		}
 	}
 
-	if err := m.client.Close(); err != nil {
+	if err := m.client.CloseWithContext(ctx); err != nil {
 		errs = append(errs, err)
 	}
 

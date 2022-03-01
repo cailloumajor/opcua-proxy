@@ -20,7 +20,7 @@ type ClientExtDeps interface {
 
 // RawClientProvider is a consumer contract modelling a raw OPC-UA client.
 type RawClientProvider interface {
-	Call(req *ua.CallMethodRequest) (*ua.CallMethodResult, error)
+	CallWithContext(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error)
 	Connect(context.Context) (err error)
 }
 
@@ -65,14 +65,14 @@ func NewClient(ctx context.Context, cfg *Config, deps ClientExtDeps, sec Securit
 // See https://reference.opcfoundation.org/Core/docs/Part5/9.1
 //
 // Upon success, it returns a slice of monitored items server handles.
-func (c *Client) GetMonitoredItems(subID uint32) ([]uint32, error) {
+func (c *Client) GetMonitoredItems(ctx context.Context, subID uint32) ([]uint32, error) {
 	req := &ua.CallMethodRequest{
 		ObjectID:       ua.NewNumericNodeID(0, id.Server),
 		MethodID:       ua.NewNumericNodeID(0, id.Server_GetMonitoredItems),
 		InputArguments: []*ua.Variant{ua.MustVariant(subID)},
 	}
 
-	res, err := c.Call(req)
+	res, err := c.CallWithContext(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("error calling the method: %w", err)
 	}
