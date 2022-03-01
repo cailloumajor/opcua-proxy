@@ -13,7 +13,9 @@ A microservice to proxy OPC-UA data change subscription through Centrifugo.
 - A Centrifugo server (at least v3.1.1) is configured to [proxy subscriptions][1] to this service.
 - Clients interested in OPC-UA values changes subscribe to Centrifugo with following request fields:
   - *Channel*: `opcua:` [namespace][2], followed by the requested publishing interval in milliseconds.
-  - *Data*: a JSON array of all individual nodes to monitor (structures and arrays must be flattened).
+  - *Data*: JSON object with following fields:
+    - *namespaceURI*: namespace URI for nodes to monitor
+    - *nodes*: array of all individual nodes to monitor (structures and arrays must be flattened)
 
 ## Data flow
 

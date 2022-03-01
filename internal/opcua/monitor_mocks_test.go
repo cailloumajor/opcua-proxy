@@ -5,6 +5,8 @@ package opcua
 
 import (
 	"context"
+	"github.com/gopcua/opcua"
+	"github.com/gopcua/opcua/ua"
 	"sync"
 )
 
@@ -21,6 +23,12 @@ var _ ClientProvider = &ClientProviderMock{}
 // 			CloseFunc: func() error {
 // 				panic("mock out the Close method")
 // 			},
+// 			NamespaceArrayFunc: func() ([]string, error) {
+// 				panic("mock out the NamespaceArray method")
+// 			},
+// 			SubscribeFunc: func(params *opcua.SubscriptionParameters, notifyCh chan *opcua.PublishNotificationData) (Subscription, error) {
+// 				panic("mock out the Subscribe method")
+// 			},
 // 		}
 //
 // 		// use mockedClientProvider in code that requires ClientProvider
@@ -31,13 +39,31 @@ type ClientProviderMock struct {
 	// CloseFunc mocks the Close method.
 	CloseFunc func() error
 
+	// NamespaceArrayFunc mocks the NamespaceArray method.
+	NamespaceArrayFunc func() ([]string, error)
+
+	// SubscribeFunc mocks the Subscribe method.
+	SubscribeFunc func(params *opcua.SubscriptionParameters, notifyCh chan *opcua.PublishNotificationData) (Subscription, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// Close holds details about calls to the Close method.
 		Close []struct {
 		}
+		// NamespaceArray holds details about calls to the NamespaceArray method.
+		NamespaceArray []struct {
+		}
+		// Subscribe holds details about calls to the Subscribe method.
+		Subscribe []struct {
+			// Params is the params argument value.
+			Params *opcua.SubscriptionParameters
+			// NotifyCh is the notifyCh argument value.
+			NotifyCh chan *opcua.PublishNotificationData
+		}
 	}
-	lockClose sync.RWMutex
+	lockClose          sync.RWMutex
+	lockNamespaceArray sync.RWMutex
+	lockSubscribe      sync.RWMutex
 }
 
 // Close calls CloseFunc.
@@ -66,6 +92,67 @@ func (mock *ClientProviderMock) CloseCalls() []struct {
 	return calls
 }
 
+// NamespaceArray calls NamespaceArrayFunc.
+func (mock *ClientProviderMock) NamespaceArray() ([]string, error) {
+	if mock.NamespaceArrayFunc == nil {
+		panic("ClientProviderMock.NamespaceArrayFunc: method is nil but ClientProvider.NamespaceArray was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockNamespaceArray.Lock()
+	mock.calls.NamespaceArray = append(mock.calls.NamespaceArray, callInfo)
+	mock.lockNamespaceArray.Unlock()
+	return mock.NamespaceArrayFunc()
+}
+
+// NamespaceArrayCalls gets all the calls that were made to NamespaceArray.
+// Check the length with:
+//     len(mockedClientProvider.NamespaceArrayCalls())
+func (mock *ClientProviderMock) NamespaceArrayCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockNamespaceArray.RLock()
+	calls = mock.calls.NamespaceArray
+	mock.lockNamespaceArray.RUnlock()
+	return calls
+}
+
+// Subscribe calls SubscribeFunc.
+func (mock *ClientProviderMock) Subscribe(params *opcua.SubscriptionParameters, notifyCh chan *opcua.PublishNotificationData) (Subscription, error) {
+	if mock.SubscribeFunc == nil {
+		panic("ClientProviderMock.SubscribeFunc: method is nil but ClientProvider.Subscribe was just called")
+	}
+	callInfo := struct {
+		Params   *opcua.SubscriptionParameters
+		NotifyCh chan *opcua.PublishNotificationData
+	}{
+		Params:   params,
+		NotifyCh: notifyCh,
+	}
+	mock.lockSubscribe.Lock()
+	mock.calls.Subscribe = append(mock.calls.Subscribe, callInfo)
+	mock.lockSubscribe.Unlock()
+	return mock.SubscribeFunc(params, notifyCh)
+}
+
+// SubscribeCalls gets all the calls that were made to Subscribe.
+// Check the length with:
+//     len(mockedClientProvider.SubscribeCalls())
+func (mock *ClientProviderMock) SubscribeCalls() []struct {
+	Params   *opcua.SubscriptionParameters
+	NotifyCh chan *opcua.PublishNotificationData
+} {
+	var calls []struct {
+		Params   *opcua.SubscriptionParameters
+		NotifyCh chan *opcua.PublishNotificationData
+	}
+	mock.lockSubscribe.RLock()
+	calls = mock.calls.Subscribe
+	mock.lockSubscribe.RUnlock()
+	return calls
+}
+
 // Ensure, that SubscriptionMock does implement Subscription.
 // If this is not the case, regenerate this file with moq.
 var _ Subscription = &SubscriptionMock{}
@@ -79,6 +166,9 @@ var _ Subscription = &SubscriptionMock{}
 // 			CancelFunc: func(ctx context.Context) error {
 // 				panic("mock out the Cancel method")
 // 			},
+// 			MonitorFunc: func(ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error) {
+// 				panic("mock out the Monitor method")
+// 			},
 // 		}
 //
 // 		// use mockedSubscription in code that requires Subscription
@@ -89,6 +179,9 @@ type SubscriptionMock struct {
 	// CancelFunc mocks the Cancel method.
 	CancelFunc func(ctx context.Context) error
 
+	// MonitorFunc mocks the Monitor method.
+	MonitorFunc func(ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// Cancel holds details about calls to the Cancel method.
@@ -96,8 +189,16 @@ type SubscriptionMock struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 		}
+		// Monitor holds details about calls to the Monitor method.
+		Monitor []struct {
+			// Ts is the ts argument value.
+			Ts ua.TimestampsToReturn
+			// Items is the items argument value.
+			Items []*ua.MonitoredItemCreateRequest
+		}
 	}
-	lockCancel sync.RWMutex
+	lockCancel  sync.RWMutex
+	lockMonitor sync.RWMutex
 }
 
 // Cancel calls CancelFunc.
@@ -128,5 +229,40 @@ func (mock *SubscriptionMock) CancelCalls() []struct {
 	mock.lockCancel.RLock()
 	calls = mock.calls.Cancel
 	mock.lockCancel.RUnlock()
+	return calls
+}
+
+// Monitor calls MonitorFunc.
+func (mock *SubscriptionMock) Monitor(ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error) {
+	if mock.MonitorFunc == nil {
+		panic("SubscriptionMock.MonitorFunc: method is nil but Subscription.Monitor was just called")
+	}
+	callInfo := struct {
+		Ts    ua.TimestampsToReturn
+		Items []*ua.MonitoredItemCreateRequest
+	}{
+		Ts:    ts,
+		Items: items,
+	}
+	mock.lockMonitor.Lock()
+	mock.calls.Monitor = append(mock.calls.Monitor, callInfo)
+	mock.lockMonitor.Unlock()
+	return mock.MonitorFunc(ts, items...)
+}
+
+// MonitorCalls gets all the calls that were made to Monitor.
+// Check the length with:
+//     len(mockedSubscription.MonitorCalls())
+func (mock *SubscriptionMock) MonitorCalls() []struct {
+	Ts    ua.TimestampsToReturn
+	Items []*ua.MonitoredItemCreateRequest
+} {
+	var calls []struct {
+		Ts    ua.TimestampsToReturn
+		Items []*ua.MonitoredItemCreateRequest
+	}
+	mock.lockMonitor.RLock()
+	calls = mock.calls.Monitor
+	mock.lockMonitor.RUnlock()
 	return calls
 }

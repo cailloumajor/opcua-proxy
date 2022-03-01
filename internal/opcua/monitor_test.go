@@ -12,6 +12,206 @@ import (
 	"github.com/gopcua/opcua/ua"
 )
 
+func TestMonitorSubscribeError(t *testing.T) {
+	cases := []struct {
+		name                     string
+		ns                       string
+		namespaceArrayError      bool
+		namespaceNotFoundError   bool
+		subscribeError           bool
+		monitorError             bool
+		monitoredItemCreateError bool
+		expectSubCancelCalls     int
+	}{
+		{
+			name:                     "NamespaceArrayError",
+			ns:                       "ns0",
+			namespaceArrayError:      true,
+			subscribeError:           false,
+			monitorError:             false,
+			monitoredItemCreateError: false,
+			expectSubCancelCalls:     0,
+		},
+		{
+			name:                     "NamespaceNotFound",
+			ns:                       "bad",
+			namespaceArrayError:      false,
+			subscribeError:           false,
+			monitorError:             false,
+			monitoredItemCreateError: false,
+			expectSubCancelCalls:     0,
+		},
+		{
+			name:                     "SubscribeError",
+			ns:                       "ns0",
+			namespaceArrayError:      false,
+			subscribeError:           true,
+			monitorError:             false,
+			monitoredItemCreateError: false,
+			expectSubCancelCalls:     0,
+		},
+		{
+			name:                     "MonitorError",
+			ns:                       "ns0",
+			namespaceArrayError:      false,
+			subscribeError:           false,
+			monitorError:             true,
+			monitoredItemCreateError: false,
+			expectSubCancelCalls:     0,
+		},
+		{
+			name:                     "MonitoredItemCreateError",
+			ns:                       "ns0",
+			namespaceArrayError:      false,
+			subscribeError:           false,
+			monitorError:             false,
+			monitoredItemCreateError: true,
+			expectSubCancelCalls:     1,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockedSubscription := &SubscriptionMock{
+				CancelFunc: func(ctx context.Context) error {
+					return nil
+				},
+				MonitorFunc: func(ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error) {
+					if tc.monitorError {
+						return nil, testutils.ErrTesting
+					}
+					resp := &ua.CreateMonitoredItemsResponse{
+						Results: []*ua.MonitoredItemCreateResult{
+							{StatusCode: ua.StatusOK},
+							{StatusCode: ua.StatusOK},
+							{StatusCode: ua.StatusOK},
+						},
+					}
+					if tc.monitoredItemCreateError {
+						resp.Results[1].StatusCode = ua.StatusBadUnexpectedError
+					}
+					return resp, nil
+				},
+			}
+			mockedClientProvider := &ClientProviderMock{
+				NamespaceArrayFunc: func() ([]string, error) {
+					if tc.namespaceArrayError {
+						return nil, testutils.ErrTesting
+					}
+					return []string{"ns0"}, nil
+				},
+				SubscribeFunc: func(params *opcua.SubscriptionParameters, notifyCh chan *opcua.PublishNotificationData) (Subscription, error) {
+					if tc.subscribeError {
+						return nil, testutils.ErrTesting
+					}
+					return mockedSubscription, nil
+				},
+			}
+			m := NewMonitor(context.Background(), &Config{}, mockedClientProvider)
+
+			err := m.Subscribe(context.Background(), PublishingInterval(0), tc.ns, "node1", "node2", "node3")
+
+			if got, want := len(mockedSubscription.CancelCalls()), tc.expectSubCancelCalls; got != want {
+				t.Errorf("Cancel call count: want %d, got %d", want, got)
+			}
+			if msg := testutils.AssertError(t, err, true); msg != "" {
+				t.Errorf(msg)
+			}
+		})
+	}
+}
+
+func TestMonitorSubscribeSuccess(t *testing.T) {
+	cases := []struct {
+		name                   string
+		interval               PublishingInterval
+		nsURI                  string
+		expectSubscribeCalled  bool
+		expectedNamespaceIndex uint16
+	}{
+		{
+			name:                   "SecondNamespace",
+			interval:               0,
+			nsURI:                  "ns1",
+			expectSubscribeCalled:  false,
+			expectedNamespaceIndex: 1,
+		},
+		{
+			name:                   "ThirdNamespace",
+			interval:               0,
+			nsURI:                  "ns2",
+			expectSubscribeCalled:  false,
+			expectedNamespaceIndex: 2,
+		},
+		{
+			name:                   "SubscribeCalled",
+			interval:               1,
+			nsURI:                  "ns0",
+			expectSubscribeCalled:  true,
+			expectedNamespaceIndex: 0,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockedSubscription := &SubscriptionMock{
+				MonitorFunc: func(ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error) {
+					return &ua.CreateMonitoredItemsResponse{}, nil
+				},
+			}
+			mockedClientProvider := &ClientProviderMock{
+				NamespaceArrayFunc: func() ([]string, error) {
+					return []string{"ns0", "ns1", "ns2", "ns3"}, nil
+				},
+				SubscribeFunc: func(params *opcua.SubscriptionParameters, notifyCh chan *opcua.PublishNotificationData) (Subscription, error) {
+					return mockedSubscription, nil
+				},
+			}
+			m := NewMonitor(context.Background(), &Config{}, mockedClientProvider)
+			m.AddSubscription(0, mockedSubscription)
+			nodes := []string{"node1", "node2", "node3"}
+
+			err := m.Subscribe(context.Background(), tc.interval, tc.nsURI, nodes...)
+
+			if got, want := len(mockedClientProvider.NamespaceArrayCalls()), 1; got != want {
+				t.Errorf("NamespaceArray call count: want %d, got %d", want, got)
+			}
+			if tc.expectSubscribeCalled {
+				if got, want := len(mockedClientProvider.SubscribeCalls()), 1; got != want {
+					t.Errorf("Subscribe call count: want %d, got %d", want, got)
+				}
+				if got, want := mockedClientProvider.SubscribeCalls()[0].Params.Interval, time.Duration(tc.interval); got != want {
+					t.Errorf("Subscribe Interval argument: want %v, got %v", want, got)
+				}
+				if got, want := mockedClientProvider.SubscribeCalls()[0].NotifyCh, m.NotifyChannel(); got != want {
+					t.Errorf("Subscribe NotifyCh argument: want %#v, got %#v", want, got)
+				}
+			} else {
+				if got, want := len(mockedClientProvider.SubscribeCalls()), 0; got != want {
+					t.Errorf("Subscribe call count: want %d, got %d", want, got)
+				}
+			}
+			if got, want := len(mockedSubscription.MonitorCalls()), 1; got != want {
+				t.Errorf("Monitor call count: want %d, got %d", want, got)
+			}
+			for i, item := range mockedSubscription.MonitorCalls()[0].Items {
+				if got, want := item.ItemToMonitor.NodeID.Namespace(), tc.expectedNamespaceIndex; got != want {
+					t.Errorf("Monitor call, %q node namespace: want %d, got %d", nodes[i], want, got)
+				}
+				if got, want := item.ItemToMonitor.NodeID.StringID(), nodes[i]; got != want {
+					t.Errorf("Monitor call, %q node string ID: want %q, got %q", nodes[i], want, got)
+				}
+				if got, want := item.RequestedParameters.ClientHandle, uint32(i); got != want {
+					t.Errorf("Monitor call, %q node requested client handle: want %d, got %d", nodes[i], want, got)
+				}
+			}
+			if msg := testutils.AssertError(t, err, false); msg != "" {
+				t.Errorf(msg)
+			}
+		})
+	}
+}
+
 func TestMonitorGetDataChange(t *testing.T) {
 	cases := []struct {
 		name        string

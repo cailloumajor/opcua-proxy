@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
@@ -18,11 +19,14 @@ const QueueSize = 8
 // ClientProvider is a consumer contract modelling an OPC-UA client provider.
 type ClientProvider interface {
 	Close() error
+	NamespaceArray() ([]string, error)
+	Subscribe(params *opcua.SubscriptionParameters, notifyCh chan *opcua.PublishNotificationData) (Subscription, error)
 }
 
 // Subscription is a consumer contract modelling an OPC-UA subscription.
 type Subscription interface {
 	Cancel(ctx context.Context) error
+	Monitor(ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error)
 }
 
 // Monitor is an OPC-UA node monitor wrapping an client.
@@ -44,6 +48,69 @@ func NewMonitor(ctx context.Context, cfg *Config, c ClientProvider) *Monitor {
 		subs:     make(map[PublishingInterval]Subscription),
 		items:    make(map[uint32]string),
 	}
+}
+
+// Subscribe subscribes for nodes data changes on the server.
+//
+// Provided nodes are string node identifiers.
+func (m *Monitor) Subscribe(ctx context.Context, p PublishingInterval, nsURI string, nodes ...string) error {
+	nsa, err := m.client.NamespaceArray()
+	if err != nil {
+		return fmt.Errorf("error getting namespace array: %w", err)
+	}
+
+	nsi := -1
+	for i, uri := range nsa {
+		if uri == nsURI {
+			nsi = i
+			break
+		}
+	}
+	if nsi == -1 {
+		return fmt.Errorf("namespace URI %q not found", nsURI)
+	}
+
+	sub, ok := m.subs[p]
+	if !ok {
+		p := &opcua.SubscriptionParameters{
+			Interval: time.Duration(p),
+		}
+		sub, err = m.client.Subscribe(p, m.notifyCh)
+		if err != nil {
+			return fmt.Errorf("error creating subscription: %w", err)
+		}
+	}
+
+	reqs := make([]*ua.MonitoredItemCreateRequest, len(nodes))
+	for i, node := range nodes {
+		handle := uint32(len(m.items))
+		reqs[i] = &ua.MonitoredItemCreateRequest{
+			ItemToMonitor: &ua.ReadValueID{
+				NodeID:      ua.NewStringNodeID(uint16(nsi), node),
+				AttributeID: ua.AttributeIDValue,
+			},
+			MonitoringMode: ua.MonitoringModeReporting,
+			RequestedParameters: &ua.MonitoringParameters{
+				ClientHandle:     handle,
+				SamplingInterval: -1,
+				QueueSize:        1,
+			},
+		}
+		m.items[handle] = node
+	}
+
+	res, err := sub.Monitor(ua.TimestampsToReturnNeither, reqs...)
+	if err != nil {
+		return fmt.Errorf("error creating monitored items: %w", err)
+	}
+	for i, s := range res.Results {
+		if s.StatusCode != ua.StatusOK {
+			_ = sub.Cancel(ctx) // Desperate attempt...
+			return fmt.Errorf("error creating %q monitored item: %w", nodes[i], err)
+		}
+	}
+
+	return nil
 }
 
 // GetDataChange returns a JSON string from the next dequeued data change notification.

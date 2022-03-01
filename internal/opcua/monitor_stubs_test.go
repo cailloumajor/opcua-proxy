@@ -18,3 +18,7 @@ func (m *Monitor) AddMonitoredItems(nodes ...string) {
 func (m *Monitor) PushNotification(n *opcua.PublishNotificationData) {
 	m.notifyCh <- n
 }
+
+func (m *Monitor) NotifyChannel() chan *opcua.PublishNotificationData {
+	return m.notifyCh
+}
