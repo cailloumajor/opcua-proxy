@@ -41,8 +41,7 @@ type Monitor struct {
 }
 
 // NewMonitor creates an OPC-UA node monitor.
-// TODO: remove ctx argument, not used.
-func NewMonitor(ctx context.Context, cfg *Config, c ClientProvider) *Monitor {
+func NewMonitor(cfg *Config, c ClientProvider) *Monitor {
 	return &Monitor{
 		client:   c,
 		notifyCh: make(chan *opcua.PublishNotificationData, QueueSize),

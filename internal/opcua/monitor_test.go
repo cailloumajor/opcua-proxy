@@ -107,7 +107,7 @@ func TestMonitorSubscribeError(t *testing.T) {
 					return mockedSubscription, nil
 				},
 			}
-			m := NewMonitor(context.Background(), &Config{}, mockedClientProvider)
+			m := NewMonitor(&Config{}, mockedClientProvider)
 
 			err := m.Subscribe(context.Background(), PublishingInterval(0), tc.ns, "node1", "node2", "node3")
 
@@ -167,7 +167,7 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 					return mockedSubscription, nil
 				},
 			}
-			m := NewMonitor(context.Background(), &Config{}, mockedClientProvider)
+			m := NewMonitor(&Config{}, mockedClientProvider)
 			m.AddSubscription(0, mockedSubscription)
 			nodes := []string{"node1", "node2", "node3"}
 
@@ -272,7 +272,7 @@ func TestMonitorGetDataChange(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := NewMonitor(context.Background(), &Config{}, &ClientProviderMock{})
+			m := NewMonitor(&Config{}, &ClientProviderMock{})
 			m.AddMonitoredItems("node0", "node1", "node2", "node3")
 			m.PushNotification(tc.publish)
 
@@ -295,11 +295,7 @@ func TestMonitorStop(t *testing.T) {
 		},
 	}
 
-	m := NewMonitor(
-		context.Background(),
-		&Config{},
-		mockedClientProvider,
-	)
+	m := NewMonitor(&Config{}, mockedClientProvider)
 	var mockedSubscriptions [5]*SubscriptionMock
 	for i := range mockedSubscriptions {
 		mockedSubscription := &SubscriptionMock{
