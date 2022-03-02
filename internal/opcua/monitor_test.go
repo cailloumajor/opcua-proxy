@@ -114,6 +114,12 @@ func TestMonitorSubscribeError(t *testing.T) {
 			if got, want := len(mockedSubscription.CancelCalls()), tc.expectSubCancelCalls; got != want {
 				t.Errorf("Cancel call count: want %d, got %d", want, got)
 			}
+			if got, want := len(m.Subs()), 0; got != want {
+				t.Errorf("subscriptions count: want %d, got %d", want, got)
+			}
+			if got, want := len(m.Items()), 0; got != want {
+				t.Errorf("monitored items count: want %d, got %d", want, got)
+			}
 			if msg := testutils.AssertError(t, err, true); msg != "" {
 				t.Errorf(msg)
 			}
@@ -169,6 +175,7 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 			}
 			m := NewMonitor(&Config{}, mockedClientProvider)
 			m.AddSubscription(0, mockedSubscription)
+			m.AddMonitoredItems("existing1", "existing2")
 			nodes := []string{"node1", "node2", "node3"}
 
 			err := m.Subscribe(context.Background(), tc.interval, tc.nsURI, nodes...)
@@ -201,9 +208,19 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 				if got, want := item.ItemToMonitor.NodeID.StringID(), nodes[i]; got != want {
 					t.Errorf("Monitor call, %q node string ID: want %q, got %q", nodes[i], want, got)
 				}
-				if got, want := item.RequestedParameters.ClientHandle, uint32(i); got != want {
+				if got, want := item.RequestedParameters.ClientHandle, uint32(i+2); got != want {
 					t.Errorf("Monitor call, %q node requested client handle: want %d, got %d", nodes[i], want, got)
 				}
+			}
+			expectedSubsCount := 1
+			if tc.expectSubscribeCalled {
+				expectedSubsCount = 2
+			}
+			if got, want := len(m.Subs()), expectedSubsCount; got != want {
+				t.Errorf("subscriptions count: want %d, got %d", want, got)
+			}
+			if got, want := len(m.Items()), 5; got != want {
+				t.Errorf("monitored items count: want %d, got %d", want, got)
 			}
 			if msg := testutils.AssertError(t, err, false); msg != "" {
 				t.Errorf(msg)

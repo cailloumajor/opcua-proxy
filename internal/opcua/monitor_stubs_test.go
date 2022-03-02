@@ -22,3 +22,11 @@ func (m *Monitor) PushNotification(n *opcua.PublishNotificationData) {
 func (m *Monitor) NotifyChannel() chan *opcua.PublishNotificationData {
 	return m.notifyCh
 }
+
+func (m *Monitor) Subs() map[PublishingInterval]Subscription {
+	return m.subs
+}
+
+func (m *Monitor) Items() map[uint32]string {
+	return m.items
+}

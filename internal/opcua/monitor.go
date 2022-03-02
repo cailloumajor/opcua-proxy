@@ -81,9 +81,14 @@ func (m *Monitor) Subscribe(ctx context.Context, p PublishingInterval, nsURI str
 		}
 	}
 
+	im := make(map[uint32]string)
+	for k, v := range m.items {
+		im[k] = v
+	}
+
 	reqs := make([]*ua.MonitoredItemCreateRequest, len(nodes))
 	for i, node := range nodes {
-		handle := uint32(len(m.items))
+		handle := uint32(len(im))
 		reqs[i] = &ua.MonitoredItemCreateRequest{
 			ItemToMonitor: &ua.ReadValueID{
 				NodeID:      ua.NewStringNodeID(uint16(nsi), node),
@@ -96,7 +101,7 @@ func (m *Monitor) Subscribe(ctx context.Context, p PublishingInterval, nsURI str
 				QueueSize:        1,
 			},
 		}
-		m.items[handle] = node
+		im[handle] = node
 	}
 
 	res, err := sub.MonitorWithContext(ctx, ua.TimestampsToReturnNeither, reqs...)
@@ -109,6 +114,9 @@ func (m *Monitor) Subscribe(ctx context.Context, p PublishingInterval, nsURI str
 			return fmt.Errorf("error creating %q monitored item: %w", nodes[i], err)
 		}
 	}
+
+	m.subs[p] = sub
+	m.items = im
 
 	return nil
 }
