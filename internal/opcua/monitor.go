@@ -153,9 +153,7 @@ func (m *Monitor) GetDataChange() (string, error) {
 // Stop cancels all subscriptions and closes the wrapped client.
 //
 // Monitor must not be used after calling Stop().
-func (m *Monitor) Stop(ctx context.Context) []error {
-	var errs []error
-
+func (m *Monitor) Stop(ctx context.Context) (errs []error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -169,5 +167,5 @@ func (m *Monitor) Stop(ctx context.Context) []error {
 		errs = append(errs, err)
 	}
 
-	return errs
+	return
 }
