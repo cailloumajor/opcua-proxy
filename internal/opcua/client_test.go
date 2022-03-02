@@ -276,3 +276,86 @@ func TestGetMonitoredItems(t *testing.T) {
 		})
 	}
 }
+
+func TestNamespaceIndex(t *testing.T) {
+	cases := []struct {
+		name                string
+		namespaceURI        string
+		namespaceArrayError bool
+		expectIndex         uint16
+		expectError         bool
+	}{
+		{
+			name:                "NamespaceArrayError",
+			namespaceURI:        "ns0",
+			namespaceArrayError: true,
+			expectIndex:         0,
+			expectError:         true,
+		},
+		{
+			name:                "NamespaceNotFound",
+			namespaceURI:        "null",
+			namespaceArrayError: false,
+			expectIndex:         0,
+			expectError:         true,
+		},
+		{
+			name:                "FirstNamespace",
+			namespaceURI:        "ns0",
+			namespaceArrayError: false,
+			expectIndex:         0,
+			expectError:         false,
+		},
+		{
+			name:                "LastNamespace",
+			namespaceURI:        "ns3",
+			namespaceArrayError: false,
+			expectIndex:         3,
+			expectError:         false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockedRawClientProvider := &RawClientProviderMock{
+				ConnectFunc: func(contextMoqParam context.Context) error { return nil },
+				NamespaceArrayWithContextFunc: func(ctx context.Context) ([]string, error) {
+					if tc.namespaceArrayError {
+						return nil, testutils.ErrTesting
+					}
+					return []string{"ns0", "ns1", "ns2", "ns3"}, nil
+				},
+			}
+			mockedClientExtDeps := &ClientExtDepsMock{
+				GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
+					return []*ua.EndpointDescription{}, nil
+				},
+				SelectEndpointFunc: func(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
+					return &ua.EndpointDescription{}
+				},
+				NewClientFunc: func(endpoint string, opts ...opcua.Option) RawClientProvider {
+					return mockedRawClientProvider
+				},
+			}
+			mockedSecurityProvider := &SecurityProviderMock{
+				MessageSecurityModeFunc: func() ua.MessageSecurityMode {
+					return ua.MessageSecurityModeInvalid
+				},
+				PolicyFunc: func() string { return "" },
+				OptionsFunc: func(ep *ua.EndpointDescription) []opcua.Option {
+					return []opcua.Option{}
+				},
+			}
+			c, _ := NewClient(context.Background(), &Config{}, mockedClientExtDeps, mockedSecurityProvider)
+
+			idx, err := c.NamespaceIndex(context.Background(), tc.namespaceURI)
+
+			if got, want := idx, tc.expectIndex; got != want {
+				t.Errorf("index: want %d, got %d", want, got)
+			}
+			if msg := testutils.AssertError(t, err, tc.expectError); msg != "" {
+				t.Errorf(msg)
+			}
+		})
+	}
+}

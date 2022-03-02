@@ -22,6 +22,7 @@ type ClientExtDeps interface {
 type RawClientProvider interface {
 	CallWithContext(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error)
 	Connect(context.Context) (err error)
+	NamespaceArrayWithContext(ctx context.Context) ([]string, error)
 }
 
 // SecurityProvider is a consumer contract modelling an OPC-UA security provider.
@@ -81,4 +82,25 @@ func (c *Client) GetMonitoredItems(ctx context.Context, subID uint32) ([]uint32,
 	}
 
 	return res.OutputArguments[1].Value().([]uint32), nil
+}
+
+// NamespaceIndex returns the index of the provided namespace URI in the server namespace array.
+func (c *Client) NamespaceIndex(ctx context.Context, nsURI string) (uint16, error) {
+	nsa, err := c.NamespaceArrayWithContext(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("error getting namespace array: %w", err)
+	}
+
+	nsi := -1
+	for i, uri := range nsa {
+		if uri == nsURI {
+			nsi = i
+			break
+		}
+	}
+	if nsi == -1 {
+		return 0, fmt.Errorf("namespace URI %q not found", nsURI)
+	}
+
+	return uint16(nsi), nil
 }

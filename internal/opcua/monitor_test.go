@@ -15,8 +15,7 @@ import (
 func TestMonitorSubscribeError(t *testing.T) {
 	cases := []struct {
 		name                     string
-		ns                       string
-		namespaceArrayError      bool
+		namespaceIndexError      bool
 		namespaceNotFoundError   bool
 		subscribeError           bool
 		monitorError             bool
@@ -24,18 +23,8 @@ func TestMonitorSubscribeError(t *testing.T) {
 		expectSubCancelCalls     int
 	}{
 		{
-			name:                     "NamespaceArrayError",
-			ns:                       "ns0",
-			namespaceArrayError:      true,
-			subscribeError:           false,
-			monitorError:             false,
-			monitoredItemCreateError: false,
-			expectSubCancelCalls:     0,
-		},
-		{
-			name:                     "NamespaceNotFound",
-			ns:                       "bad",
-			namespaceArrayError:      false,
+			name:                     "NamespaceIndexError",
+			namespaceIndexError:      true,
 			subscribeError:           false,
 			monitorError:             false,
 			monitoredItemCreateError: false,
@@ -43,8 +32,7 @@ func TestMonitorSubscribeError(t *testing.T) {
 		},
 		{
 			name:                     "SubscribeError",
-			ns:                       "ns0",
-			namespaceArrayError:      false,
+			namespaceIndexError:      false,
 			subscribeError:           true,
 			monitorError:             false,
 			monitoredItemCreateError: false,
@@ -52,8 +40,7 @@ func TestMonitorSubscribeError(t *testing.T) {
 		},
 		{
 			name:                     "MonitorError",
-			ns:                       "ns0",
-			namespaceArrayError:      false,
+			namespaceIndexError:      false,
 			subscribeError:           false,
 			monitorError:             true,
 			monitoredItemCreateError: false,
@@ -61,8 +48,7 @@ func TestMonitorSubscribeError(t *testing.T) {
 		},
 		{
 			name:                     "MonitoredItemCreateError",
-			ns:                       "ns0",
-			namespaceArrayError:      false,
+			namespaceIndexError:      false,
 			subscribeError:           false,
 			monitorError:             false,
 			monitoredItemCreateError: true,
@@ -94,11 +80,11 @@ func TestMonitorSubscribeError(t *testing.T) {
 				},
 			}
 			mockedClientProvider := &ClientProviderMock{
-				NamespaceArrayWithContextFunc: func(ctx context.Context) ([]string, error) {
-					if tc.namespaceArrayError {
-						return nil, testutils.ErrTesting
+				NamespaceIndexFunc: func(ctx context.Context, nsURI string) (uint16, error) {
+					if tc.namespaceIndexError {
+						return 0, testutils.ErrTesting
 					}
-					return []string{"ns0"}, nil
+					return 0, nil
 				},
 				SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error) {
 					if tc.subscribeError {
@@ -109,7 +95,7 @@ func TestMonitorSubscribeError(t *testing.T) {
 			}
 			m := NewMonitor(&Config{}, mockedClientProvider)
 
-			err := m.Subscribe(context.Background(), PublishingInterval(0), tc.ns, "node1", "node2", "node3")
+			err := m.Subscribe(context.Background(), PublishingInterval(0), "", "node1", "node2", "node3")
 
 			if got, want := len(mockedSubscription.CancelCalls()), tc.expectSubCancelCalls; got != want {
 				t.Errorf("Cancel call count: want %d, got %d", want, got)
@@ -129,32 +115,19 @@ func TestMonitorSubscribeError(t *testing.T) {
 
 func TestMonitorSubscribeSuccess(t *testing.T) {
 	cases := []struct {
-		name                   string
-		interval               PublishingInterval
-		nsURI                  string
-		expectSubscribeCalled  bool
-		expectedNamespaceIndex uint16
+		name                  string
+		interval              PublishingInterval
+		expectSubscribeCalled bool
 	}{
 		{
-			name:                   "SecondNamespace",
-			interval:               0,
-			nsURI:                  "ns1",
-			expectSubscribeCalled:  false,
-			expectedNamespaceIndex: 1,
+			name:                  "SubscribeNotCalled",
+			interval:              0,
+			expectSubscribeCalled: false,
 		},
 		{
-			name:                   "ThirdNamespace",
-			interval:               0,
-			nsURI:                  "ns2",
-			expectSubscribeCalled:  false,
-			expectedNamespaceIndex: 2,
-		},
-		{
-			name:                   "SubscribeCalled",
-			interval:               1,
-			nsURI:                  "ns0",
-			expectSubscribeCalled:  true,
-			expectedNamespaceIndex: 0,
+			name:                  "SubscribeCalled",
+			interval:              1,
+			expectSubscribeCalled: true,
 		},
 	}
 
@@ -166,8 +139,8 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 				},
 			}
 			mockedClientProvider := &ClientProviderMock{
-				NamespaceArrayWithContextFunc: func(ctx context.Context) ([]string, error) {
-					return []string{"ns0", "ns1", "ns2", "ns3"}, nil
+				NamespaceIndexFunc: func(ctx context.Context, nsURI string) (uint16, error) {
+					return 2, nil
 				},
 				SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error) {
 					return mockedSubscription, nil
@@ -178,11 +151,8 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 			m.AddMonitoredItems("existing1", "existing2")
 			nodes := []string{"node1", "node2", "node3"}
 
-			err := m.Subscribe(context.Background(), tc.interval, tc.nsURI, nodes...)
+			err := m.Subscribe(context.Background(), tc.interval, "", nodes...)
 
-			if got, want := len(mockedClientProvider.NamespaceArrayWithContextCalls()), 1; got != want {
-				t.Errorf("NamespaceArray call count: want %d, got %d", want, got)
-			}
 			if tc.expectSubscribeCalled {
 				if got, want := len(mockedClientProvider.SubscribeWithContextCalls()), 1; got != want {
 					t.Errorf("Subscribe call count: want %d, got %d", want, got)
@@ -202,7 +172,7 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 				t.Errorf("Monitor call count: want %d, got %d", want, got)
 			}
 			for i, item := range mockedSubscription.MonitorWithContextCalls()[0].Items {
-				if got, want := item.ItemToMonitor.NodeID.Namespace(), tc.expectedNamespaceIndex; got != want {
+				if got, want := item.ItemToMonitor.NodeID.Namespace(), uint16(2); got != want {
 					t.Errorf("Monitor call, %q node namespace: want %d, got %d", nodes[i], want, got)
 				}
 				if got, want := item.ItemToMonitor.NodeID.StringID(), nodes[i]; got != want {

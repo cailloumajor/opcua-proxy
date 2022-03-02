@@ -19,7 +19,7 @@ const QueueSize = 8
 // ClientProvider is a consumer contract modelling an OPC-UA client provider.
 type ClientProvider interface {
 	CloseWithContext(ctx context.Context) error
-	NamespaceArrayWithContext(ctx context.Context) ([]string, error)
+	NamespaceIndex(ctx context.Context, nsURI string) (uint16, error)
 	SubscribeWithContext(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error)
 }
 
@@ -54,20 +54,9 @@ func NewMonitor(cfg *Config, c ClientProvider) *Monitor {
 //
 // Provided nodes are string node identifiers.
 func (m *Monitor) Subscribe(ctx context.Context, p PublishingInterval, nsURI string, nodes ...string) error {
-	nsa, err := m.client.NamespaceArrayWithContext(ctx)
+	nsi, err := m.client.NamespaceIndex(ctx, nsURI)
 	if err != nil {
-		return fmt.Errorf("error getting namespace array: %w", err)
-	}
-
-	nsi := -1
-	for i, uri := range nsa {
-		if uri == nsURI {
-			nsi = i
-			break
-		}
-	}
-	if nsi == -1 {
-		return fmt.Errorf("namespace URI %q not found", nsURI)
+		return err
 	}
 
 	m.mu.Lock()
@@ -94,7 +83,7 @@ func (m *Monitor) Subscribe(ctx context.Context, p PublishingInterval, nsURI str
 		handle := uint32(len(im))
 		reqs[i] = &ua.MonitoredItemCreateRequest{
 			ItemToMonitor: &ua.ReadValueID{
-				NodeID:      ua.NewStringNodeID(uint16(nsi), node),
+				NodeID:      ua.NewStringNodeID(nsi, node),
 				AttributeID: ua.AttributeIDValue,
 			},
 			MonitoringMode: ua.MonitoringModeReporting,

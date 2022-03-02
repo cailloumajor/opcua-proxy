@@ -207,6 +207,9 @@ var _ RawClientProvider = &RawClientProviderMock{}
 // 			ConnectFunc: func(contextMoqParam context.Context) error {
 // 				panic("mock out the Connect method")
 // 			},
+// 			NamespaceArrayWithContextFunc: func(ctx context.Context) ([]string, error) {
+// 				panic("mock out the NamespaceArrayWithContext method")
+// 			},
 // 		}
 //
 // 		// use mockedRawClientProvider in code that requires RawClientProvider
@@ -219,6 +222,9 @@ type RawClientProviderMock struct {
 
 	// ConnectFunc mocks the Connect method.
 	ConnectFunc func(contextMoqParam context.Context) error
+
+	// NamespaceArrayWithContextFunc mocks the NamespaceArrayWithContext method.
+	NamespaceArrayWithContextFunc func(ctx context.Context) ([]string, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -234,9 +240,15 @@ type RawClientProviderMock struct {
 			// ContextMoqParam is the contextMoqParam argument value.
 			ContextMoqParam context.Context
 		}
+		// NamespaceArrayWithContext holds details about calls to the NamespaceArrayWithContext method.
+		NamespaceArrayWithContext []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
 	}
-	lockCallWithContext sync.RWMutex
-	lockConnect         sync.RWMutex
+	lockCallWithContext           sync.RWMutex
+	lockConnect                   sync.RWMutex
+	lockNamespaceArrayWithContext sync.RWMutex
 }
 
 // CallWithContext calls CallWithContextFunc.
@@ -302,6 +314,37 @@ func (mock *RawClientProviderMock) ConnectCalls() []struct {
 	mock.lockConnect.RLock()
 	calls = mock.calls.Connect
 	mock.lockConnect.RUnlock()
+	return calls
+}
+
+// NamespaceArrayWithContext calls NamespaceArrayWithContextFunc.
+func (mock *RawClientProviderMock) NamespaceArrayWithContext(ctx context.Context) ([]string, error) {
+	if mock.NamespaceArrayWithContextFunc == nil {
+		panic("RawClientProviderMock.NamespaceArrayWithContextFunc: method is nil but RawClientProvider.NamespaceArrayWithContext was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockNamespaceArrayWithContext.Lock()
+	mock.calls.NamespaceArrayWithContext = append(mock.calls.NamespaceArrayWithContext, callInfo)
+	mock.lockNamespaceArrayWithContext.Unlock()
+	return mock.NamespaceArrayWithContextFunc(ctx)
+}
+
+// NamespaceArrayWithContextCalls gets all the calls that were made to NamespaceArrayWithContext.
+// Check the length with:
+//     len(mockedRawClientProvider.NamespaceArrayWithContextCalls())
+func (mock *RawClientProviderMock) NamespaceArrayWithContextCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockNamespaceArrayWithContext.RLock()
+	calls = mock.calls.NamespaceArrayWithContext
+	mock.lockNamespaceArrayWithContext.RUnlock()
 	return calls
 }
 

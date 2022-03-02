@@ -23,8 +23,8 @@ var _ ClientProvider = &ClientProviderMock{}
 // 			CloseWithContextFunc: func(ctx context.Context) error {
 // 				panic("mock out the CloseWithContext method")
 // 			},
-// 			NamespaceArrayWithContextFunc: func(ctx context.Context) ([]string, error) {
-// 				panic("mock out the NamespaceArrayWithContext method")
+// 			NamespaceIndexFunc: func(ctx context.Context, nsURI string) (uint16, error) {
+// 				panic("mock out the NamespaceIndex method")
 // 			},
 // 			SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error) {
 // 				panic("mock out the SubscribeWithContext method")
@@ -39,8 +39,8 @@ type ClientProviderMock struct {
 	// CloseWithContextFunc mocks the CloseWithContext method.
 	CloseWithContextFunc func(ctx context.Context) error
 
-	// NamespaceArrayWithContextFunc mocks the NamespaceArrayWithContext method.
-	NamespaceArrayWithContextFunc func(ctx context.Context) ([]string, error)
+	// NamespaceIndexFunc mocks the NamespaceIndex method.
+	NamespaceIndexFunc func(ctx context.Context, nsURI string) (uint16, error)
 
 	// SubscribeWithContextFunc mocks the SubscribeWithContext method.
 	SubscribeWithContextFunc func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error)
@@ -52,10 +52,12 @@ type ClientProviderMock struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 		}
-		// NamespaceArrayWithContext holds details about calls to the NamespaceArrayWithContext method.
-		NamespaceArrayWithContext []struct {
+		// NamespaceIndex holds details about calls to the NamespaceIndex method.
+		NamespaceIndex []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
+			// NsURI is the nsURI argument value.
+			NsURI string
 		}
 		// SubscribeWithContext holds details about calls to the SubscribeWithContext method.
 		SubscribeWithContext []struct {
@@ -67,9 +69,9 @@ type ClientProviderMock struct {
 			NotifyCh chan<- *opcua.PublishNotificationData
 		}
 	}
-	lockCloseWithContext          sync.RWMutex
-	lockNamespaceArrayWithContext sync.RWMutex
-	lockSubscribeWithContext      sync.RWMutex
+	lockCloseWithContext     sync.RWMutex
+	lockNamespaceIndex       sync.RWMutex
+	lockSubscribeWithContext sync.RWMutex
 }
 
 // CloseWithContext calls CloseWithContextFunc.
@@ -103,34 +105,38 @@ func (mock *ClientProviderMock) CloseWithContextCalls() []struct {
 	return calls
 }
 
-// NamespaceArrayWithContext calls NamespaceArrayWithContextFunc.
-func (mock *ClientProviderMock) NamespaceArrayWithContext(ctx context.Context) ([]string, error) {
-	if mock.NamespaceArrayWithContextFunc == nil {
-		panic("ClientProviderMock.NamespaceArrayWithContextFunc: method is nil but ClientProvider.NamespaceArrayWithContext was just called")
+// NamespaceIndex calls NamespaceIndexFunc.
+func (mock *ClientProviderMock) NamespaceIndex(ctx context.Context, nsURI string) (uint16, error) {
+	if mock.NamespaceIndexFunc == nil {
+		panic("ClientProviderMock.NamespaceIndexFunc: method is nil but ClientProvider.NamespaceIndex was just called")
 	}
 	callInfo := struct {
-		Ctx context.Context
+		Ctx   context.Context
+		NsURI string
 	}{
-		Ctx: ctx,
+		Ctx:   ctx,
+		NsURI: nsURI,
 	}
-	mock.lockNamespaceArrayWithContext.Lock()
-	mock.calls.NamespaceArrayWithContext = append(mock.calls.NamespaceArrayWithContext, callInfo)
-	mock.lockNamespaceArrayWithContext.Unlock()
-	return mock.NamespaceArrayWithContextFunc(ctx)
+	mock.lockNamespaceIndex.Lock()
+	mock.calls.NamespaceIndex = append(mock.calls.NamespaceIndex, callInfo)
+	mock.lockNamespaceIndex.Unlock()
+	return mock.NamespaceIndexFunc(ctx, nsURI)
 }
 
-// NamespaceArrayWithContextCalls gets all the calls that were made to NamespaceArrayWithContext.
+// NamespaceIndexCalls gets all the calls that were made to NamespaceIndex.
 // Check the length with:
-//     len(mockedClientProvider.NamespaceArrayWithContextCalls())
-func (mock *ClientProviderMock) NamespaceArrayWithContextCalls() []struct {
-	Ctx context.Context
+//     len(mockedClientProvider.NamespaceIndexCalls())
+func (mock *ClientProviderMock) NamespaceIndexCalls() []struct {
+	Ctx   context.Context
+	NsURI string
 } {
 	var calls []struct {
-		Ctx context.Context
+		Ctx   context.Context
+		NsURI string
 	}
-	mock.lockNamespaceArrayWithContext.RLock()
-	calls = mock.calls.NamespaceArrayWithContext
-	mock.lockNamespaceArrayWithContext.RUnlock()
+	mock.lockNamespaceIndex.RLock()
+	calls = mock.calls.NamespaceIndex
+	mock.lockNamespaceIndex.RUnlock()
 	return calls
 }
 
