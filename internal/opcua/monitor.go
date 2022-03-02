@@ -70,6 +70,9 @@ func (m *Monitor) Subscribe(ctx context.Context, p PublishingInterval, nsURI str
 		return fmt.Errorf("namespace URI %q not found", nsURI)
 	}
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	sub, ok := m.subs[p]
 	if !ok {
 		p := &opcua.SubscriptionParameters{
