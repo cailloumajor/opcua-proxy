@@ -305,6 +305,87 @@ func TestMonitorGetDataChange(t *testing.T) {
 	}
 }
 
+func TestMonitorPurge(t *testing.T) {
+	cases := []struct {
+		name                  string
+		intervals             []PublishingInterval
+		cancelError           bool
+		expectCancelCallCount int
+		expectRemainingSubs   int
+		expectErrorCount      int
+	}{
+		{
+			name:                  "NoSubscriptionRemoved",
+			intervals:             []PublishingInterval{1, 2, 3},
+			cancelError:           false,
+			expectCancelCallCount: 0,
+			expectRemainingSubs:   3,
+			expectErrorCount:      0,
+		},
+		{
+			name:                  "OneSubscriptionRemovedNoError",
+			intervals:             []PublishingInterval{2, 3},
+			cancelError:           false,
+			expectCancelCallCount: 1,
+			expectRemainingSubs:   2,
+			expectErrorCount:      0,
+		},
+		{
+			name:                  "TwoSubscriptionsRemovedNoError",
+			intervals:             []PublishingInterval{2},
+			cancelError:           false,
+			expectCancelCallCount: 2,
+			expectRemainingSubs:   1,
+			expectErrorCount:      0,
+		},
+		{
+			name:                  "OneSubscriptionRemovedWithError",
+			intervals:             []PublishingInterval{1, 2},
+			cancelError:           true,
+			expectCancelCallCount: 1,
+			expectRemainingSubs:   3,
+			expectErrorCount:      1,
+		},
+		{
+			name:                  "TwoSubscriptionsRemovedWithError",
+			intervals:             []PublishingInterval{2},
+			cancelError:           true,
+			expectCancelCallCount: 2,
+			expectRemainingSubs:   3,
+			expectErrorCount:      2,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockedSubscription := &SubscriptionMock{
+				CancelFunc: func(ctx context.Context) error {
+					if tc.cancelError {
+						return testutils.ErrTesting
+					}
+					return nil
+				},
+			}
+			m := NewMonitor(&Config{}, &ClientProviderMock{})
+			m.AddSubscription(1, mockedSubscription)
+			m.AddSubscription(2, &SubscriptionMock{})
+			m.AddSubscription(3, mockedSubscription)
+
+			errs := m.Purge(context.Background(), tc.intervals)
+
+			if got, want := len(mockedSubscription.CancelCalls()), tc.expectCancelCallCount; got != want {
+				t.Errorf("Cancel calls count: want %d, got %d", want, got)
+			}
+			if got, want := len(m.Subs()), tc.expectRemainingSubs; got != want {
+				t.Errorf("remaining subscriptions count: want %d, got %d", want, got)
+			}
+			if got, want := len(errs), tc.expectErrorCount; got != want {
+				t.Errorf("errors count: want %d, got %d", want, got)
+			}
+		})
+	}
+}
+
 func TestMonitorStop(t *testing.T) {
 	mockedClientProvider := &ClientProviderMock{
 		CloseWithContextFunc: func(ctx context.Context) error {

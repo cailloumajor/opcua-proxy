@@ -153,6 +153,26 @@ func (m *Monitor) GetDataChange() (string, error) {
 	return string(j), nil
 }
 
+// Purge unsubscribes and removes subscriptions for intervals that do not exist in provided slice.
+func (m *Monitor) Purge(ctx context.Context, intervals []PublishingInterval) (errs []error) {
+	is := make(map[PublishingInterval]bool)
+	for _, interval := range intervals {
+		is[interval] = true
+	}
+
+	for interval, sub := range m.subs {
+		if !is[interval] {
+			if err := sub.Cancel(ctx); err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			delete(m.subs, interval)
+		}
+	}
+
+	return
+}
+
 // Stop cancels all subscriptions and closes the wrapped client.
 //
 // Monitor must not be used after calling Stop().
