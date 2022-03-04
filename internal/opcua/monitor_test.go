@@ -2,6 +2,7 @@ package opcua_test
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -95,7 +96,7 @@ func TestMonitorSubscribeError(t *testing.T) {
 			}
 			m := NewMonitor(&Config{}, mockedClientProvider)
 
-			err := m.Subscribe(context.Background(), 0, "", "node1", "node2", "node3")
+			err := m.Subscribe(context.Background(), "", "", 0, []string{"node1", "node2", "node3"})
 
 			if got, want := len(mockedSubscription.CancelCalls()), tc.expectSubCancelCalls; got != want {
 				t.Errorf("Cancel call count: want %d, got %d", want, got)
@@ -116,25 +117,40 @@ func TestMonitorSubscribeError(t *testing.T) {
 func TestMonitorSubscribeSuccess(t *testing.T) {
 	cases := []struct {
 		name                  string
+		subName               string
 		interval              time.Duration
-		expectSubscribeCalled bool
+		expectNewSubscription bool
 	}{
 		{
-			name:                  "SubscribeNotCalled",
+			name:                  "ExistingSubscription",
+			subName:               "sub0",
 			interval:              0,
-			expectSubscribeCalled: false,
+			expectNewSubscription: false,
 		},
 		{
-			name:                  "SubscribeCalled",
+			name:                  "NewSubscription",
+			subName:               "sub1",
 			interval:              1,
-			expectSubscribeCalled: true,
+			expectNewSubscription: true,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			sentinelNodes := []string{"node1", "node2", "node3"}
 			mockedSubscription := &SubscriptionMock{
 				MonitorWithContextFunc: func(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error) {
+					for i, item := range items {
+						if got, want := item.ItemToMonitor.NodeID.Namespace(), uint16(2); got != want {
+							t.Errorf("Monitor call, %q node namespace: want %d, got %d", sentinelNodes[i], want, got)
+						}
+						if got, want := item.ItemToMonitor.NodeID.StringID(), sentinelNodes[i]; got != want {
+							t.Errorf("Monitor call, %q node string ID: want %q, got %q", sentinelNodes[i], want, got)
+						}
+						if got, want := item.RequestedParameters.ClientHandle, uint32(i+2); got != want {
+							t.Errorf("Monitor call, %q node requested client handle: want %d, got %d", sentinelNodes[i], want, got)
+						}
+					}
 					return &ua.CreateMonitoredItemsResponse{}, nil
 				},
 			}
@@ -143,53 +159,40 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 					return 2, nil
 				},
 				SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error) {
+					if got, want := params.Interval, time.Duration(tc.interval); got != want {
+						t.Errorf("Subscribe Interval argument: want %v, got %v", want, got)
+					}
 					return mockedSubscription, nil
 				},
 			}
 			m := NewMonitor(&Config{}, mockedClientProvider)
-			m.AddSubscription(0, mockedSubscription)
+			m.AddSubscription("sub0", 0, mockedSubscription)
 			m.AddMonitoredItems("existing1", "existing2")
-			nodes := []string{"node1", "node2", "node3"}
 
-			err := m.Subscribe(context.Background(), tc.interval, "", nodes...)
+			err := m.Subscribe(context.Background(), "", tc.subName, tc.interval, sentinelNodes)
 
-			if tc.expectSubscribeCalled {
-				if got, want := len(mockedClientProvider.SubscribeWithContextCalls()), 1; got != want {
-					t.Errorf("Subscribe call count: want %d, got %d", want, got)
-				}
-				if got, want := mockedClientProvider.SubscribeWithContextCalls()[0].Params.Interval, time.Duration(tc.interval); got != want {
-					t.Errorf("Subscribe Interval argument: want %v, got %v", want, got)
-				}
-				if got, want := mockedClientProvider.SubscribeWithContextCalls()[0].NotifyCh, m.NotifyChannel(); got != want {
-					t.Errorf("Subscribe NotifyCh argument: want %#v, got %#v", want, got)
-				}
-			} else {
-				if got, want := len(mockedClientProvider.SubscribeWithContextCalls()), 0; got != want {
-					t.Errorf("Subscribe call count: want %d, got %d", want, got)
-				}
+			var (
+				expectSubscribeCalled     = 0
+				expectMonitorCalled       = 0
+				expectSubscriptionsCount  = 1
+				expectMonitoredItemsCount = 2
+			)
+			if tc.expectNewSubscription {
+				expectSubscribeCalled = 1
+				expectMonitorCalled = 1
+				expectSubscriptionsCount = 2
+				expectMonitoredItemsCount = 5
 			}
-			if got, want := len(mockedSubscription.MonitorWithContextCalls()), 1; got != want {
+			if got, want := len(mockedClientProvider.SubscribeWithContextCalls()), expectSubscribeCalled; got != want {
+				t.Errorf("Subscribe call count: want %d, got %d", want, got)
+			}
+			if got, want := len(mockedSubscription.MonitorWithContextCalls()), expectMonitorCalled; got != want {
 				t.Errorf("Monitor call count: want %d, got %d", want, got)
 			}
-			for i, item := range mockedSubscription.MonitorWithContextCalls()[0].Items {
-				if got, want := item.ItemToMonitor.NodeID.Namespace(), uint16(2); got != want {
-					t.Errorf("Monitor call, %q node namespace: want %d, got %d", nodes[i], want, got)
-				}
-				if got, want := item.ItemToMonitor.NodeID.StringID(), nodes[i]; got != want {
-					t.Errorf("Monitor call, %q node string ID: want %q, got %q", nodes[i], want, got)
-				}
-				if got, want := item.RequestedParameters.ClientHandle, uint32(i+2); got != want {
-					t.Errorf("Monitor call, %q node requested client handle: want %d, got %d", nodes[i], want, got)
-				}
-			}
-			expectedSubsCount := 1
-			if tc.expectSubscribeCalled {
-				expectedSubsCount = 2
-			}
-			if got, want := len(m.Subs()), expectedSubsCount; got != want {
+			if got, want := len(m.Subs()), expectSubscriptionsCount; got != want {
 				t.Errorf("subscriptions count: want %d, got %d", want, got)
 			}
-			if got, want := len(m.Items()), 5; got != want {
+			if got, want := len(m.Items()), expectMonitoredItemsCount; got != want {
 				t.Errorf("monitored items count: want %d, got %d", want, got)
 			}
 			if msg := testutils.AssertError(t, err, false); msg != "" {
@@ -337,9 +340,9 @@ func TestMonitorPurge(t *testing.T) {
 				},
 			}
 			m := NewMonitor(&Config{}, &ClientProviderMock{})
-			m.AddSubscription(1, mockedSubscription)
-			m.AddSubscription(2, &SubscriptionMock{})
-			m.AddSubscription(3, mockedSubscription)
+			m.AddSubscription("sub0", 1, mockedSubscription)
+			m.AddSubscription("sub1", 2, &SubscriptionMock{})
+			m.AddSubscription("sub2", 3, mockedSubscription)
 
 			errs := m.Purge(context.Background(), tc.intervals)
 
@@ -375,7 +378,7 @@ func TestMonitorStop(t *testing.T) {
 			},
 		}
 		mockedSubscriptions[i] = mockedSubscription
-		m.AddSubscription(time.Duration(i+1)*time.Second, mockedSubscription)
+		m.AddSubscription(fmt.Sprintf("sub%d", i), time.Duration(i+1)*time.Second, mockedSubscription)
 	}
 
 	errs := m.Stop(context.Background())

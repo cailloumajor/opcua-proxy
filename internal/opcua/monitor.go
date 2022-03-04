@@ -30,6 +30,11 @@ type Subscription interface {
 	MonitorWithContext(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error)
 }
 
+type subscriptionID struct {
+	name     string
+	interval time.Duration
+}
+
 // Monitor is an OPC-UA node monitor wrapping an client.
 type Monitor struct {
 	client ClientProvider
@@ -37,7 +42,7 @@ type Monitor struct {
 	notifyCh chan *opcua.PublishNotificationData
 
 	mu    sync.RWMutex
-	subs  map[time.Duration]Subscription
+	subs  map[subscriptionID]Subscription
 	items map[uint32]string
 }
 
@@ -46,7 +51,7 @@ func NewMonitor(cfg *Config, c ClientProvider) *Monitor {
 	return &Monitor{
 		client:   c,
 		notifyCh: make(chan *opcua.PublishNotificationData, QueueSize),
-		subs:     make(map[time.Duration]Subscription),
+		subs:     make(map[subscriptionID]Subscription),
 		items:    make(map[uint32]string),
 	}
 }
@@ -54,24 +59,34 @@ func NewMonitor(cfg *Config, c ClientProvider) *Monitor {
 // Subscribe subscribes for nodes data changes on the server.
 //
 // Provided nodes are string node identifiers.
-func (m *Monitor) Subscribe(ctx context.Context, interval time.Duration, nsURI string, nodes ...string) error {
+func (m *Monitor) Subscribe(ctx context.Context, nsURI string, name string, interval time.Duration, nodes []string) error {
 	nsi, err := m.client.NamespaceIndex(ctx, nsURI)
 	if err != nil {
 		return err
 	}
 
+	si := subscriptionID{
+		name:     name,
+		interval: interval,
+	}
+
+	m.mu.RLock()
+	_, exists := m.subs[si]
+	m.mu.RUnlock()
+
+	if exists {
+		return nil
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	sub, ok := m.subs[interval]
-	if !ok {
-		p := &opcua.SubscriptionParameters{
-			Interval: interval,
-		}
-		sub, err = m.client.SubscribeWithContext(ctx, p, m.notifyCh)
-		if err != nil {
-			return fmt.Errorf("error creating subscription: %w", err)
-		}
+	p := &opcua.SubscriptionParameters{
+		Interval: interval,
+	}
+	sub, err := m.client.SubscribeWithContext(ctx, p, m.notifyCh)
+	if err != nil {
+		return fmt.Errorf("error creating subscription: %w", err)
 	}
 
 	im := make(map[uint32]string)
@@ -108,7 +123,7 @@ func (m *Monitor) Subscribe(ctx context.Context, interval time.Duration, nsURI s
 		}
 	}
 
-	m.subs[interval] = sub
+	m.subs[si] = sub
 	m.items = im
 
 	return nil
@@ -150,13 +165,13 @@ func (m *Monitor) Purge(ctx context.Context, intervals []time.Duration) (errs []
 		is[interval] = true
 	}
 
-	for interval, sub := range m.subs {
-		if !is[interval] {
+	for id, sub := range m.subs {
+		if !is[id.interval] {
 			if err := sub.Cancel(ctx); err != nil {
 				errs = append(errs, err)
 				continue
 			}
-			delete(m.subs, interval)
+			delete(m.subs, id)
 		}
 	}
 

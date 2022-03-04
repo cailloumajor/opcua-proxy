@@ -8,20 +8,12 @@ import (
 )
 
 const nsSeparator = ":"
-const channelPrefix = "opcua@"
-
-type sentinelError string
-
-func (e sentinelError) Error() string {
-	return string(e)
-}
-
-// ErrNotOpcUaChannel is issued when the channel is not suitable for OPC-UA.
-const ErrNotOpcUaChannel = sentinelError("not an OPC-UA suitable channel")
+const nameIntervalSeparator = "@"
 
 // Channel represents a Centrifugo channel suitable for OPC-UA use.
 type Channel struct {
 	ns       string
+	name     string
 	interval time.Duration
 }
 
@@ -32,17 +24,20 @@ type Channel struct {
 // See "Specifications" section in README.md for the format of the channel.
 func ParseChannel(s string) (*Channel, error) {
 	p := strings.SplitN(s, nsSeparator, 2)
-	if len(p) < 2 {
+	if len(p) != 2 {
 		return nil, fmt.Errorf("missing namespace in %q channel", s)
 	}
+	ns, name := p[0], p[1]
 
-	if !strings.HasPrefix(p[1], channelPrefix) {
-		return nil, ErrNotOpcUaChannel
+	p = strings.SplitN(name, nameIntervalSeparator, 2)
+	if len(p) != 2 {
+		return nil, fmt.Errorf("bad channel name format: %q", name)
+	}
+	if p[0] == "" {
+		return nil, fmt.Errorf("empty channel name: %q", p[0])
 	}
 
-	i := strings.TrimPrefix(p[1], channelPrefix)
-
-	ms, err := strconv.ParseUint(i, 10, 64)
+	ms, err := strconv.ParseUint(p[1], 10, 64)
 	switch {
 	case err != nil:
 		return nil, fmt.Errorf("error parsing interval: %w", err)
@@ -51,9 +46,15 @@ func ParseChannel(s string) (*Channel, error) {
 	}
 
 	return &Channel{
-		ns:       p[0],
+		ns:       ns,
+		name:     p[0],
 		interval: time.Duration(ms) * time.Millisecond,
 	}, nil
+}
+
+// Name returns the channel name.
+func (c *Channel) Name() string {
+	return c.name
 }
 
 // Interval returns the channel interval.
@@ -63,5 +64,5 @@ func (c *Channel) Interval() time.Duration {
 
 // String returns the string representation of the channel.
 func (c *Channel) String() string {
-	return fmt.Sprint(c.ns, nsSeparator, channelPrefix, c.interval.Milliseconds())
+	return fmt.Sprint(c.ns, nsSeparator, c.name, nameIntervalSeparator, c.interval.Milliseconds())
 }

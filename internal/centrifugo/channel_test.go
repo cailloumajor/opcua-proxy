@@ -1,7 +1,6 @@
 package centrifugo_test
 
 import (
-	"errors"
 	"testing"
 	"time"
 
@@ -10,12 +9,15 @@ import (
 )
 
 func TestParseChannelSuccess(t *testing.T) {
-	const channel = `ns:opcua@1800000`
+	const channel = `ns:my_tags@1800000`
 
 	c, err := ParseChannel(channel)
 
 	if msg := testutils.AssertError(t, err, false); msg != "" {
 		t.Errorf(msg)
+	}
+	if got, want := c.Name(), "my_tags"; got != want {
+		t.Errorf("Name method: want %q, got %q", want, got)
 	}
 	if got, want := c.Interval(), 30*time.Minute; got != want {
 		t.Errorf("Interval method: want %v, got %v", want, got)
@@ -27,34 +29,32 @@ func TestParseChannelSuccess(t *testing.T) {
 
 func TestParseChannelError(t *testing.T) {
 	cases := []struct {
-		name                  string
-		input                 string
-		expectNotOpcUaChannel bool
+		name  string
+		input string
 	}{
 		{
-			name:                  "MissingNamespace",
-			input:                 "opcua@1800000",
-			expectNotOpcUaChannel: false,
+			name:  "MissingNamespace",
+			input: "my_tags@1800000",
 		},
 		{
-			name:                  "NotOpcUaChannel",
-			input:                 `ns:1800000`,
-			expectNotOpcUaChannel: true,
+			name:  "NoInterval",
+			input: "ns:my_tags",
 		},
 		{
-			name:                  "IntervalParsingError",
-			input:                 `ns:opcua@interval`,
-			expectNotOpcUaChannel: false,
+			name:  "EmptyName",
+			input: "ns:@1800000",
 		},
 		{
-			name:                  "NegativeInterval",
-			input:                 `ns:opcua@-1800000`,
-			expectNotOpcUaChannel: false,
+			name:  "IntervalParsingError",
+			input: `ns:my_tags@interval`,
 		},
 		{
-			name:                  "IntervalTooBig",
-			input:                 `ns:opcua@9223372036855`,
-			expectNotOpcUaChannel: false,
+			name:  "NegativeInterval",
+			input: `ns:my_tags@-1800000`,
+		},
+		{
+			name:  "IntervalTooBig",
+			input: `ns:my_tags@9223372036855`,
 		},
 	}
 
@@ -64,12 +64,6 @@ func TestParseChannelError(t *testing.T) {
 
 			if msg := testutils.AssertError(t, err, true); msg != "" {
 				t.Errorf(msg)
-			}
-			if !tc.expectNotOpcUaChannel && errors.Is(err, ErrNotOpcUaChannel) {
-				t.Errorf("unexpected ErrNotOpcUaChannel")
-			}
-			if tc.expectNotOpcUaChannel && !errors.Is(err, ErrNotOpcUaChannel) {
-				t.Errorf("expected ErrNotOpcUaChannel, got %v", err)
 			}
 		})
 	}

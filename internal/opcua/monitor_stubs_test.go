@@ -6,8 +6,8 @@ import (
 	"github.com/gopcua/opcua"
 )
 
-func (m *Monitor) AddSubscription(interval time.Duration, sub Subscription) {
-	m.subs[interval] = sub
+func (m *Monitor) AddSubscription(name string, interval time.Duration, sub Subscription) {
+	m.subs[subscriptionID{name: name, interval: interval}] = sub
 }
 
 func (m *Monitor) AddMonitoredItems(nodes ...string) {
@@ -21,11 +21,7 @@ func (m *Monitor) PushNotification(n *opcua.PublishNotificationData) {
 	m.notifyCh <- n
 }
 
-func (m *Monitor) NotifyChannel() chan *opcua.PublishNotificationData {
-	return m.notifyCh
-}
-
-func (m *Monitor) Subs() map[time.Duration]Subscription {
+func (m *Monitor) Subs() map[subscriptionID]Subscription {
 	return m.subs
 }
 
