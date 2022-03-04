@@ -8,26 +8,26 @@ import (
 	"sync"
 )
 
-// Ensure, that OPCUAClientMock does implement OPCUAClient.
+// Ensure, that MonitorProviderMock does implement MonitorProvider.
 // If this is not the case, regenerate this file with moq.
-var _ OPCUAClient = &OPCUAClientMock{}
+var _ MonitorProvider = &MonitorProviderMock{}
 
-// OPCUAClientMock is a mock implementation of OPCUAClient.
+// MonitorProviderMock is a mock implementation of MonitorProvider.
 //
-// 	func TestSomethingThatUsesOPCUAClient(t *testing.T) {
+// 	func TestSomethingThatUsesMonitorProvider(t *testing.T) {
 //
-// 		// make and configure a mocked OPCUAClient
-// 		mockedOPCUAClient := &OPCUAClientMock{
+// 		// make and configure a mocked MonitorProvider
+// 		mockedMonitorProvider := &MonitorProviderMock{
 // 			StateFunc: func() opcua.ConnState {
 // 				panic("mock out the State method")
 // 			},
 // 		}
 //
-// 		// use mockedOPCUAClient in code that requires OPCUAClient
+// 		// use mockedMonitorProvider in code that requires MonitorProvider
 // 		// and then make assertions.
 //
 // 	}
-type OPCUAClientMock struct {
+type MonitorProviderMock struct {
 	// StateFunc mocks the State method.
 	StateFunc func() opcua.ConnState
 
@@ -41,9 +41,9 @@ type OPCUAClientMock struct {
 }
 
 // State calls StateFunc.
-func (mock *OPCUAClientMock) State() opcua.ConnState {
+func (mock *MonitorProviderMock) State() opcua.ConnState {
 	if mock.StateFunc == nil {
-		panic("OPCUAClientMock.StateFunc: method is nil but OPCUAClient.State was just called")
+		panic("MonitorProviderMock.StateFunc: method is nil but MonitorProvider.State was just called")
 	}
 	callInfo := struct {
 	}{}
@@ -55,8 +55,8 @@ func (mock *OPCUAClientMock) State() opcua.ConnState {
 
 // StateCalls gets all the calls that were made to State.
 // Check the length with:
-//     len(mockedOPCUAClient.StateCalls())
-func (mock *OPCUAClientMock) StateCalls() []struct {
+//     len(mockedMonitorProvider.StateCalls())
+func (mock *MonitorProviderMock) StateCalls() []struct {
 } {
 	var calls []struct {
 	}

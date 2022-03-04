@@ -392,3 +392,16 @@ func TestMonitorStop(t *testing.T) {
 		t.Errorf("errors count: want %d, got %d", want, got)
 	}
 }
+
+func TestState(t *testing.T) {
+	mockedClientProvider := &ClientProviderMock{
+		StateFunc: func() opcua.ConnState {
+			return opcua.ConnState(255)
+		},
+	}
+	m := NewMonitor(&Config{}, mockedClientProvider)
+
+	if got, want := m.State(), opcua.ConnState(255); got != want {
+		t.Errorf("State method: want %v, got %v", want, got)
+	}
+}

@@ -26,6 +26,9 @@ var _ ClientProvider = &ClientProviderMock{}
 // 			NamespaceIndexFunc: func(ctx context.Context, nsURI string) (uint16, error) {
 // 				panic("mock out the NamespaceIndex method")
 // 			},
+// 			StateFunc: func() opcua.ConnState {
+// 				panic("mock out the State method")
+// 			},
 // 			SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error) {
 // 				panic("mock out the SubscribeWithContext method")
 // 			},
@@ -41,6 +44,9 @@ type ClientProviderMock struct {
 
 	// NamespaceIndexFunc mocks the NamespaceIndex method.
 	NamespaceIndexFunc func(ctx context.Context, nsURI string) (uint16, error)
+
+	// StateFunc mocks the State method.
+	StateFunc func() opcua.ConnState
 
 	// SubscribeWithContextFunc mocks the SubscribeWithContext method.
 	SubscribeWithContextFunc func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error)
@@ -59,6 +65,9 @@ type ClientProviderMock struct {
 			// NsURI is the nsURI argument value.
 			NsURI string
 		}
+		// State holds details about calls to the State method.
+		State []struct {
+		}
 		// SubscribeWithContext holds details about calls to the SubscribeWithContext method.
 		SubscribeWithContext []struct {
 			// Ctx is the ctx argument value.
@@ -71,6 +80,7 @@ type ClientProviderMock struct {
 	}
 	lockCloseWithContext     sync.RWMutex
 	lockNamespaceIndex       sync.RWMutex
+	lockState                sync.RWMutex
 	lockSubscribeWithContext sync.RWMutex
 }
 
@@ -137,6 +147,32 @@ func (mock *ClientProviderMock) NamespaceIndexCalls() []struct {
 	mock.lockNamespaceIndex.RLock()
 	calls = mock.calls.NamespaceIndex
 	mock.lockNamespaceIndex.RUnlock()
+	return calls
+}
+
+// State calls StateFunc.
+func (mock *ClientProviderMock) State() opcua.ConnState {
+	if mock.StateFunc == nil {
+		panic("ClientProviderMock.StateFunc: method is nil but ClientProvider.State was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockState.Lock()
+	mock.calls.State = append(mock.calls.State, callInfo)
+	mock.lockState.Unlock()
+	return mock.StateFunc()
+}
+
+// StateCalls gets all the calls that were made to State.
+// Check the length with:
+//     len(mockedClientProvider.StateCalls())
+func (mock *ClientProviderMock) StateCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockState.RLock()
+	calls = mock.calls.State
+	mock.lockState.RUnlock()
 	return calls
 }
 

@@ -21,6 +21,7 @@ type ClientProvider interface {
 	CloseWithContext(ctx context.Context) error
 	NamespaceIndex(ctx context.Context, nsURI string) (uint16, error)
 	SubscribeWithContext(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error)
+	State() opcua.ConnState
 }
 
 // Subscription is a consumer contract modelling an OPC-UA subscription.
@@ -180,4 +181,9 @@ func (m *Monitor) Stop(ctx context.Context) (errs []error) {
 	}
 
 	return
+}
+
+// State returns the wrapped client connection state.
+func (m *Monitor) State() opcua.ConnState {
+	return m.client.State()
 }

@@ -29,12 +29,12 @@ func TestHealth(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockedOPCUAClient := &OPCUAClientMock{
+			mockedMonitorProvider := &MonitorProviderMock{
 				StateFunc: func() opcua.ConnState {
 					return tc.gotState
 				},
 			}
-			proxy := NewProxy(mockedOPCUAClient)
+			proxy := NewProxy(mockedMonitorProvider)
 			srv := httptest.NewServer(proxy)
 			defer srv.Close()
 

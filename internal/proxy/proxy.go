@@ -6,10 +6,10 @@ import (
 	"github.com/gopcua/opcua"
 )
 
-//go:generate moq -out proxy_mocks_test.go . OPCUAClient
+//go:generate moq -out proxy_mocks_test.go . MonitorProvider
 
-// OPCUAClient is a consumer contract modelling an OPC-UA client.
-type OPCUAClient interface {
+// MonitorProvider is a consumer contract modelling an OPC-UA monitor.
+type MonitorProvider interface {
 	State() opcua.ConnState
 }
 
@@ -26,15 +26,15 @@ func methodHandler(m string, h http.Handler) http.Handler {
 
 // Proxy handles requests for the service.
 type Proxy struct {
-	opc OPCUAClient
+	m MonitorProvider
 
 	http.Handler
 }
 
 // NewProxy creates and returns a ready to use proxy.
-func NewProxy(opc OPCUAClient) *Proxy {
+func NewProxy(m MonitorProvider) *Proxy {
 	p := &Proxy{
-		opc: opc,
+		m: m,
 	}
 
 	mux := http.NewServeMux()
@@ -50,7 +50,7 @@ func (p *Proxy) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch {
-	case p.opc.State() != opcua.Connected:
+	case p.m.State() != opcua.Connected:
 		nok("OPC-UA client not connected")
 	}
 }
