@@ -1,10 +1,12 @@
 package opcua
 
 import (
+	"time"
+
 	"github.com/gopcua/opcua"
 )
 
-func (m *Monitor) AddSubscription(interval PublishingInterval, sub Subscription) {
+func (m *Monitor) AddSubscription(interval time.Duration, sub Subscription) {
 	m.subs[interval] = sub
 }
 
@@ -23,7 +25,7 @@ func (m *Monitor) NotifyChannel() chan *opcua.PublishNotificationData {
 	return m.notifyCh
 }
 
-func (m *Monitor) Subs() map[PublishingInterval]Subscription {
+func (m *Monitor) Subs() map[time.Duration]Subscription {
 	return m.subs
 }
 

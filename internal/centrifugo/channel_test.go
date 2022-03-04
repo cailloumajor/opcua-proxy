@@ -1,23 +1,27 @@
-package opcua_test
+package centrifugo_test
 
 import (
 	"errors"
 	"testing"
+	"time"
 
-	. "github.com/cailloumajor/opcua-centrifugo/internal/opcua"
+	. "github.com/cailloumajor/opcua-centrifugo/internal/centrifugo"
 	"github.com/cailloumajor/opcua-centrifugo/internal/testutils"
 )
 
 func TestParseChannelSuccess(t *testing.T) {
-	const channel = `opcua:1800000`
+	const channel = `ns:opcua@1800000`
 
 	c, err := ParseChannel(channel)
 
 	if msg := testutils.AssertError(t, err, false); msg != "" {
-		t.Errorf("ParseChannel(): %s", msg)
+		t.Errorf(msg)
 	}
-	if got, want := c.Channel(), channel; got != want {
-		t.Errorf("Channel() method: want %q, got %q", want, got)
+	if got, want := c.Interval(), 30*time.Minute; got != want {
+		t.Errorf("Interval method: want %v, got %v", want, got)
+	}
+	if got, want := c.String(), channel; got != want {
+		t.Errorf("String method: want %q, got %q", want, got)
 	}
 }
 
@@ -28,28 +32,28 @@ func TestParseChannelError(t *testing.T) {
 		expectNotOpcUaChannel bool
 	}{
 		{
-			name:                  "NoNamespace",
-			input:                 `30000`,
-			expectNotOpcUaChannel: true,
+			name:                  "MissingNamespace",
+			input:                 "opcua@1800000",
+			expectNotOpcUaChannel: false,
 		},
 		{
-			name:                  "NotOpcUaNamespace",
-			input:                 `ns:30000`,
+			name:                  "NotOpcUaChannel",
+			input:                 `ns:1800000`,
 			expectNotOpcUaChannel: true,
 		},
 		{
 			name:                  "IntervalParsingError",
-			input:                 `opcua:interval`,
+			input:                 `ns:opcua@interval`,
 			expectNotOpcUaChannel: false,
 		},
 		{
 			name:                  "NegativeInterval",
-			input:                 `opcua:-5000`,
+			input:                 `ns:opcua@-1800000`,
 			expectNotOpcUaChannel: false,
 		},
 		{
 			name:                  "IntervalTooBig",
-			input:                 `opcua:9223372036855`,
+			input:                 `ns:opcua@9223372036855`,
 			expectNotOpcUaChannel: false,
 		},
 	}
@@ -59,7 +63,7 @@ func TestParseChannelError(t *testing.T) {
 			_, err := ParseChannel(tc.input)
 
 			if msg := testutils.AssertError(t, err, true); msg != "" {
-				t.Errorf("Node() method: %s", msg)
+				t.Errorf(msg)
 			}
 			if !tc.expectNotOpcUaChannel && errors.Is(err, ErrNotOpcUaChannel) {
 				t.Errorf("unexpected ErrNotOpcUaChannel")

@@ -95,7 +95,7 @@ func TestMonitorSubscribeError(t *testing.T) {
 			}
 			m := NewMonitor(&Config{}, mockedClientProvider)
 
-			err := m.Subscribe(context.Background(), PublishingInterval(0), "", "node1", "node2", "node3")
+			err := m.Subscribe(context.Background(), 0, "", "node1", "node2", "node3")
 
 			if got, want := len(mockedSubscription.CancelCalls()), tc.expectSubCancelCalls; got != want {
 				t.Errorf("Cancel call count: want %d, got %d", want, got)
@@ -116,7 +116,7 @@ func TestMonitorSubscribeError(t *testing.T) {
 func TestMonitorSubscribeSuccess(t *testing.T) {
 	cases := []struct {
 		name                  string
-		interval              PublishingInterval
+		interval              time.Duration
 		expectSubscribeCalled bool
 	}{
 		{
@@ -278,7 +278,7 @@ func TestMonitorGetDataChange(t *testing.T) {
 func TestMonitorPurge(t *testing.T) {
 	cases := []struct {
 		name                  string
-		intervals             []PublishingInterval
+		intervals             []time.Duration
 		cancelError           bool
 		expectCancelCallCount int
 		expectRemainingSubs   int
@@ -286,7 +286,7 @@ func TestMonitorPurge(t *testing.T) {
 	}{
 		{
 			name:                  "NoSubscriptionRemoved",
-			intervals:             []PublishingInterval{1, 2, 3},
+			intervals:             []time.Duration{1, 2, 3},
 			cancelError:           false,
 			expectCancelCallCount: 0,
 			expectRemainingSubs:   3,
@@ -294,7 +294,7 @@ func TestMonitorPurge(t *testing.T) {
 		},
 		{
 			name:                  "OneSubscriptionRemovedNoError",
-			intervals:             []PublishingInterval{2, 3},
+			intervals:             []time.Duration{2, 3},
 			cancelError:           false,
 			expectCancelCallCount: 1,
 			expectRemainingSubs:   2,
@@ -302,7 +302,7 @@ func TestMonitorPurge(t *testing.T) {
 		},
 		{
 			name:                  "TwoSubscriptionsRemovedNoError",
-			intervals:             []PublishingInterval{2},
+			intervals:             []time.Duration{2},
 			cancelError:           false,
 			expectCancelCallCount: 2,
 			expectRemainingSubs:   1,
@@ -310,7 +310,7 @@ func TestMonitorPurge(t *testing.T) {
 		},
 		{
 			name:                  "OneSubscriptionRemovedWithError",
-			intervals:             []PublishingInterval{1, 2},
+			intervals:             []time.Duration{1, 2},
 			cancelError:           true,
 			expectCancelCallCount: 1,
 			expectRemainingSubs:   3,
@@ -318,7 +318,7 @@ func TestMonitorPurge(t *testing.T) {
 		},
 		{
 			name:                  "TwoSubscriptionsRemovedWithError",
-			intervals:             []PublishingInterval{2},
+			intervals:             []time.Duration{2},
 			cancelError:           true,
 			expectCancelCallCount: 2,
 			expectRemainingSubs:   3,
@@ -375,7 +375,7 @@ func TestMonitorStop(t *testing.T) {
 			},
 		}
 		mockedSubscriptions[i] = mockedSubscription
-		m.AddSubscription(PublishingInterval(time.Duration(i+1)*time.Second), mockedSubscription)
+		m.AddSubscription(time.Duration(i+1)*time.Second, mockedSubscription)
 	}
 
 	errs := m.Stop(context.Background())

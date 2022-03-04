@@ -36,7 +36,7 @@ type Monitor struct {
 	notifyCh chan *opcua.PublishNotificationData
 
 	mu    sync.RWMutex
-	subs  map[PublishingInterval]Subscription
+	subs  map[time.Duration]Subscription
 	items map[uint32]string
 }
 
@@ -45,7 +45,7 @@ func NewMonitor(cfg *Config, c ClientProvider) *Monitor {
 	return &Monitor{
 		client:   c,
 		notifyCh: make(chan *opcua.PublishNotificationData, QueueSize),
-		subs:     make(map[PublishingInterval]Subscription),
+		subs:     make(map[time.Duration]Subscription),
 		items:    make(map[uint32]string),
 	}
 }
@@ -53,7 +53,7 @@ func NewMonitor(cfg *Config, c ClientProvider) *Monitor {
 // Subscribe subscribes for nodes data changes on the server.
 //
 // Provided nodes are string node identifiers.
-func (m *Monitor) Subscribe(ctx context.Context, p PublishingInterval, nsURI string, nodes ...string) error {
+func (m *Monitor) Subscribe(ctx context.Context, interval time.Duration, nsURI string, nodes ...string) error {
 	nsi, err := m.client.NamespaceIndex(ctx, nsURI)
 	if err != nil {
 		return err
@@ -62,10 +62,10 @@ func (m *Monitor) Subscribe(ctx context.Context, p PublishingInterval, nsURI str
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	sub, ok := m.subs[p]
+	sub, ok := m.subs[interval]
 	if !ok {
 		p := &opcua.SubscriptionParameters{
-			Interval: time.Duration(p),
+			Interval: interval,
 		}
 		sub, err = m.client.SubscribeWithContext(ctx, p, m.notifyCh)
 		if err != nil {
@@ -107,7 +107,7 @@ func (m *Monitor) Subscribe(ctx context.Context, p PublishingInterval, nsURI str
 		}
 	}
 
-	m.subs[p] = sub
+	m.subs[interval] = sub
 	m.items = im
 
 	return nil
@@ -143,8 +143,8 @@ func (m *Monitor) GetDataChange() (string, error) {
 }
 
 // Purge unsubscribes and removes subscriptions for intervals that do not exist in provided slice.
-func (m *Monitor) Purge(ctx context.Context, intervals []PublishingInterval) (errs []error) {
-	is := make(map[PublishingInterval]bool)
+func (m *Monitor) Purge(ctx context.Context, intervals []time.Duration) (errs []error) {
+	is := make(map[time.Duration]bool)
 	for _, interval := range intervals {
 		is[interval] = true
 	}
