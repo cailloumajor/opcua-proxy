@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.3
 
-FROM golang:1.17.7-bullseye AS builder
+FROM golang:1.17.8-bullseye AS builder
 
 WORKDIR /usr/src/app
 COPY go.mod go.sum ./
