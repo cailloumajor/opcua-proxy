@@ -36,7 +36,7 @@ type subShape struct {
 	interval time.Duration
 }
 
-// Monitor is an OPC-UA node monitor wrapping an client.
+// Monitor is an OPC-UA node monitor wrapping a client.
 type Monitor struct {
 	client ClientProvider
 
