@@ -30,7 +30,8 @@ type Subscription interface {
 	MonitorWithContext(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error)
 }
 
-type subscriptionID struct {
+// subShape models the characteristics of a subscription.
+type subShape struct {
 	name     string
 	interval time.Duration
 }
@@ -42,7 +43,7 @@ type Monitor struct {
 	notifyCh chan *opcua.PublishNotificationData
 
 	mu    sync.RWMutex
-	subs  map[subscriptionID]Subscription
+	subs  map[subShape]Subscription
 	items map[uint32]string
 }
 
@@ -51,7 +52,7 @@ func NewMonitor(cfg *Config, c ClientProvider) *Monitor {
 	return &Monitor{
 		client:   c,
 		notifyCh: make(chan *opcua.PublishNotificationData, QueueSize),
-		subs:     make(map[subscriptionID]Subscription),
+		subs:     make(map[subShape]Subscription),
 		items:    make(map[uint32]string),
 	}
 }
@@ -65,7 +66,7 @@ func (m *Monitor) Subscribe(ctx context.Context, nsURI string, name string, inte
 		return err
 	}
 
-	si := subscriptionID{
+	si := subShape{
 		name:     name,
 		interval: interval,
 	}

@@ -7,7 +7,7 @@ import (
 )
 
 func (m *Monitor) AddSubscription(name string, interval time.Duration, sub Subscription) {
-	m.subs[subscriptionID{name: name, interval: interval}] = sub
+	m.subs[subShape{name: name, interval: interval}] = sub
 }
 
 func (m *Monitor) AddMonitoredItems(nodes ...string) {
@@ -21,7 +21,7 @@ func (m *Monitor) PushNotification(n *opcua.PublishNotificationData) {
 	m.notifyCh <- n
 }
 
-func (m *Monitor) Subs() map[subscriptionID]Subscription {
+func (m *Monitor) Subs() map[subShape]Subscription {
 	return m.subs
 }
 
