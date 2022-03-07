@@ -59,7 +59,7 @@ func TestMonitorSubscribeError(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockedSubscription := &SubscriptionMock{
+			mockedSubscription := &SubscriptionProviderMock{
 				CancelFunc: func(ctx context.Context) error {
 					return nil
 				},
@@ -87,7 +87,7 @@ func TestMonitorSubscribeError(t *testing.T) {
 					}
 					return 0, nil
 				},
-				SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error) {
+				SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error) {
 					if tc.subscribeError {
 						return nil, testutils.ErrTesting
 					}
@@ -138,7 +138,7 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			sentinelNodes := []string{"node1", "node2", "node3"}
-			mockedSubscription := &SubscriptionMock{
+			mockedSubscription := &SubscriptionProviderMock{
 				MonitorWithContextFunc: func(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error) {
 					for i, item := range items {
 						if got, want := item.ItemToMonitor.NodeID.Namespace(), uint16(2); got != want {
@@ -158,7 +158,7 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 				NamespaceIndexFunc: func(ctx context.Context, nsURI string) (uint16, error) {
 					return 2, nil
 				},
-				SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error) {
+				SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error) {
 					if got, want := params.Interval, time.Duration(tc.interval); got != want {
 						t.Errorf("Subscribe Interval argument: want %v, got %v", want, got)
 					}
@@ -331,7 +331,7 @@ func TestMonitorPurge(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockedSubscription := &SubscriptionMock{
+			mockedSubscription := &SubscriptionProviderMock{
 				CancelFunc: func(ctx context.Context) error {
 					if tc.cancelError {
 						return testutils.ErrTesting
@@ -341,7 +341,7 @@ func TestMonitorPurge(t *testing.T) {
 			}
 			m := NewMonitor(&Config{}, &ClientProviderMock{})
 			m.AddSubscription("sub0", 1, mockedSubscription)
-			m.AddSubscription("sub1", 2, &SubscriptionMock{})
+			m.AddSubscription("sub1", 2, &SubscriptionProviderMock{})
 			m.AddSubscription("sub2", 3, mockedSubscription)
 
 			errs := m.Purge(context.Background(), tc.intervals)
@@ -367,9 +367,9 @@ func TestMonitorStop(t *testing.T) {
 	}
 
 	m := NewMonitor(&Config{}, mockedClientProvider)
-	var mockedSubscriptions [5]*SubscriptionMock
+	var mockedSubscriptions [5]*SubscriptionProviderMock
 	for i := range mockedSubscriptions {
-		mockedSubscription := &SubscriptionMock{
+		mockedSubscription := &SubscriptionProviderMock{
 			CancelFunc: func(ctx context.Context) error {
 				if len(mockedClientProvider.CloseWithContextCalls()) > 0 {
 					t.Errorf("client has been closed before subscription cancel call")

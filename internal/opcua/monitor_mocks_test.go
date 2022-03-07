@@ -29,7 +29,7 @@ var _ ClientProvider = &ClientProviderMock{}
 // 			StateFunc: func() opcua.ConnState {
 // 				panic("mock out the State method")
 // 			},
-// 			SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error) {
+// 			SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error) {
 // 				panic("mock out the SubscribeWithContext method")
 // 			},
 // 		}
@@ -49,7 +49,7 @@ type ClientProviderMock struct {
 	StateFunc func() opcua.ConnState
 
 	// SubscribeWithContextFunc mocks the SubscribeWithContext method.
-	SubscribeWithContextFunc func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error)
+	SubscribeWithContextFunc func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -177,7 +177,7 @@ func (mock *ClientProviderMock) StateCalls() []struct {
 }
 
 // SubscribeWithContext calls SubscribeWithContextFunc.
-func (mock *ClientProviderMock) SubscribeWithContext(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error) {
+func (mock *ClientProviderMock) SubscribeWithContext(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error) {
 	if mock.SubscribeWithContextFunc == nil {
 		panic("ClientProviderMock.SubscribeWithContextFunc: method is nil but ClientProvider.SubscribeWithContext was just called")
 	}
@@ -215,16 +215,16 @@ func (mock *ClientProviderMock) SubscribeWithContextCalls() []struct {
 	return calls
 }
 
-// Ensure, that SubscriptionMock does implement Subscription.
+// Ensure, that SubscriptionProviderMock does implement SubscriptionProvider.
 // If this is not the case, regenerate this file with moq.
-var _ Subscription = &SubscriptionMock{}
+var _ SubscriptionProvider = &SubscriptionProviderMock{}
 
-// SubscriptionMock is a mock implementation of Subscription.
+// SubscriptionProviderMock is a mock implementation of SubscriptionProvider.
 //
-// 	func TestSomethingThatUsesSubscription(t *testing.T) {
+// 	func TestSomethingThatUsesSubscriptionProvider(t *testing.T) {
 //
-// 		// make and configure a mocked Subscription
-// 		mockedSubscription := &SubscriptionMock{
+// 		// make and configure a mocked SubscriptionProvider
+// 		mockedSubscriptionProvider := &SubscriptionProviderMock{
 // 			CancelFunc: func(ctx context.Context) error {
 // 				panic("mock out the Cancel method")
 // 			},
@@ -233,11 +233,11 @@ var _ Subscription = &SubscriptionMock{}
 // 			},
 // 		}
 //
-// 		// use mockedSubscription in code that requires Subscription
+// 		// use mockedSubscriptionProvider in code that requires SubscriptionProvider
 // 		// and then make assertions.
 //
 // 	}
-type SubscriptionMock struct {
+type SubscriptionProviderMock struct {
 	// CancelFunc mocks the Cancel method.
 	CancelFunc func(ctx context.Context) error
 
@@ -266,9 +266,9 @@ type SubscriptionMock struct {
 }
 
 // Cancel calls CancelFunc.
-func (mock *SubscriptionMock) Cancel(ctx context.Context) error {
+func (mock *SubscriptionProviderMock) Cancel(ctx context.Context) error {
 	if mock.CancelFunc == nil {
-		panic("SubscriptionMock.CancelFunc: method is nil but Subscription.Cancel was just called")
+		panic("SubscriptionProviderMock.CancelFunc: method is nil but SubscriptionProvider.Cancel was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
@@ -283,8 +283,8 @@ func (mock *SubscriptionMock) Cancel(ctx context.Context) error {
 
 // CancelCalls gets all the calls that were made to Cancel.
 // Check the length with:
-//     len(mockedSubscription.CancelCalls())
-func (mock *SubscriptionMock) CancelCalls() []struct {
+//     len(mockedSubscriptionProvider.CancelCalls())
+func (mock *SubscriptionProviderMock) CancelCalls() []struct {
 	Ctx context.Context
 } {
 	var calls []struct {
@@ -297,9 +297,9 @@ func (mock *SubscriptionMock) CancelCalls() []struct {
 }
 
 // MonitorWithContext calls MonitorWithContextFunc.
-func (mock *SubscriptionMock) MonitorWithContext(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error) {
+func (mock *SubscriptionProviderMock) MonitorWithContext(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error) {
 	if mock.MonitorWithContextFunc == nil {
-		panic("SubscriptionMock.MonitorWithContextFunc: method is nil but Subscription.MonitorWithContext was just called")
+		panic("SubscriptionProviderMock.MonitorWithContextFunc: method is nil but SubscriptionProvider.MonitorWithContext was just called")
 	}
 	callInfo := struct {
 		Ctx   context.Context
@@ -318,8 +318,8 @@ func (mock *SubscriptionMock) MonitorWithContext(ctx context.Context, ts ua.Time
 
 // MonitorWithContextCalls gets all the calls that were made to MonitorWithContext.
 // Check the length with:
-//     len(mockedSubscription.MonitorWithContextCalls())
-func (mock *SubscriptionMock) MonitorWithContextCalls() []struct {
+//     len(mockedSubscriptionProvider.MonitorWithContextCalls())
+func (mock *SubscriptionProviderMock) MonitorWithContextCalls() []struct {
 	Ctx   context.Context
 	Ts    ua.TimestampsToReturn
 	Items []*ua.MonitoredItemCreateRequest

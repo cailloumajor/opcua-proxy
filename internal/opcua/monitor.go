@@ -11,7 +11,7 @@ import (
 	"github.com/gopcua/opcua/ua"
 )
 
-//go:generate moq -out monitor_mocks_test.go . ClientProvider Subscription
+//go:generate moq -out monitor_mocks_test.go . ClientProvider SubscriptionProvider
 
 // QueueSize represents the size of the buffered channel for data change notifications.
 const QueueSize = 8
@@ -20,12 +20,12 @@ const QueueSize = 8
 type ClientProvider interface {
 	CloseWithContext(ctx context.Context) error
 	NamespaceIndex(ctx context.Context, nsURI string) (uint16, error)
-	SubscribeWithContext(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (Subscription, error)
+	SubscribeWithContext(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error)
 	State() opcua.ConnState
 }
 
-// Subscription is a consumer contract modelling an OPC-UA subscription.
-type Subscription interface {
+// SubscriptionProvider is a consumer contract modelling an OPC-UA subscription.
+type SubscriptionProvider interface {
 	Cancel(ctx context.Context) error
 	MonitorWithContext(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error)
 }
@@ -43,7 +43,7 @@ type Monitor struct {
 	notifyCh chan *opcua.PublishNotificationData
 
 	mu    sync.RWMutex
-	subs  map[subShape]Subscription
+	subs  map[subShape]SubscriptionProvider
 	items map[uint32]string
 }
 
@@ -52,7 +52,7 @@ func NewMonitor(cfg *Config, c ClientProvider) *Monitor {
 	return &Monitor{
 		client:   c,
 		notifyCh: make(chan *opcua.PublishNotificationData, QueueSize),
-		subs:     make(map[subShape]Subscription),
+		subs:     make(map[subShape]SubscriptionProvider),
 		items:    make(map[uint32]string),
 	}
 }

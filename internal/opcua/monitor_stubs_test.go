@@ -6,7 +6,7 @@ import (
 	"github.com/gopcua/opcua"
 )
 
-func (m *Monitor) AddSubscription(name string, interval time.Duration, sub Subscription) {
+func (m *Monitor) AddSubscription(name string, interval time.Duration, sub SubscriptionProvider) {
 	m.subs[subShape{name: name, interval: interval}] = sub
 }
 
@@ -21,7 +21,7 @@ func (m *Monitor) PushNotification(n *opcua.PublishNotificationData) {
 	m.notifyCh <- n
 }
 
-func (m *Monitor) Subs() map[subShape]Subscription {
+func (m *Monitor) Subs() map[subShape]SubscriptionProvider {
 	return m.subs
 }
 
