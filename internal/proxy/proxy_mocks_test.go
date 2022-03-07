@@ -4,8 +4,10 @@
 package proxy
 
 import (
+	"context"
 	"github.com/gopcua/opcua"
 	"sync"
+	"time"
 )
 
 // Ensure, that MonitorProviderMock does implement MonitorProvider.
@@ -21,6 +23,9 @@ var _ MonitorProvider = &MonitorProviderMock{}
 // 			StateFunc: func() opcua.ConnState {
 // 				panic("mock out the State method")
 // 			},
+// 			SubscribeFunc: func(ctx context.Context, nsURI string, ch ChannelProvider, nodes []string) error {
+// 				panic("mock out the Subscribe method")
+// 			},
 // 		}
 //
 // 		// use mockedMonitorProvider in code that requires MonitorProvider
@@ -31,13 +36,28 @@ type MonitorProviderMock struct {
 	// StateFunc mocks the State method.
 	StateFunc func() opcua.ConnState
 
+	// SubscribeFunc mocks the Subscribe method.
+	SubscribeFunc func(ctx context.Context, nsURI string, ch ChannelProvider, nodes []string) error
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// State holds details about calls to the State method.
 		State []struct {
 		}
+		// Subscribe holds details about calls to the Subscribe method.
+		Subscribe []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// NsURI is the nsURI argument value.
+			NsURI string
+			// Ch is the ch argument value.
+			Ch ChannelProvider
+			// Nodes is the nodes argument value.
+			Nodes []string
+		}
 	}
-	lockState sync.RWMutex
+	lockState     sync.RWMutex
+	lockSubscribe sync.RWMutex
 }
 
 // State calls StateFunc.
@@ -63,5 +83,243 @@ func (mock *MonitorProviderMock) StateCalls() []struct {
 	mock.lockState.RLock()
 	calls = mock.calls.State
 	mock.lockState.RUnlock()
+	return calls
+}
+
+// Subscribe calls SubscribeFunc.
+func (mock *MonitorProviderMock) Subscribe(ctx context.Context, nsURI string, ch ChannelProvider, nodes []string) error {
+	if mock.SubscribeFunc == nil {
+		panic("MonitorProviderMock.SubscribeFunc: method is nil but MonitorProvider.Subscribe was just called")
+	}
+	callInfo := struct {
+		Ctx   context.Context
+		NsURI string
+		Ch    ChannelProvider
+		Nodes []string
+	}{
+		Ctx:   ctx,
+		NsURI: nsURI,
+		Ch:    ch,
+		Nodes: nodes,
+	}
+	mock.lockSubscribe.Lock()
+	mock.calls.Subscribe = append(mock.calls.Subscribe, callInfo)
+	mock.lockSubscribe.Unlock()
+	return mock.SubscribeFunc(ctx, nsURI, ch, nodes)
+}
+
+// SubscribeCalls gets all the calls that were made to Subscribe.
+// Check the length with:
+//     len(mockedMonitorProvider.SubscribeCalls())
+func (mock *MonitorProviderMock) SubscribeCalls() []struct {
+	Ctx   context.Context
+	NsURI string
+	Ch    ChannelProvider
+	Nodes []string
+} {
+	var calls []struct {
+		Ctx   context.Context
+		NsURI string
+		Ch    ChannelProvider
+		Nodes []string
+	}
+	mock.lockSubscribe.RLock()
+	calls = mock.calls.Subscribe
+	mock.lockSubscribe.RUnlock()
+	return calls
+}
+
+// Ensure, that ChannelProviderMock does implement ChannelProvider.
+// If this is not the case, regenerate this file with moq.
+var _ ChannelProvider = &ChannelProviderMock{}
+
+// ChannelProviderMock is a mock implementation of ChannelProvider.
+//
+// 	func TestSomethingThatUsesChannelProvider(t *testing.T) {
+//
+// 		// make and configure a mocked ChannelProvider
+// 		mockedChannelProvider := &ChannelProviderMock{
+// 			IntervalFunc: func() time.Duration {
+// 				panic("mock out the Interval method")
+// 			},
+// 			NameFunc: func() string {
+// 				panic("mock out the Name method")
+// 			},
+// 			StringFunc: func() string {
+// 				panic("mock out the String method")
+// 			},
+// 		}
+//
+// 		// use mockedChannelProvider in code that requires ChannelProvider
+// 		// and then make assertions.
+//
+// 	}
+type ChannelProviderMock struct {
+	// IntervalFunc mocks the Interval method.
+	IntervalFunc func() time.Duration
+
+	// NameFunc mocks the Name method.
+	NameFunc func() string
+
+	// StringFunc mocks the String method.
+	StringFunc func() string
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// Interval holds details about calls to the Interval method.
+		Interval []struct {
+		}
+		// Name holds details about calls to the Name method.
+		Name []struct {
+		}
+		// String holds details about calls to the String method.
+		String []struct {
+		}
+	}
+	lockInterval sync.RWMutex
+	lockName     sync.RWMutex
+	lockString   sync.RWMutex
+}
+
+// Interval calls IntervalFunc.
+func (mock *ChannelProviderMock) Interval() time.Duration {
+	if mock.IntervalFunc == nil {
+		panic("ChannelProviderMock.IntervalFunc: method is nil but ChannelProvider.Interval was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockInterval.Lock()
+	mock.calls.Interval = append(mock.calls.Interval, callInfo)
+	mock.lockInterval.Unlock()
+	return mock.IntervalFunc()
+}
+
+// IntervalCalls gets all the calls that were made to Interval.
+// Check the length with:
+//     len(mockedChannelProvider.IntervalCalls())
+func (mock *ChannelProviderMock) IntervalCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockInterval.RLock()
+	calls = mock.calls.Interval
+	mock.lockInterval.RUnlock()
+	return calls
+}
+
+// Name calls NameFunc.
+func (mock *ChannelProviderMock) Name() string {
+	if mock.NameFunc == nil {
+		panic("ChannelProviderMock.NameFunc: method is nil but ChannelProvider.Name was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockName.Lock()
+	mock.calls.Name = append(mock.calls.Name, callInfo)
+	mock.lockName.Unlock()
+	return mock.NameFunc()
+}
+
+// NameCalls gets all the calls that were made to Name.
+// Check the length with:
+//     len(mockedChannelProvider.NameCalls())
+func (mock *ChannelProviderMock) NameCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockName.RLock()
+	calls = mock.calls.Name
+	mock.lockName.RUnlock()
+	return calls
+}
+
+// String calls StringFunc.
+func (mock *ChannelProviderMock) String() string {
+	if mock.StringFunc == nil {
+		panic("ChannelProviderMock.StringFunc: method is nil but ChannelProvider.String was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockString.Lock()
+	mock.calls.String = append(mock.calls.String, callInfo)
+	mock.lockString.Unlock()
+	return mock.StringFunc()
+}
+
+// StringCalls gets all the calls that were made to String.
+// Check the length with:
+//     len(mockedChannelProvider.StringCalls())
+func (mock *ChannelProviderMock) StringCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockString.RLock()
+	calls = mock.calls.String
+	mock.lockString.RUnlock()
+	return calls
+}
+
+// Ensure, that CentrifugoChannelParserMock does implement CentrifugoChannelParser.
+// If this is not the case, regenerate this file with moq.
+var _ CentrifugoChannelParser = &CentrifugoChannelParserMock{}
+
+// CentrifugoChannelParserMock is a mock implementation of CentrifugoChannelParser.
+//
+// 	func TestSomethingThatUsesCentrifugoChannelParser(t *testing.T) {
+//
+// 		// make and configure a mocked CentrifugoChannelParser
+// 		mockedCentrifugoChannelParser := &CentrifugoChannelParserMock{
+// 			ParseChannelFunc: func(s string) (ChannelProvider, error) {
+// 				panic("mock out the ParseChannel method")
+// 			},
+// 		}
+//
+// 		// use mockedCentrifugoChannelParser in code that requires CentrifugoChannelParser
+// 		// and then make assertions.
+//
+// 	}
+type CentrifugoChannelParserMock struct {
+	// ParseChannelFunc mocks the ParseChannel method.
+	ParseChannelFunc func(s string) (ChannelProvider, error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// ParseChannel holds details about calls to the ParseChannel method.
+		ParseChannel []struct {
+			// S is the s argument value.
+			S string
+		}
+	}
+	lockParseChannel sync.RWMutex
+}
+
+// ParseChannel calls ParseChannelFunc.
+func (mock *CentrifugoChannelParserMock) ParseChannel(s string) (ChannelProvider, error) {
+	if mock.ParseChannelFunc == nil {
+		panic("CentrifugoChannelParserMock.ParseChannelFunc: method is nil but CentrifugoChannelParser.ParseChannel was just called")
+	}
+	callInfo := struct {
+		S string
+	}{
+		S: s,
+	}
+	mock.lockParseChannel.Lock()
+	mock.calls.ParseChannel = append(mock.calls.ParseChannel, callInfo)
+	mock.lockParseChannel.Unlock()
+	return mock.ParseChannelFunc(s)
+}
+
+// ParseChannelCalls gets all the calls that were made to ParseChannel.
+// Check the length with:
+//     len(mockedCentrifugoChannelParser.ParseChannelCalls())
+func (mock *CentrifugoChannelParserMock) ParseChannelCalls() []struct {
+	S string
+} {
+	var calls []struct {
+		S string
+	}
+	mock.lockParseChannel.RLock()
+	calls = mock.calls.ParseChannel
+	mock.lockParseChannel.RUnlock()
 	return calls
 }

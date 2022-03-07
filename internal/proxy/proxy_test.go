@@ -1,11 +1,15 @@
 package proxy_test
 
 import (
+	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	. "github.com/cailloumajor/opcua-centrifugo/internal/proxy"
+	"github.com/cailloumajor/opcua-centrifugo/internal/testutils"
 	"github.com/gopcua/opcua"
 )
 
@@ -34,7 +38,7 @@ func TestHealth(t *testing.T) {
 					return tc.gotState
 				},
 			}
-			proxy := NewProxy(mockedMonitorProvider)
+			proxy := NewProxy(mockedMonitorProvider, &CentrifugoChannelParserMock{})
 			srv := httptest.NewServer(proxy)
 			defer srv.Close()
 
@@ -44,6 +48,99 @@ func TestHealth(t *testing.T) {
 			}
 			if got, want := resp.StatusCode, tc.expectStatusCode; got != want {
 				t.Errorf("status code: want %d, got %d", want, got)
+			}
+		})
+	}
+}
+
+func TestCentrifugoSubscribe(t *testing.T) {
+	cases := []struct {
+		name              string
+		body              string
+		channelParseError bool
+		subscribeError    bool
+		expectStatusCode  int
+		expectBody        string
+		ignoreBody        bool
+	}{
+		{
+			name:              "JsonDecodeError",
+			body:              "[",
+			channelParseError: false,
+			subscribeError:    false,
+			expectStatusCode:  http.StatusBadRequest,
+			expectBody:        "",
+			ignoreBody:        true,
+		},
+		{
+			name:              "ChannelParseError",
+			body:              "{}",
+			channelParseError: true,
+			subscribeError:    false,
+			expectStatusCode:  http.StatusOK,
+			expectBody:        "{\"error\":{\"code\":1000,\"message\":\"bad channel format: general error for testing\"}}\n",
+			ignoreBody:        false,
+		},
+		{
+			name:              "SubscribeError",
+			body:              "{}",
+			channelParseError: false,
+			subscribeError:    true,
+			expectStatusCode:  http.StatusOK,
+			expectBody:        "{\"error\":{\"code\":1001,\"message\":\"error subscribing to OPC-UA data change: general error for testing\"}}\n",
+			ignoreBody:        false,
+		},
+		{
+			name:              "Success",
+			body:              "{}",
+			channelParseError: false,
+			subscribeError:    false,
+			expectStatusCode:  http.StatusOK,
+			expectBody:        "{\"result\":{}}\n",
+			ignoreBody:        false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockedMonitorProvider := &MonitorProviderMock{
+				SubscribeFunc: func(ctx context.Context, nsURI string, ch ChannelProvider, nodes []string) error {
+					if tc.subscribeError {
+						return testutils.ErrTesting
+					}
+					return nil
+				},
+			}
+			mockedChannelParser := &CentrifugoChannelParserMock{
+				ParseChannelFunc: func(s string) (ChannelProvider, error) {
+					if tc.channelParseError {
+						return nil, testutils.ErrTesting
+					}
+					return &ChannelProviderMock{}, nil
+				},
+			}
+			p := NewProxy(mockedMonitorProvider, mockedChannelParser)
+			srv := httptest.NewServer(p)
+			defer srv.Close()
+
+			r := strings.NewReader(tc.body)
+			resp, err := http.Post(srv.URL+"/centrifugo/subscribe", "application/json", r)
+			if err != nil {
+				t.Fatalf("request error: %v", err)
+			}
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("error reading response body: %v", err)
+			}
+			if err := resp.Body.Close(); err != nil {
+				t.Fatalf("error closing response body: %v", err)
+			}
+
+			if got, want := resp.StatusCode, tc.expectStatusCode; got != want {
+				t.Errorf("status code: want %d, got %d", want, got)
+			}
+			if got, want := string(body), tc.expectBody; !tc.ignoreBody && got != want {
+				t.Errorf("body: got %q, want %q", got, want)
 			}
 		})
 	}
