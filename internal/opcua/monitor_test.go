@@ -98,7 +98,7 @@ func TestMonitorSubscribeError(t *testing.T) {
 					return mockedSubscription, nil
 				},
 			}
-			m := NewMonitor(&Config{}, mockedClientProvider)
+			m := NewMonitor(mockedClientProvider)
 
 			err := m.Subscribe(context.Background(), "", mockedChannelProvider, []string{"node1", "node2", "node3"})
 
@@ -174,7 +174,7 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 					return mockedSubscription, nil
 				},
 			}
-			m := NewMonitor(&Config{}, mockedClientProvider)
+			m := NewMonitor(mockedClientProvider)
 			m.AddSubscription("sub0", 0, mockedSubscription)
 			m.AddMonitoredItems("existing1", "existing2")
 
@@ -305,7 +305,7 @@ func TestMonitorGetDataChange(t *testing.T) {
 			mockedChannelProvider := &ChannelProviderMock{
 				NameFunc: func() string { return "MockedChannel" },
 			}
-			m := NewMonitor(&Config{}, &ClientProviderMock{})
+			m := NewMonitor(&ClientProviderMock{})
 			m.AddMonitoredItems("node0", "node1", "node2", "node3")
 			m.PushNotification(tc.publish)
 			if !tc.missingChannel {
@@ -388,7 +388,7 @@ func TestMonitorPurge(t *testing.T) {
 					return nil
 				},
 			}
-			m := NewMonitor(&Config{}, &ClientProviderMock{})
+			m := NewMonitor(&ClientProviderMock{})
 			m.AddSubscription("sub0", 1, mockedSubscription)
 			m.AddSubscription("sub1", 2, &SubscriptionProviderMock{})
 			m.AddSubscription("sub2", 3, mockedSubscription)
@@ -415,7 +415,7 @@ func TestMonitorStop(t *testing.T) {
 		},
 	}
 
-	m := NewMonitor(&Config{}, mockedClientProvider)
+	m := NewMonitor(mockedClientProvider)
 	var mockedSubscriptions [5]*SubscriptionProviderMock
 	for i := range mockedSubscriptions {
 		mockedSubscription := &SubscriptionProviderMock{
@@ -451,7 +451,7 @@ func TestState(t *testing.T) {
 			return opcua.ConnState(255)
 		},
 	}
-	m := NewMonitor(&Config{}, mockedClientProvider)
+	m := NewMonitor(mockedClientProvider)
 
 	if got, want := m.State(), opcua.ConnState(255); got != want {
 		t.Errorf("State method: want %v, got %v", want, got)

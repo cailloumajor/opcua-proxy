@@ -57,7 +57,7 @@ type Monitor struct {
 }
 
 // NewMonitor creates an OPC-UA node monitor.
-func NewMonitor(cfg *Config, c ClientProvider) *Monitor {
+func NewMonitor(c ClientProvider) *Monitor {
 	return &Monitor{
 		client:   c,
 		notifyCh: make(chan *opcua.PublishNotificationData, QueueSize),
