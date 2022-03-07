@@ -47,36 +47,11 @@ func main() {
 	var opcuaConfig opcua.Config
 
 	fs := flag.NewFlagSet("opcua-centrifugo", flag.ExitOnError)
-	fs.StringVar(
-		&opcuaConfig.ServerURL,
-		"opcua-server-url",
-		"opc.tcp://127.0.0.1:4840",
-		"OPC-UA server endpoint URL",
-	)
-	fs.StringVar(
-		&opcuaConfig.User,
-		"opcua-user",
-		"",
-		"user name for OPC-UA authentication (optional)",
-	)
-	fs.StringVar(
-		&opcuaConfig.Password,
-		"opcua-password",
-		"",
-		"password for OPC-UA authentication (optional)",
-	)
-	fs.StringVar(
-		&opcuaConfig.CertFile,
-		"opcua-cert-file",
-		"",
-		"certificate file path for OPC-UA secure channel (optional)",
-	)
-	fs.StringVar(
-		&opcuaConfig.KeyFile,
-		"opcua-key-file",
-		"",
-		"private key file path for OPC-UA secure channel (optional)",
-	)
+	fs.StringVar(&opcuaConfig.ServerURL, "opcua-server-url", "opc.tcp://127.0.0.1:4840", "OPC-UA server endpoint URL")
+	fs.StringVar(&opcuaConfig.User, "opcua-user", "", "user name for OPC-UA authentication (optional)")
+	fs.StringVar(&opcuaConfig.Password, "opcua-password", "", "password for OPC-UA authentication (optional)")
+	fs.StringVar(&opcuaConfig.CertFile, "opcua-cert-file", "", "certificate file path for OPC-UA secure channel (optional)")
+	fs.StringVar(&opcuaConfig.KeyFile, "opcua-key-file", "", "private key file path for OPC-UA secure channel (optional)")
 	debug := fs.Bool("debug", false, "log debug information")
 	fs.Usage = usageFor(fs, os.Stderr)
 
