@@ -8,6 +8,7 @@ import (
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
 	"sync"
+	"time"
 )
 
 // Ensure, that ClientProviderMock does implement ClientProvider.
@@ -29,8 +30,8 @@ var _ ClientProvider = &ClientProviderMock{}
 // 			StateFunc: func() opcua.ConnState {
 // 				panic("mock out the State method")
 // 			},
-// 			SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error) {
-// 				panic("mock out the SubscribeWithContext method")
+// 			SubscribeFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error) {
+// 				panic("mock out the Subscribe method")
 // 			},
 // 		}
 //
@@ -48,8 +49,8 @@ type ClientProviderMock struct {
 	// StateFunc mocks the State method.
 	StateFunc func() opcua.ConnState
 
-	// SubscribeWithContextFunc mocks the SubscribeWithContext method.
-	SubscribeWithContextFunc func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error)
+	// SubscribeFunc mocks the Subscribe method.
+	SubscribeFunc func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -68,8 +69,8 @@ type ClientProviderMock struct {
 		// State holds details about calls to the State method.
 		State []struct {
 		}
-		// SubscribeWithContext holds details about calls to the SubscribeWithContext method.
-		SubscribeWithContext []struct {
+		// Subscribe holds details about calls to the Subscribe method.
+		Subscribe []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 			// Params is the params argument value.
@@ -78,10 +79,10 @@ type ClientProviderMock struct {
 			NotifyCh chan<- *opcua.PublishNotificationData
 		}
 	}
-	lockCloseWithContext     sync.RWMutex
-	lockNamespaceIndex       sync.RWMutex
-	lockState                sync.RWMutex
-	lockSubscribeWithContext sync.RWMutex
+	lockCloseWithContext sync.RWMutex
+	lockNamespaceIndex   sync.RWMutex
+	lockState            sync.RWMutex
+	lockSubscribe        sync.RWMutex
 }
 
 // CloseWithContext calls CloseWithContextFunc.
@@ -176,10 +177,10 @@ func (mock *ClientProviderMock) StateCalls() []struct {
 	return calls
 }
 
-// SubscribeWithContext calls SubscribeWithContextFunc.
-func (mock *ClientProviderMock) SubscribeWithContext(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error) {
-	if mock.SubscribeWithContextFunc == nil {
-		panic("ClientProviderMock.SubscribeWithContextFunc: method is nil but ClientProvider.SubscribeWithContext was just called")
+// Subscribe calls SubscribeFunc.
+func (mock *ClientProviderMock) Subscribe(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error) {
+	if mock.SubscribeFunc == nil {
+		panic("ClientProviderMock.SubscribeFunc: method is nil but ClientProvider.Subscribe was just called")
 	}
 	callInfo := struct {
 		Ctx      context.Context
@@ -190,16 +191,16 @@ func (mock *ClientProviderMock) SubscribeWithContext(ctx context.Context, params
 		Params:   params,
 		NotifyCh: notifyCh,
 	}
-	mock.lockSubscribeWithContext.Lock()
-	mock.calls.SubscribeWithContext = append(mock.calls.SubscribeWithContext, callInfo)
-	mock.lockSubscribeWithContext.Unlock()
-	return mock.SubscribeWithContextFunc(ctx, params, notifyCh)
+	mock.lockSubscribe.Lock()
+	mock.calls.Subscribe = append(mock.calls.Subscribe, callInfo)
+	mock.lockSubscribe.Unlock()
+	return mock.SubscribeFunc(ctx, params, notifyCh)
 }
 
-// SubscribeWithContextCalls gets all the calls that were made to SubscribeWithContext.
+// SubscribeCalls gets all the calls that were made to Subscribe.
 // Check the length with:
-//     len(mockedClientProvider.SubscribeWithContextCalls())
-func (mock *ClientProviderMock) SubscribeWithContextCalls() []struct {
+//     len(mockedClientProvider.SubscribeCalls())
+func (mock *ClientProviderMock) SubscribeCalls() []struct {
 	Ctx      context.Context
 	Params   *opcua.SubscriptionParameters
 	NotifyCh chan<- *opcua.PublishNotificationData
@@ -209,9 +210,9 @@ func (mock *ClientProviderMock) SubscribeWithContextCalls() []struct {
 		Params   *opcua.SubscriptionParameters
 		NotifyCh chan<- *opcua.PublishNotificationData
 	}
-	mock.lockSubscribeWithContext.RLock()
-	calls = mock.calls.SubscribeWithContext
-	mock.lockSubscribeWithContext.RUnlock()
+	mock.lockSubscribe.RLock()
+	calls = mock.calls.Subscribe
+	mock.lockSubscribe.RUnlock()
 	return calls
 }
 
@@ -228,6 +229,9 @@ var _ SubscriptionProvider = &SubscriptionProviderMock{}
 // 			CancelFunc: func(ctx context.Context) error {
 // 				panic("mock out the Cancel method")
 // 			},
+// 			IDFunc: func() uint32 {
+// 				panic("mock out the ID method")
+// 			},
 // 			MonitorWithContextFunc: func(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error) {
 // 				panic("mock out the MonitorWithContext method")
 // 			},
@@ -241,6 +245,9 @@ type SubscriptionProviderMock struct {
 	// CancelFunc mocks the Cancel method.
 	CancelFunc func(ctx context.Context) error
 
+	// IDFunc mocks the ID method.
+	IDFunc func() uint32
+
 	// MonitorWithContextFunc mocks the MonitorWithContext method.
 	MonitorWithContextFunc func(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error)
 
@@ -250,6 +257,9 @@ type SubscriptionProviderMock struct {
 		Cancel []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
+		}
+		// ID holds details about calls to the ID method.
+		ID []struct {
 		}
 		// MonitorWithContext holds details about calls to the MonitorWithContext method.
 		MonitorWithContext []struct {
@@ -262,6 +272,7 @@ type SubscriptionProviderMock struct {
 		}
 	}
 	lockCancel             sync.RWMutex
+	lockID                 sync.RWMutex
 	lockMonitorWithContext sync.RWMutex
 }
 
@@ -293,6 +304,32 @@ func (mock *SubscriptionProviderMock) CancelCalls() []struct {
 	mock.lockCancel.RLock()
 	calls = mock.calls.Cancel
 	mock.lockCancel.RUnlock()
+	return calls
+}
+
+// ID calls IDFunc.
+func (mock *SubscriptionProviderMock) ID() uint32 {
+	if mock.IDFunc == nil {
+		panic("SubscriptionProviderMock.IDFunc: method is nil but SubscriptionProvider.ID was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockID.Lock()
+	mock.calls.ID = append(mock.calls.ID, callInfo)
+	mock.lockID.Unlock()
+	return mock.IDFunc()
+}
+
+// IDCalls gets all the calls that were made to ID.
+// Check the length with:
+//     len(mockedSubscriptionProvider.IDCalls())
+func (mock *SubscriptionProviderMock) IDCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockID.RLock()
+	calls = mock.calls.ID
+	mock.lockID.RUnlock()
 	return calls
 }
 
@@ -332,5 +369,135 @@ func (mock *SubscriptionProviderMock) MonitorWithContextCalls() []struct {
 	mock.lockMonitorWithContext.RLock()
 	calls = mock.calls.MonitorWithContext
 	mock.lockMonitorWithContext.RUnlock()
+	return calls
+}
+
+// Ensure, that ChannelProviderMock does implement ChannelProvider.
+// If this is not the case, regenerate this file with moq.
+var _ ChannelProvider = &ChannelProviderMock{}
+
+// ChannelProviderMock is a mock implementation of ChannelProvider.
+//
+// 	func TestSomethingThatUsesChannelProvider(t *testing.T) {
+//
+// 		// make and configure a mocked ChannelProvider
+// 		mockedChannelProvider := &ChannelProviderMock{
+// 			IntervalFunc: func() time.Duration {
+// 				panic("mock out the Interval method")
+// 			},
+// 			NameFunc: func() string {
+// 				panic("mock out the Name method")
+// 			},
+// 			StringFunc: func() string {
+// 				panic("mock out the String method")
+// 			},
+// 		}
+//
+// 		// use mockedChannelProvider in code that requires ChannelProvider
+// 		// and then make assertions.
+//
+// 	}
+type ChannelProviderMock struct {
+	// IntervalFunc mocks the Interval method.
+	IntervalFunc func() time.Duration
+
+	// NameFunc mocks the Name method.
+	NameFunc func() string
+
+	// StringFunc mocks the String method.
+	StringFunc func() string
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// Interval holds details about calls to the Interval method.
+		Interval []struct {
+		}
+		// Name holds details about calls to the Name method.
+		Name []struct {
+		}
+		// String holds details about calls to the String method.
+		String []struct {
+		}
+	}
+	lockInterval sync.RWMutex
+	lockName     sync.RWMutex
+	lockString   sync.RWMutex
+}
+
+// Interval calls IntervalFunc.
+func (mock *ChannelProviderMock) Interval() time.Duration {
+	if mock.IntervalFunc == nil {
+		panic("ChannelProviderMock.IntervalFunc: method is nil but ChannelProvider.Interval was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockInterval.Lock()
+	mock.calls.Interval = append(mock.calls.Interval, callInfo)
+	mock.lockInterval.Unlock()
+	return mock.IntervalFunc()
+}
+
+// IntervalCalls gets all the calls that were made to Interval.
+// Check the length with:
+//     len(mockedChannelProvider.IntervalCalls())
+func (mock *ChannelProviderMock) IntervalCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockInterval.RLock()
+	calls = mock.calls.Interval
+	mock.lockInterval.RUnlock()
+	return calls
+}
+
+// Name calls NameFunc.
+func (mock *ChannelProviderMock) Name() string {
+	if mock.NameFunc == nil {
+		panic("ChannelProviderMock.NameFunc: method is nil but ChannelProvider.Name was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockName.Lock()
+	mock.calls.Name = append(mock.calls.Name, callInfo)
+	mock.lockName.Unlock()
+	return mock.NameFunc()
+}
+
+// NameCalls gets all the calls that were made to Name.
+// Check the length with:
+//     len(mockedChannelProvider.NameCalls())
+func (mock *ChannelProviderMock) NameCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockName.RLock()
+	calls = mock.calls.Name
+	mock.lockName.RUnlock()
+	return calls
+}
+
+// String calls StringFunc.
+func (mock *ChannelProviderMock) String() string {
+	if mock.StringFunc == nil {
+		panic("ChannelProviderMock.StringFunc: method is nil but ChannelProvider.String was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockString.Lock()
+	mock.calls.String = append(mock.calls.String, callInfo)
+	mock.lockString.Unlock()
+	return mock.StringFunc()
+}
+
+// StringCalls gets all the calls that were made to String.
+// Check the length with:
+//     len(mockedChannelProvider.StringCalls())
+func (mock *ChannelProviderMock) StringCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockString.RLock()
+	calls = mock.calls.String
+	mock.lockString.RUnlock()
 	return calls
 }

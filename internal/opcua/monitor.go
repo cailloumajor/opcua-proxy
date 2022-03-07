@@ -11,7 +11,7 @@ import (
 	"github.com/gopcua/opcua/ua"
 )
 
-//go:generate moq -out monitor_mocks_test.go . ClientProvider SubscriptionProvider
+//go:generate moq -out monitor_mocks_test.go . ClientProvider SubscriptionProvider ChannelProvider
 
 // QueueSize represents the size of the buffered channel for data change notifications.
 const QueueSize = 8
@@ -20,14 +20,22 @@ const QueueSize = 8
 type ClientProvider interface {
 	CloseWithContext(ctx context.Context) error
 	NamespaceIndex(ctx context.Context, nsURI string) (uint16, error)
-	SubscribeWithContext(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error)
+	Subscribe(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error)
 	State() opcua.ConnState
 }
 
 // SubscriptionProvider is a consumer contract modelling an OPC-UA subscription.
 type SubscriptionProvider interface {
 	Cancel(ctx context.Context) error
+	ID() uint32
 	MonitorWithContext(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error)
+}
+
+// ChannelProvider is a consumer contract modelling a Centrifugo channel.
+type ChannelProvider interface {
+	Name() string
+	Interval() time.Duration
+	fmt.Stringer
 }
 
 // subShape models the characteristics of a subscription.
@@ -44,6 +52,7 @@ type Monitor struct {
 
 	mu    sync.RWMutex
 	subs  map[subShape]SubscriptionProvider
+	chans map[uint32]ChannelProvider
 	items map[uint32]string
 }
 
@@ -53,6 +62,7 @@ func NewMonitor(cfg *Config, c ClientProvider) *Monitor {
 		client:   c,
 		notifyCh: make(chan *opcua.PublishNotificationData, QueueSize),
 		subs:     make(map[subShape]SubscriptionProvider),
+		chans:    make(map[uint32]ChannelProvider),
 		items:    make(map[uint32]string),
 	}
 }
@@ -60,15 +70,15 @@ func NewMonitor(cfg *Config, c ClientProvider) *Monitor {
 // Subscribe subscribes for nodes data changes on the server.
 //
 // Provided nodes are string node identifiers.
-func (m *Monitor) Subscribe(ctx context.Context, nsURI string, name string, interval time.Duration, nodes []string) error {
+func (m *Monitor) Subscribe(ctx context.Context, nsURI string, ch ChannelProvider, nodes []string) error {
 	nsi, err := m.client.NamespaceIndex(ctx, nsURI)
 	if err != nil {
 		return err
 	}
 
 	si := subShape{
-		name:     name,
-		interval: interval,
+		name:     ch.Name(),
+		interval: ch.Interval(),
 	}
 
 	m.mu.RLock()
@@ -83,9 +93,9 @@ func (m *Monitor) Subscribe(ctx context.Context, nsURI string, name string, inte
 	defer m.mu.Unlock()
 
 	p := &opcua.SubscriptionParameters{
-		Interval: interval,
+		Interval: ch.Interval(),
 	}
-	sub, err := m.client.SubscribeWithContext(ctx, p, m.notifyCh)
+	sub, err := m.client.Subscribe(ctx, p, m.notifyCh)
 	if err != nil {
 		return fmt.Errorf("error creating subscription: %w", err)
 	}
@@ -126,37 +136,46 @@ func (m *Monitor) Subscribe(ctx context.Context, nsURI string, name string, inte
 
 	m.subs[si] = sub
 	m.items = im
+	m.chans[sub.ID()] = ch
 
 	return nil
 }
 
-// GetDataChange returns a JSON string from the next dequeued data change notification.
-func (m *Monitor) GetDataChange() (string, error) {
+// GetDataChange returns the Centrifugo channel name and a JSON string from
+// the next dequeued data change notification.
+func (m *Monitor) GetDataChange() (string, string, error) {
 	notif := <-m.notifyCh
 
 	if notif.Error != nil {
-		return "", fmt.Errorf("notification data error: %w", notif.Error)
+		return "", "", fmt.Errorf("notification data error: %w", notif.Error)
 	}
 
 	d, ok := notif.Value.(*ua.DataChangeNotification)
 	if !ok {
-		return "", fmt.Errorf("not a data change notification")
+		return "", "", fmt.Errorf("not a data change notification")
 	}
 
 	im := make(map[string]interface{})
 	m.mu.RLock()
+
+	c, ok := m.chans[notif.SubscriptionID]
+	if !ok {
+		return "", "", fmt.Errorf("Centrifugo channel not found")
+	}
+
 	for _, mi := range d.MonitoredItems {
 		n := m.items[mi.ClientHandle]
 		im[n] = mi.Value.Value.Value()
 	}
+
 	m.mu.RUnlock()
 
 	j, err := json.Marshal(im)
 	if err != nil {
-		return "", fmt.Errorf("JSON marshalling error: %w", err)
+		return "", "", fmt.Errorf("JSON marshalling error: %w", err)
 	}
 
-	return string(j), nil
+	return c.Name(), string(j), nil
 }
 
 // Purge unsubscribes and removes subscriptions for intervals that do not exist in provided slice.

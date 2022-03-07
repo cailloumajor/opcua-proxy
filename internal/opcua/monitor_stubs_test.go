@@ -25,6 +25,14 @@ func (m *Monitor) Subs() map[subShape]SubscriptionProvider {
 	return m.subs
 }
 
+func (m *Monitor) Chans() map[uint32]ChannelProvider {
+	return m.chans
+}
+
+func (m *Monitor) AddChan(id uint32, c ChannelProvider) {
+	m.chans[id] = c
+}
+
 func (m *Monitor) Items() map[uint32]string {
 	return m.items
 }
