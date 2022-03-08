@@ -82,3 +82,26 @@ func (s *Security) Policy() string {
 func (s *Security) Options(ep *ua.EndpointDescription) []opcua.Option {
 	return append(s.opts, s.sop.SecurityFromEndpoint(ep, s.utt))
 }
+
+// DefaultSecurityOptsProvider represents the default SecurityOptsProvider implementation.
+type DefaultSecurityOptsProvider struct{}
+
+// AuthUsername implements SecurityOptsProvider.
+func (d DefaultSecurityOptsProvider) AuthUsername(user, pass string) opcua.Option {
+	return opcua.AuthUsername(user, pass)
+}
+
+// CertificateFile implements SecurityOptsProvider.
+func (d DefaultSecurityOptsProvider) CertificateFile(filename string) opcua.Option {
+	return opcua.CertificateFile(filename)
+}
+
+// PrivateKeyFile implements SecurityOptsProvider.
+func (d DefaultSecurityOptsProvider) PrivateKeyFile(filename string) opcua.Option {
+	return opcua.PrivateKeyFile(filename)
+}
+
+// SecurityFromEndpoint implements SecurityOptsProvider.
+func (d DefaultSecurityOptsProvider) SecurityFromEndpoint(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option {
+	return opcua.SecurityFromEndpoint(ep, authType)
+}

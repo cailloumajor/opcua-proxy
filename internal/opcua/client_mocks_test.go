@@ -204,11 +204,20 @@ var _ RawClientProvider = &RawClientProviderMock{}
 // 			CallWithContextFunc: func(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error) {
 // 				panic("mock out the CallWithContext method")
 // 			},
+// 			CloseWithContextFunc: func(ctx context.Context) error {
+// 				panic("mock out the CloseWithContext method")
+// 			},
 // 			ConnectFunc: func(contextMoqParam context.Context) error {
 // 				panic("mock out the Connect method")
 // 			},
 // 			NamespaceArrayWithContextFunc: func(ctx context.Context) ([]string, error) {
 // 				panic("mock out the NamespaceArrayWithContext method")
+// 			},
+// 			StateFunc: func() opcua.ConnState {
+// 				panic("mock out the State method")
+// 			},
+// 			SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error) {
+// 				panic("mock out the SubscribeWithContext method")
 // 			},
 // 		}
 //
@@ -220,11 +229,20 @@ type RawClientProviderMock struct {
 	// CallWithContextFunc mocks the CallWithContext method.
 	CallWithContextFunc func(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error)
 
+	// CloseWithContextFunc mocks the CloseWithContext method.
+	CloseWithContextFunc func(ctx context.Context) error
+
 	// ConnectFunc mocks the Connect method.
 	ConnectFunc func(contextMoqParam context.Context) error
 
 	// NamespaceArrayWithContextFunc mocks the NamespaceArrayWithContext method.
 	NamespaceArrayWithContextFunc func(ctx context.Context) ([]string, error)
+
+	// StateFunc mocks the State method.
+	StateFunc func() opcua.ConnState
+
+	// SubscribeWithContextFunc mocks the SubscribeWithContext method.
+	SubscribeWithContextFunc func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -234,6 +252,11 @@ type RawClientProviderMock struct {
 			Ctx context.Context
 			// Req is the req argument value.
 			Req *ua.CallMethodRequest
+		}
+		// CloseWithContext holds details about calls to the CloseWithContext method.
+		CloseWithContext []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
 		}
 		// Connect holds details about calls to the Connect method.
 		Connect []struct {
@@ -245,10 +268,25 @@ type RawClientProviderMock struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 		}
+		// State holds details about calls to the State method.
+		State []struct {
+		}
+		// SubscribeWithContext holds details about calls to the SubscribeWithContext method.
+		SubscribeWithContext []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Params is the params argument value.
+			Params *opcua.SubscriptionParameters
+			// NotifyCh is the notifyCh argument value.
+			NotifyCh chan<- *opcua.PublishNotificationData
+		}
 	}
 	lockCallWithContext           sync.RWMutex
+	lockCloseWithContext          sync.RWMutex
 	lockConnect                   sync.RWMutex
 	lockNamespaceArrayWithContext sync.RWMutex
+	lockState                     sync.RWMutex
+	lockSubscribeWithContext      sync.RWMutex
 }
 
 // CallWithContext calls CallWithContextFunc.
@@ -283,6 +321,37 @@ func (mock *RawClientProviderMock) CallWithContextCalls() []struct {
 	mock.lockCallWithContext.RLock()
 	calls = mock.calls.CallWithContext
 	mock.lockCallWithContext.RUnlock()
+	return calls
+}
+
+// CloseWithContext calls CloseWithContextFunc.
+func (mock *RawClientProviderMock) CloseWithContext(ctx context.Context) error {
+	if mock.CloseWithContextFunc == nil {
+		panic("RawClientProviderMock.CloseWithContextFunc: method is nil but RawClientProvider.CloseWithContext was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockCloseWithContext.Lock()
+	mock.calls.CloseWithContext = append(mock.calls.CloseWithContext, callInfo)
+	mock.lockCloseWithContext.Unlock()
+	return mock.CloseWithContextFunc(ctx)
+}
+
+// CloseWithContextCalls gets all the calls that were made to CloseWithContext.
+// Check the length with:
+//     len(mockedRawClientProvider.CloseWithContextCalls())
+func (mock *RawClientProviderMock) CloseWithContextCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockCloseWithContext.RLock()
+	calls = mock.calls.CloseWithContext
+	mock.lockCloseWithContext.RUnlock()
 	return calls
 }
 
@@ -345,6 +414,71 @@ func (mock *RawClientProviderMock) NamespaceArrayWithContextCalls() []struct {
 	mock.lockNamespaceArrayWithContext.RLock()
 	calls = mock.calls.NamespaceArrayWithContext
 	mock.lockNamespaceArrayWithContext.RUnlock()
+	return calls
+}
+
+// State calls StateFunc.
+func (mock *RawClientProviderMock) State() opcua.ConnState {
+	if mock.StateFunc == nil {
+		panic("RawClientProviderMock.StateFunc: method is nil but RawClientProvider.State was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockState.Lock()
+	mock.calls.State = append(mock.calls.State, callInfo)
+	mock.lockState.Unlock()
+	return mock.StateFunc()
+}
+
+// StateCalls gets all the calls that were made to State.
+// Check the length with:
+//     len(mockedRawClientProvider.StateCalls())
+func (mock *RawClientProviderMock) StateCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockState.RLock()
+	calls = mock.calls.State
+	mock.lockState.RUnlock()
+	return calls
+}
+
+// SubscribeWithContext calls SubscribeWithContextFunc.
+func (mock *RawClientProviderMock) SubscribeWithContext(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error) {
+	if mock.SubscribeWithContextFunc == nil {
+		panic("RawClientProviderMock.SubscribeWithContextFunc: method is nil but RawClientProvider.SubscribeWithContext was just called")
+	}
+	callInfo := struct {
+		Ctx      context.Context
+		Params   *opcua.SubscriptionParameters
+		NotifyCh chan<- *opcua.PublishNotificationData
+	}{
+		Ctx:      ctx,
+		Params:   params,
+		NotifyCh: notifyCh,
+	}
+	mock.lockSubscribeWithContext.Lock()
+	mock.calls.SubscribeWithContext = append(mock.calls.SubscribeWithContext, callInfo)
+	mock.lockSubscribeWithContext.Unlock()
+	return mock.SubscribeWithContextFunc(ctx, params, notifyCh)
+}
+
+// SubscribeWithContextCalls gets all the calls that were made to SubscribeWithContext.
+// Check the length with:
+//     len(mockedRawClientProvider.SubscribeWithContextCalls())
+func (mock *RawClientProviderMock) SubscribeWithContextCalls() []struct {
+	Ctx      context.Context
+	Params   *opcua.SubscriptionParameters
+	NotifyCh chan<- *opcua.PublishNotificationData
+} {
+	var calls []struct {
+		Ctx      context.Context
+		Params   *opcua.SubscriptionParameters
+		NotifyCh chan<- *opcua.PublishNotificationData
+	}
+	mock.lockSubscribeWithContext.RLock()
+	calls = mock.calls.SubscribeWithContext
+	mock.lockSubscribeWithContext.RUnlock()
 	return calls
 }
 

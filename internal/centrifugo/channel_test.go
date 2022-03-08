@@ -1,6 +1,7 @@
 package centrifugo_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 func TestParseChannelSuccess(t *testing.T) {
 	const channel = `ns:my_tags@1800000`
 
-	c, err := ParseChannel(channel)
+	c, err := ParseChannel(channel, "ns")
 
 	if msg := testutils.AssertError(t, err, false); msg != "" {
 		t.Errorf(msg)
@@ -29,41 +30,56 @@ func TestParseChannelSuccess(t *testing.T) {
 
 func TestParseChannelError(t *testing.T) {
 	cases := []struct {
-		name  string
-		input string
+		name                   string
+		input                  string
+		expectIgnoredNamespace bool
 	}{
 		{
-			name:  "MissingNamespace",
-			input: "my_tags@1800000",
+			name:                   "MissingNamespace",
+			input:                  "my_tags@1800000",
+			expectIgnoredNamespace: true,
 		},
 		{
-			name:  "NoInterval",
-			input: "ns:my_tags",
+			name:                   "NotExpectedNamespace",
+			input:                  "otherns:my_tags@1800000",
+			expectIgnoredNamespace: true,
 		},
 		{
-			name:  "EmptyName",
-			input: "ns:@1800000",
+			name:                   "NoInterval",
+			input:                  "ns:my_tags",
+			expectIgnoredNamespace: false,
 		},
 		{
-			name:  "IntervalParsingError",
-			input: `ns:my_tags@interval`,
+			name:                   "EmptyName",
+			input:                  "ns:@1800000",
+			expectIgnoredNamespace: false,
 		},
 		{
-			name:  "NegativeInterval",
-			input: `ns:my_tags@-1800000`,
+			name:                   "IntervalParsingError",
+			input:                  `ns:my_tags@interval`,
+			expectIgnoredNamespace: false,
 		},
 		{
-			name:  "IntervalTooBig",
-			input: `ns:my_tags@9223372036855`,
+			name:                   "NegativeInterval",
+			input:                  `ns:my_tags@-1800000`,
+			expectIgnoredNamespace: false,
+		},
+		{
+			name:                   "IntervalTooBig",
+			input:                  `ns:my_tags@9223372036855`,
+			expectIgnoredNamespace: false,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := ParseChannel(tc.input)
+			_, err := ParseChannel(tc.input, "ns")
 
 			if msg := testutils.AssertError(t, err, true); msg != "" {
 				t.Errorf(msg)
+			}
+			if got, want := errors.Is(err, ErrIgnoredNamespace), tc.expectIgnoredNamespace; got != want {
+				t.Errorf("ignored namespace error returned: want %v, got %v", want, got)
 			}
 		})
 	}

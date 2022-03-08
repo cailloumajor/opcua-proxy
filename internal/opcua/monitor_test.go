@@ -1,6 +1,7 @@
 package opcua_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math"
@@ -220,38 +221,55 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 func TestMonitorGetDataChange(t *testing.T) {
 	cases := []struct {
 		name              string
+		contextCancelled  bool
 		publish           *opcua.PublishNotificationData
 		missingChannel    bool
 		expectError       bool
 		expectChannelName string
-		expectJSON        string
+		expectJSON        []byte
 	}{
 		{
+			name:             "ContextCancelled",
+			contextCancelled: true,
+			publish: &opcua.PublishNotificationData{
+				SubscriptionID: 5616,
+				Value:          &ua.DataChangeNotification{},
+			},
+			missingChannel:    false,
+			expectError:       true,
+			expectChannelName: "",
+			expectJSON:        nil,
+		},
+		{
 			name:              "NotificationDataError",
+			contextCancelled:  false,
 			publish:           &opcua.PublishNotificationData{Error: testutils.ErrTesting},
 			missingChannel:    false,
 			expectError:       true,
 			expectChannelName: "",
-			expectJSON:        "",
+			expectJSON:        nil,
 		},
 		{
 			name:              "EventNotificationList",
+			contextCancelled:  false,
 			publish:           &opcua.PublishNotificationData{Value: &ua.EventNotificationList{}},
 			missingChannel:    false,
 			expectError:       true,
 			expectChannelName: "",
-			expectJSON:        "",
+			expectJSON:        nil,
 		},
 		{
 			name:              "StatusChangeNotification",
+			contextCancelled:  false,
 			publish:           &opcua.PublishNotificationData{Value: &ua.StatusChangeNotification{}},
 			missingChannel:    false,
 			expectError:       true,
 			expectChannelName: "",
-			expectJSON:        "",
+			expectJSON:        nil,
 		},
 		{
-			name: "CentrifugoChannelNotFound",
+			name:             "CentrifugoChannelNotFound",
+			contextCancelled: false,
 			publish: &opcua.PublishNotificationData{
 				SubscriptionID: 5616,
 				Value:          &ua.DataChangeNotification{},
@@ -259,10 +277,11 @@ func TestMonitorGetDataChange(t *testing.T) {
 			missingChannel:    true,
 			expectError:       true,
 			expectChannelName: "",
-			expectJSON:        "",
+			expectJSON:        nil,
 		},
 		{
-			name: "JSONMarshalError",
+			name:             "JSONMarshalError",
+			contextCancelled: false,
 			publish: &opcua.PublishNotificationData{
 				SubscriptionID: 5616,
 				Value: &ua.DataChangeNotification{
@@ -278,10 +297,11 @@ func TestMonitorGetDataChange(t *testing.T) {
 			missingChannel:    false,
 			expectError:       true,
 			expectChannelName: "",
-			expectJSON:        "",
+			expectJSON:        nil,
 		},
 		{
-			name: "Success",
+			name:             "Success",
+			contextCancelled: false,
 			publish: &opcua.PublishNotificationData{
 				SubscriptionID: 5616,
 				Value: &ua.DataChangeNotification{
@@ -296,7 +316,7 @@ func TestMonitorGetDataChange(t *testing.T) {
 			missingChannel:    false,
 			expectError:       false,
 			expectChannelName: "MockedChannel",
-			expectJSON:        `{"node0":"string","node1":42,"node2":"1970-01-01T00:00:00Z","node3":37.5}`,
+			expectJSON:        []byte(`{"node0":"string","node1":42,"node2":"1970-01-01T00:00:00Z","node3":37.5}`),
 		},
 	}
 
@@ -307,12 +327,18 @@ func TestMonitorGetDataChange(t *testing.T) {
 			}
 			m := NewMonitor(&ClientProviderMock{})
 			m.AddMonitoredItems("node0", "node1", "node2", "node3")
-			m.PushNotification(tc.publish)
 			if !tc.missingChannel {
 				m.AddChan(5616, mockedChannelProvider)
 			}
 
-			n, d, err := m.GetDataChange()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			if tc.contextCancelled {
+				cancel()
+			} else {
+				m.PushNotification(tc.publish)
+			}
+			n, d, err := m.GetDataChange(ctx)
 
 			if msg := testutils.AssertError(t, err, tc.expectError); msg != "" {
 				t.Errorf(msg)
@@ -320,7 +346,7 @@ func TestMonitorGetDataChange(t *testing.T) {
 			if got, want := n, tc.expectChannelName; got != want {
 				t.Errorf("channel name: want %q, got %q", want, got)
 			}
-			if got, want := d, tc.expectJSON; got != want {
+			if got, want := d, tc.expectJSON; !bytes.Equal(got, want) {
 				t.Errorf("JSON data: want %q, got %q", want, got)
 			}
 		})

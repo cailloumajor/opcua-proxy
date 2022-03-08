@@ -66,11 +66,17 @@ USAGE
   opcua-centrifugo [options]
 
 OPTIONS
-  Flag               Env Var           Description
-  -debug                               log debug information (default: false)
-  -opcua-cert-file   OPCUA_CERT_FILE   certificate file path for OPC-UA secure channel (optional)
-  -opcua-key-file    OPCUA_KEY_FILE    private key file path for OPC-UA secure channel (optional)
-  -opcua-password    OPCUA_PASSWORD    password for OPC-UA authentication (optional)
-  -opcua-server-url  OPCUA_SERVER_URL  OPC-UA server endpoint URL (default: opc.tcp://127.0.0.1:4840)
-  -opcua-user        OPCUA_USER        user name for OPC-UA authentication (optional)
+  Flag                     Env Var                 Description
+  -centrifugo-api-address  CENTRIFUGO_API_ADDRESS  Centrifugo API endpoint
+  -centrifugo-api-key      CENTRIFUGO_API_KEY      Centrifugo API key
+  -centrifugo-namespace    CENTRIFUGO_NAMESPACE    Centrifugo channel namespace for this instance
+  -debug                                           log debug information (default: false)
+  -opcua-cert-file         OPCUA_CERT_FILE         certificate file path for OPC-UA secure channel (optional)
+  -opcua-client-timeout    OPCUA_CLIENT_TIMEOUT    timeout for connecting the OPC-UA client (default: 10s)
+  -opcua-key-file          OPCUA_KEY_FILE          private key file path for OPC-UA secure channel (optional)
+  -opcua-password          OPCUA_PASSWORD          password for OPC-UA authentication (optional)
+  -opcua-server-url        OPCUA_SERVER_URL        OPC-UA server endpoint URL (default: opc.tcp://127.0.0.1:4840)
+  -opcua-tidy-interval     OPCUA_TIDY_INTERVAL     interval at which to tidy-up OPC-UA subscriptions (default: 30s)
+  -opcua-user              OPCUA_USER              user name for OPC-UA authentication (optional)
+  -proxy-listen            PROXY_LISTEN            Centrifugo proxy listen address (default: :8080)
 ```

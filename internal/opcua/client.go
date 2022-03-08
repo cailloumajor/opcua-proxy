@@ -21,8 +21,11 @@ type ClientExtDeps interface {
 // RawClientProvider is a consumer contract modelling a raw OPC-UA client.
 type RawClientProvider interface {
 	CallWithContext(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error)
+	CloseWithContext(ctx context.Context) error
 	Connect(context.Context) (err error)
 	NamespaceArrayWithContext(ctx context.Context) ([]string, error)
+	State() opcua.ConnState
+	SubscribeWithContext(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error)
 }
 
 // SecurityProvider is a consumer contract modelling an OPC-UA security provider.
@@ -34,7 +37,7 @@ type SecurityProvider interface {
 
 // Client represents an OPC-UA client connected to a server.
 type Client struct {
-	RawClientProvider
+	inner RawClientProvider
 }
 
 // NewClient creates a new client and connects it to a server.
@@ -57,7 +60,7 @@ func NewClient(ctx context.Context, cfg *Config, deps ClientExtDeps, sec Securit
 	}
 
 	return &Client{
-		RawClientProvider: c,
+		inner: c,
 	}, nil
 }
 
@@ -73,7 +76,7 @@ func (c *Client) GetMonitoredItems(ctx context.Context, subID uint32) ([]uint32,
 		InputArguments: []*ua.Variant{ua.MustVariant(subID)},
 	}
 
-	res, err := c.CallWithContext(ctx, req)
+	res, err := c.inner.CallWithContext(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("error calling the method: %w", err)
 	}
@@ -86,7 +89,7 @@ func (c *Client) GetMonitoredItems(ctx context.Context, subID uint32) ([]uint32,
 
 // NamespaceIndex returns the index of the provided namespace URI in the server namespace array.
 func (c *Client) NamespaceIndex(ctx context.Context, nsURI string) (uint16, error) {
-	nsa, err := c.NamespaceArrayWithContext(ctx)
+	nsa, err := c.inner.NamespaceArrayWithContext(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("error getting namespace array: %w", err)
 	}
@@ -103,4 +106,41 @@ func (c *Client) NamespaceIndex(ctx context.Context, nsURI string) (uint16, erro
 	}
 
 	return uint16(nsi), nil
+}
+
+// CloseWithContext stub.
+func (c *Client) CloseWithContext(ctx context.Context) error {
+	return c.inner.CloseWithContext(ctx)
+}
+
+// State stub.
+func (c *Client) State() opcua.ConnState {
+	return c.inner.State()
+}
+
+// Subscribe stub.
+func (c *Client) Subscribe(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error) {
+	s, err := c.inner.SubscribeWithContext(ctx, params, notifyCh)
+	if err != nil {
+		return nil, err
+	}
+	return &Subscription{inner: s}, nil
+}
+
+// DefaultClientExtDeps represents the default ClientExtDeps implementation.
+type DefaultClientExtDeps struct{}
+
+// GetEndpoints implements ClientExtDeps.
+func (DefaultClientExtDeps) GetEndpoints(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
+	return opcua.GetEndpoints(ctx, endpoint, opts...)
+}
+
+// SelectEndpoint implements ClientExtDeps.
+func (DefaultClientExtDeps) SelectEndpoint(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
+	return opcua.SelectEndpoint(endpoints, policy, mode)
+}
+
+// NewClient implements ClientExtDeps.
+func (DefaultClientExtDeps) NewClient(endpoint string, opts ...opcua.Option) RawClientProvider {
+	return opcua.NewClient(endpoint, opts...)
 }

@@ -141,18 +141,23 @@ func (m *Monitor) Subscribe(ctx context.Context, nsURI string, ch ChannelProvide
 	return nil
 }
 
-// GetDataChange returns the Centrifugo channel name and a JSON string from
+// GetDataChange returns the Centrifugo channel name and JSON data from
 // the next dequeued data change notification.
-func (m *Monitor) GetDataChange() (string, string, error) {
-	notif := <-m.notifyCh
+func (m *Monitor) GetDataChange(ctx context.Context) (string, []byte, error) {
+	var notif *opcua.PublishNotificationData
+	select {
+	case <-ctx.Done():
+		return "", nil, ctx.Err()
+	case notif = <-m.notifyCh:
+	}
 
 	if notif.Error != nil {
-		return "", "", fmt.Errorf("notification data error: %w", notif.Error)
+		return "", nil, fmt.Errorf("notification data error: %w", notif.Error)
 	}
 
 	d, ok := notif.Value.(*ua.DataChangeNotification)
 	if !ok {
-		return "", "", fmt.Errorf("not a data change notification")
+		return "", nil, fmt.Errorf("not a data change notification")
 	}
 
 	im := make(map[string]interface{})
@@ -160,7 +165,7 @@ func (m *Monitor) GetDataChange() (string, string, error) {
 
 	c, ok := m.chans[notif.SubscriptionID]
 	if !ok {
-		return "", "", fmt.Errorf("Centrifugo channel not found")
+		return "", nil, fmt.Errorf("Centrifugo channel not found")
 	}
 
 	for _, mi := range d.MonitoredItems {
@@ -172,10 +177,10 @@ func (m *Monitor) GetDataChange() (string, string, error) {
 
 	j, err := json.Marshal(im)
 	if err != nil {
-		return "", "", fmt.Errorf("JSON marshalling error: %w", err)
+		return "", nil, fmt.Errorf("JSON marshalling error: %w", err)
 	}
 
-	return c.Name(), string(j), nil
+	return c.Name(), j, nil
 }
 
 // Purge unsubscribes and removes subscriptions for intervals that do not exist in provided slice.

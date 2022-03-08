@@ -3,33 +3,29 @@ package proxy
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/gopcua/opcua"
+	"github.com/cailloumajor/opcua-centrifugo/internal/centrifugo"
+	"github.com/cailloumajor/opcua-centrifugo/internal/opcua"
+	gopcua "github.com/gopcua/opcua"
 )
 
-//go:generate moq -out proxy_mocks_test.go . MonitorProvider ChannelProvider CentrifugoChannelParser
+//go:generate moq -out proxy_mocks_test.go . MonitorProvider CentrifugoChannelParser
 
 const subscribeTimeout = 5 * time.Second
 
 // MonitorProvider is a consumer contract modelling an OPC-UA monitor.
 type MonitorProvider interface {
-	State() opcua.ConnState
-	Subscribe(ctx context.Context, nsURI string, ch ChannelProvider, nodes []string) error
-}
-
-// ChannelProvider is a consumer contract modelling a Centrifugo channel.
-type ChannelProvider interface {
-	Name() string
-	Interval() time.Duration
-	fmt.Stringer
+	State() gopcua.ConnState
+	Subscribe(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []string) error
 }
 
 // CentrifugoChannelParser is a consumer contract modelling a Centrifugo channel parser.
 type CentrifugoChannelParser interface {
-	ParseChannel(s string) (ChannelProvider, error)
+	ParseChannel(s, namespace string) (opcua.ChannelProvider, error)
 }
 
 func methodHandler(m string, h http.Handler) http.Handler {
@@ -47,15 +43,17 @@ func methodHandler(m string, h http.Handler) http.Handler {
 type Proxy struct {
 	m  MonitorProvider
 	cp CentrifugoChannelParser
+	ns string // expected namespace for this instance
 
 	http.Handler
 }
 
 // NewProxy creates and returns a ready to use proxy.
-func NewProxy(m MonitorProvider, cp CentrifugoChannelParser) *Proxy {
+func NewProxy(m MonitorProvider, cp CentrifugoChannelParser, ns string) *Proxy {
 	p := &Proxy{
 		m:  m,
 		cp: cp,
+		ns: ns,
 	}
 
 	mux := http.NewServeMux()
@@ -75,7 +73,7 @@ func (p *Proxy) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch {
-	case p.m.State() != opcua.Connected:
+	case p.m.State() != gopcua.Connected:
 		nok("OPC-UA client not connected")
 	}
 }
@@ -101,17 +99,20 @@ type errorResponse struct {
 	Error errorContent `json:"error"`
 }
 
+func newErrorResponse(code uint32, msg string) *errorResponse {
+	return &errorResponse{
+		Error: errorContent{
+			Code:    code,
+			Message: msg,
+		},
+	}
+}
+
 func (p *Proxy) handleCentrifugoSubscribe(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 
-	respondError := func(code uint32, msg string) {
-		er := errorResponse{
-			Error: errorContent{
-				Code:    code,
-				Message: msg,
-			},
-		}
-		if err := enc.Encode(&er); err != nil {
+	respond := func(resp interface{}) {
+		if err := enc.Encode(resp); err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 	}
@@ -125,10 +126,14 @@ func (p *Proxy) handleCentrifugoSubscribe(w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("content-type", "application/json")
 
-	cch, err := p.cp.ParseChannel(sr.Channel)
+	cch, err := p.cp.ParseChannel(sr.Channel, p.ns)
+	if errors.Is(err, centrifugo.ErrIgnoredNamespace) {
+		respond(&successResponse{})
+		return
+	}
 	if err != nil {
 		msg := fmt.Sprintf("bad channel format: %v", err)
-		respondError(1000, msg)
+		respond(newErrorResponse(1000, msg))
 		return
 	}
 
@@ -137,11 +142,17 @@ func (p *Proxy) handleCentrifugoSubscribe(w http.ResponseWriter, r *http.Request
 
 	if err := p.m.Subscribe(ctx, sr.Data.NamespaceURI, cch, sr.Data.Nodes); err != nil {
 		msg := fmt.Sprintf("error subscribing to OPC-UA data change: %v", err)
-		respondError(1001, msg)
+		respond(newErrorResponse(1001, msg))
 		return
 	}
 
-	if err := enc.Encode(&successResponse{}); err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-	}
+	respond(&successResponse{})
+}
+
+// DefaultCentrifugoChannelParser is the default implementation of CentrifugoChannelParser.
+type DefaultCentrifugoChannelParser struct{}
+
+// ParseChannel implements CentrifugoChannelParser.
+func (DefaultCentrifugoChannelParser) ParseChannel(s, namespace string) (opcua.ChannelProvider, error) {
+	return centrifugo.ParseChannel(s, namespace)
 }

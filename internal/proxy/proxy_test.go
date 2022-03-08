@@ -8,25 +8,27 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cailloumajor/opcua-centrifugo/internal/centrifugo"
+	"github.com/cailloumajor/opcua-centrifugo/internal/opcua"
 	. "github.com/cailloumajor/opcua-centrifugo/internal/proxy"
 	"github.com/cailloumajor/opcua-centrifugo/internal/testutils"
-	"github.com/gopcua/opcua"
+	gopcua "github.com/gopcua/opcua"
 )
 
 func TestHealth(t *testing.T) {
 	cases := []struct {
 		name             string
-		gotState         opcua.ConnState
+		gotState         gopcua.ConnState
 		expectStatusCode int
 	}{
 		{
 			name:             "OpcClientNotConnected",
-			gotState:         opcua.Disconnected,
+			gotState:         gopcua.Disconnected,
 			expectStatusCode: 500,
 		},
 		{
 			name:             "OK",
-			gotState:         opcua.Connected,
+			gotState:         gopcua.Connected,
 			expectStatusCode: http.StatusOK,
 		},
 	}
@@ -34,11 +36,11 @@ func TestHealth(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockedMonitorProvider := &MonitorProviderMock{
-				StateFunc: func() opcua.ConnState {
+				StateFunc: func() gopcua.ConnState {
 					return tc.gotState
 				},
 			}
-			proxy := NewProxy(mockedMonitorProvider, &CentrifugoChannelParserMock{})
+			proxy := NewProxy(mockedMonitorProvider, &CentrifugoChannelParserMock{}, "")
 			srv := httptest.NewServer(proxy)
 			defer srv.Close()
 
@@ -57,7 +59,7 @@ func TestCentrifugoSubscribe(t *testing.T) {
 	cases := []struct {
 		name              string
 		body              string
-		channelParseError bool
+		channelParseError error
 		subscribeError    bool
 		expectStatusCode  int
 		expectBody        string
@@ -66,16 +68,25 @@ func TestCentrifugoSubscribe(t *testing.T) {
 		{
 			name:              "JsonDecodeError",
 			body:              "[",
-			channelParseError: false,
+			channelParseError: nil,
 			subscribeError:    false,
 			expectStatusCode:  http.StatusBadRequest,
 			expectBody:        "",
 			ignoreBody:        true,
 		},
 		{
+			name:              "IgnoredNamespace",
+			body:              "{}",
+			channelParseError: centrifugo.ErrIgnoredNamespace,
+			subscribeError:    false,
+			expectStatusCode:  http.StatusOK,
+			expectBody:        "{\"result\":{}}\n",
+			ignoreBody:        false,
+		},
+		{
 			name:              "ChannelParseError",
 			body:              "{}",
-			channelParseError: true,
+			channelParseError: testutils.ErrTesting,
 			subscribeError:    false,
 			expectStatusCode:  http.StatusOK,
 			expectBody:        "{\"error\":{\"code\":1000,\"message\":\"bad channel format: general error for testing\"}}\n",
@@ -84,16 +95,16 @@ func TestCentrifugoSubscribe(t *testing.T) {
 		{
 			name:              "SubscribeError",
 			body:              "{}",
-			channelParseError: false,
+			channelParseError: nil,
 			subscribeError:    true,
 			expectStatusCode:  http.StatusOK,
 			expectBody:        "{\"error\":{\"code\":1001,\"message\":\"error subscribing to OPC-UA data change: general error for testing\"}}\n",
 			ignoreBody:        false,
 		},
 		{
-			name:              "Success",
+			name:              "Subscribed",
 			body:              "{}",
-			channelParseError: false,
+			channelParseError: nil,
 			subscribeError:    false,
 			expectStatusCode:  http.StatusOK,
 			expectBody:        "{\"result\":{}}\n",
@@ -104,7 +115,7 @@ func TestCentrifugoSubscribe(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockedMonitorProvider := &MonitorProviderMock{
-				SubscribeFunc: func(ctx context.Context, nsURI string, ch ChannelProvider, nodes []string) error {
+				SubscribeFunc: func(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []string) error {
 					if tc.subscribeError {
 						return testutils.ErrTesting
 					}
@@ -112,14 +123,14 @@ func TestCentrifugoSubscribe(t *testing.T) {
 				},
 			}
 			mockedChannelParser := &CentrifugoChannelParserMock{
-				ParseChannelFunc: func(s string) (ChannelProvider, error) {
-					if tc.channelParseError {
-						return nil, testutils.ErrTesting
+				ParseChannelFunc: func(s, namespace string) (opcua.ChannelProvider, error) {
+					if tc.channelParseError != nil {
+						return nil, tc.channelParseError
 					}
-					return &ChannelProviderMock{}, nil
+					return &centrifugo.Channel{}, nil
 				},
 			}
-			p := NewProxy(mockedMonitorProvider, mockedChannelParser)
+			p := NewProxy(mockedMonitorProvider, mockedChannelParser, "")
 			srv := httptest.NewServer(p)
 			defer srv.Close()
 

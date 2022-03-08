@@ -7,8 +7,19 @@ import (
 	"time"
 )
 
-const nsSeparator = ":"
+// NsSeparator is the channel namespace boundary character.
+const NsSeparator = ":"
+
 const nameIntervalSeparator = "@"
+
+type channelError string
+
+func (c channelError) Error() string {
+	return string(c)
+}
+
+// ErrIgnoredNamespace is returned when the namespace is to be ignored.
+const ErrIgnoredNamespace = channelError("namespace ignored")
 
 // Channel represents a Centrifugo channel suitable for OPC-UA use.
 type Channel struct {
@@ -19,13 +30,14 @@ type Channel struct {
 
 // ParseChannel parses a Centrifugo channel and creates a Channel structure.
 //
-// It is expected that channel namespace is always present.
-//
 // See "Specifications" section in README.md for the format of the channel.
-func ParseChannel(s string) (*Channel, error) {
-	p := strings.SplitN(s, nsSeparator, 2)
+func ParseChannel(s, namespace string) (*Channel, error) {
+	p := strings.SplitN(s, NsSeparator, 2)
 	if len(p) != 2 {
-		return nil, fmt.Errorf("missing namespace in %q channel", s)
+		return nil, ErrIgnoredNamespace
+	}
+	if p[0] != namespace {
+		return nil, ErrIgnoredNamespace
 	}
 	ns, name := p[0], p[1]
 
@@ -64,5 +76,5 @@ func (c *Channel) Interval() time.Duration {
 
 // String returns the string representation of the channel.
 func (c *Channel) String() string {
-	return fmt.Sprint(c.ns, nsSeparator, c.name, nameIntervalSeparator, c.interval.Milliseconds())
+	return fmt.Sprint(c.ns, NsSeparator, c.name, nameIntervalSeparator, c.interval.Milliseconds())
 }
