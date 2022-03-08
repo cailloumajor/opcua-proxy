@@ -2,9 +2,7 @@ package main_test
 
 import (
 	"context"
-	"reflect"
 	"testing"
-	"time"
 
 	. "github.com/cailloumajor/opcua-centrifugo/cmd/opcua-centrifugo"
 	"github.com/cailloumajor/opcua-centrifugo/internal/testutils"
@@ -16,19 +14,19 @@ func TestChannelsInterval(t *testing.T) {
 		name            string
 		channelsError   bool
 		expectError     bool
-		expectIntervals []time.Duration
+		expectIntervals int
 	}{
 		{
 			name:            "ChannelsError",
 			channelsError:   true,
 			expectError:     true,
-			expectIntervals: nil,
+			expectIntervals: 0,
 		},
 		{
 			name:            "Success",
 			channelsError:   false,
 			expectError:     false,
-			expectIntervals: []time.Duration{2 * time.Second, 5 * time.Second},
+			expectIntervals: 2,
 		},
 	}
 
@@ -61,7 +59,7 @@ func TestChannelsInterval(t *testing.T) {
 			if msg := testutils.AssertError(t, err, tc.expectError); msg != "" {
 				t.Error(msg)
 			}
-			if got, want := in, tc.expectIntervals; !reflect.DeepEqual(got, want) {
+			if got, want := len(in), tc.expectIntervals; got != want {
 				t.Errorf("returned intervals, want %#q, got %#q", want, got)
 			}
 		})
