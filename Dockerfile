@@ -6,6 +6,7 @@ WORKDIR /usr/src/app
 COPY go.mod go.sum ./
 COPY cmd ./cmd
 COPY internal ./internal
+ENV CGO_ENABLED=0
 RUN --mount=type=cache,target=/root/.cache/go-build \
     go build -o bin/ -v ./...
 
