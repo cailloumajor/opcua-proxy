@@ -64,6 +64,7 @@ go.work
 
 # Binaries
 /bin/
+/opcua-centrifugo
 
 # Testing certificate and key
 !/certs/testing_cert.der
