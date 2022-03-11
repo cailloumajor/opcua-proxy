@@ -1,5 +1,4 @@
 #!/bin/sh
 
-openssl req -x509 -out cert.pem -days 3650 -nodes -config ./openssl.conf
-openssl x509 -outform der -in cert.pem -out cert.der
-rm cert.pem
+openssl genrsa -out key.pem 2048
+openssl req -x509 -key key.pem -out cert.der -outform der -days 3650 -nodes -config ./openssl.conf
