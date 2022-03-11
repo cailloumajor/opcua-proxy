@@ -122,12 +122,13 @@ func main() {
 			Handler: proxy,
 		}
 		g.Add(func() error {
+			defer level.Debug(proxyLogger).Log("msg", "shutting down")
+			level.Debug(proxyLogger).Log("msg", "starting")
 			level.Info(proxyLogger).Log("listen", proxyListen)
 			return srv.ListenAndServe()
 		}, func(err error) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			level.Debug(proxyLogger).Log("msg", "shutting down")
 			if err := srv.Shutdown(ctx); err != nil {
 				level.Info(proxyLogger).Log("during", "Shutdown", "err", err)
 			}
@@ -135,9 +136,11 @@ func main() {
 	}
 
 	{
-		monitorLogger := log.With(logger, "component", "OPC-UA monitor")
+		monitorLogger := log.With(logger, "component", "monitor")
 		ctx, cancel := context.WithCancel(context.Background())
 		g.Add(func() error {
+			defer level.Debug(monitorLogger).Log("msg", "stopping")
+			level.Debug(monitorLogger).Log("msg", "starting")
 			for {
 				select {
 				case <-ctx.Done():
@@ -158,18 +161,22 @@ func main() {
 			}
 		}, func(err error) {
 			cancel()
-			stopContext, stopCancel := context.WithTimeout(context.Background(), 5*time.Second)
+			stopContext, stopCancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer stopCancel()
-			level.Debug(monitorLogger).Log("msg", "stopping")
-			opcMonitor.Stop(stopContext)
+			errs := opcMonitor.Stop(stopContext)
+			for _, err := range errs {
+				level.Info(monitorLogger).Log("during", "stop", "err", err)
+			}
 		})
 	}
 
 	{
-		tidyLogger := log.With(logger, "component", "tidy routine")
+		tidyLogger := log.With(logger, "component", "tidy")
 		ctx, cancel := context.WithCancel(context.Background())
 		ticker := time.NewTicker(opcuaTidyInterval)
 		g.Add(func() error {
+			defer level.Debug(tidyLogger).Log("msg", "stopping")
+			level.Debug(tidyLogger).Log("msg", "starting")
 			for {
 				select {
 				case <-ctx.Done():
