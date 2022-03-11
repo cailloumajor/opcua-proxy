@@ -110,8 +110,9 @@ func (m *Monitor) Subscribe(ctx context.Context, nsURI string, ch ChannelProvide
 		handle := uint32(len(im))
 		reqs[i] = &ua.MonitoredItemCreateRequest{
 			ItemToMonitor: &ua.ReadValueID{
-				NodeID:      ua.NewStringNodeID(nsi, node),
-				AttributeID: ua.AttributeIDValue,
+				NodeID:       ua.NewStringNodeID(nsi, node),
+				AttributeID:  ua.AttributeIDValue,
+				DataEncoding: &ua.QualifiedName{},
 			},
 			MonitoringMode: ua.MonitoringModeReporting,
 			RequestedParameters: &ua.MonitoringParameters{
