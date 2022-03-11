@@ -144,8 +144,12 @@ func main() {
 					return ctx.Err()
 				default:
 					c, d, err := opcMonitor.GetDataChange(ctx)
+					if errors.Is(err, context.Canceled) {
+						continue
+					}
 					if err != nil {
 						level.Info(monitorLogger).Log("during", "GetDataChange", "err", err)
+						continue
 					}
 					if _, err := centrifugoClient.Publish(ctx, c, d); err != nil {
 						level.Info(monitorLogger).Log("during", "Publish", "err", err)
