@@ -130,7 +130,7 @@ func (m *Monitor) Subscribe(ctx context.Context, nsURI string, ch ChannelProvide
 	for i, s := range res.Results {
 		if s.StatusCode != ua.StatusOK {
 			_ = sub.Cancel(ctx) // Desperate attempt...
-			return fmt.Errorf("error creating %q monitored item: %w", nodes[i], err)
+			return fmt.Errorf("error creating %q monitored item: %w", nodes[i], s.StatusCode)
 		}
 	}
 
