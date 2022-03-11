@@ -23,6 +23,8 @@ import (
 	"github.com/peterbourgon/ff"
 )
 
+const stopTimeout = 2 * time.Second
+
 func usageFor(fs *flag.FlagSet, out io.Writer) func() {
 	return func() {
 		fmt.Fprintln(out, "USAGE")
@@ -127,7 +129,7 @@ func main() {
 			level.Info(proxyLogger).Log("listen", proxyListen)
 			return srv.ListenAndServe()
 		}, func(err error) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), stopTimeout)
 			defer cancel()
 			if err := srv.Shutdown(ctx); err != nil {
 				level.Info(proxyLogger).Log("during", "Shutdown", "err", err)
@@ -161,7 +163,7 @@ func main() {
 			}
 		}, func(err error) {
 			cancel()
-			stopContext, stopCancel := context.WithTimeout(context.Background(), 2*time.Second)
+			stopContext, stopCancel := context.WithTimeout(context.Background(), stopTimeout)
 			defer stopCancel()
 			errs := opcMonitor.Stop(stopContext)
 			for _, err := range errs {
