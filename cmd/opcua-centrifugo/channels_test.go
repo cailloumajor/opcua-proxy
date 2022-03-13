@@ -9,7 +9,7 @@ import (
 	"github.com/centrifugal/gocent/v3"
 )
 
-func TestChannelsInterval(t *testing.T) {
+func TestChannels(t *testing.T) {
 	cases := []struct {
 		name            string
 		channelsError   bool
@@ -26,7 +26,7 @@ func TestChannelsInterval(t *testing.T) {
 			name:            "Success",
 			channelsError:   false,
 			expectError:     false,
-			expectIntervals: 2,
+			expectIntervals: 3,
 		},
 	}
 
@@ -46,21 +46,19 @@ func TestChannelsInterval(t *testing.T) {
 					}
 					return gocent.ChannelsResult{
 						Channels: map[string]gocent.ChannelInfo{
-							"ns:ch1@2000": {},
-							"ch2":         {},
-							"ns:ch3@5000": {},
+							"ch1": {}, "ch2": {}, "ch3": {},
 						},
 					}, nil
 				},
 			}
 
-			in, err := ChannelIntervals(context.Background(), mockedCentrifugoChannels, "ns")
+			chs, err := Channels(context.Background(), mockedCentrifugoChannels, "ns")
 
 			if msg := testutils.AssertError(t, err, tc.expectError); msg != "" {
 				t.Error(msg)
 			}
-			if got, want := len(in), tc.expectIntervals; got != want {
-				t.Errorf("returned intervals, want %#q, got %#q", want, got)
+			if got, want := len(chs), tc.expectIntervals; got != want {
+				t.Errorf("returned intervals count, want %d, got %d", want, got)
 			}
 		})
 	}

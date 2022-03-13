@@ -385,9 +385,6 @@ var _ ChannelProvider = &ChannelProviderMock{}
 // 			IntervalFunc: func() time.Duration {
 // 				panic("mock out the Interval method")
 // 			},
-// 			NameFunc: func() string {
-// 				panic("mock out the Name method")
-// 			},
 // 			StringFunc: func() string {
 // 				panic("mock out the String method")
 // 			},
@@ -401,9 +398,6 @@ type ChannelProviderMock struct {
 	// IntervalFunc mocks the Interval method.
 	IntervalFunc func() time.Duration
 
-	// NameFunc mocks the Name method.
-	NameFunc func() string
-
 	// StringFunc mocks the String method.
 	StringFunc func() string
 
@@ -412,15 +406,11 @@ type ChannelProviderMock struct {
 		// Interval holds details about calls to the Interval method.
 		Interval []struct {
 		}
-		// Name holds details about calls to the Name method.
-		Name []struct {
-		}
 		// String holds details about calls to the String method.
 		String []struct {
 		}
 	}
 	lockInterval sync.RWMutex
-	lockName     sync.RWMutex
 	lockString   sync.RWMutex
 }
 
@@ -447,32 +437,6 @@ func (mock *ChannelProviderMock) IntervalCalls() []struct {
 	mock.lockInterval.RLock()
 	calls = mock.calls.Interval
 	mock.lockInterval.RUnlock()
-	return calls
-}
-
-// Name calls NameFunc.
-func (mock *ChannelProviderMock) Name() string {
-	if mock.NameFunc == nil {
-		panic("ChannelProviderMock.NameFunc: method is nil but ChannelProvider.Name was just called")
-	}
-	callInfo := struct {
-	}{}
-	mock.lockName.Lock()
-	mock.calls.Name = append(mock.calls.Name, callInfo)
-	mock.lockName.Unlock()
-	return mock.NameFunc()
-}
-
-// NameCalls gets all the calls that were made to Name.
-// Check the length with:
-//     len(mockedChannelProvider.NameCalls())
-func (mock *ChannelProviderMock) NameCalls() []struct {
-} {
-	var calls []struct {
-	}
-	mock.lockName.RLock()
-	calls = mock.calls.Name
-	mock.lockName.RUnlock()
 	return calls
 }
 

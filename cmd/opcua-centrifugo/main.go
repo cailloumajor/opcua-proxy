@@ -184,7 +184,7 @@ func main() {
 				case <-ctx.Done():
 					return ctx.Err()
 				case <-ticker.C:
-					ints, err := ChannelIntervals(ctx, centrifugoClient, centrifugoNamespace)
+					ints, err := Channels(ctx, centrifugoClient, centrifugoNamespace)
 					if err != nil {
 						level.Info(tidyLogger).Log("during", "ChannelIntervals", "err", err)
 					}

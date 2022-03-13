@@ -1,10 +1,11 @@
 package opcua_test
 
 import (
-	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
+	"reflect"
 	"testing"
 	"time"
 
@@ -61,8 +62,8 @@ func TestMonitorSubscribeError(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockedChannelProvider := &ChannelProviderMock{
-				NameFunc:     func() string { return "" },
 				IntervalFunc: func() time.Duration { return 0 },
+				StringFunc:   func() string { return "" },
 			}
 			mockedSubscription := &SubscriptionProviderMock{
 				CancelFunc: func(ctx context.Context) error {
@@ -109,9 +110,6 @@ func TestMonitorSubscribeError(t *testing.T) {
 			if got, want := len(m.Subs()), 0; got != want {
 				t.Errorf("subscriptions count: want %d, got %d", want, got)
 			}
-			if got, want := len(m.Items()), 0; got != want {
-				t.Errorf("monitored items count: want %d, got %d", want, got)
-			}
 			if msg := testutils.AssertError(t, err, true); msg != "" {
 				t.Errorf(msg)
 			}
@@ -142,23 +140,30 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			sentinelNodes := []string{"node1", "node2", "node3"}
+			sentinelNodes := [...]struct {
+				nodeID string
+				handle uint32
+			}{
+				{nodeID: "node1", handle: 1},
+				{nodeID: "node2", handle: 2},
+				{nodeID: "node3", handle: 3},
+			}
 			mockedChannelProvider := &ChannelProviderMock{
-				NameFunc:     func() string { return tc.subName },
 				IntervalFunc: func() time.Duration { return tc.interval },
+				StringFunc:   func() string { return tc.subName },
 			}
 			mockedSubscription := &SubscriptionProviderMock{
 				IDFunc: func() uint32 { return 56461 },
 				MonitorWithContextFunc: func(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error) {
 					for i, item := range items {
 						if got, want := item.ItemToMonitor.NodeID.Namespace(), uint16(2); got != want {
-							t.Errorf("Monitor call, %q node namespace: want %d, got %d", sentinelNodes[i], want, got)
+							t.Errorf("Monitor call, %q node namespace: want %d, got %d", item.ItemToMonitor.NodeID, want, got)
 						}
-						if got, want := item.ItemToMonitor.NodeID.StringID(), sentinelNodes[i]; got != want {
-							t.Errorf("Monitor call, %q node string ID: want %q, got %q", sentinelNodes[i], want, got)
+						if got, want := item.ItemToMonitor.NodeID.StringID(), sentinelNodes[i].nodeID; got != want {
+							t.Errorf("Monitor call, %q node string ID: want %q, got %q", item.ItemToMonitor.NodeID, want, got)
 						}
-						if got, want := item.RequestedParameters.ClientHandle, uint32(i+2); got != want {
-							t.Errorf("Monitor call, %q node requested client handle: want %d, got %d", sentinelNodes[i], want, got)
+						if got, want := item.RequestedParameters.ClientHandle, sentinelNodes[i].handle; got != want {
+							t.Errorf("Monitor call, %q node requested client handle: want %d, got %d", item.ItemToMonitor.NodeID, want, got)
 						}
 					}
 					return &ua.CreateMonitoredItemsResponse{}, nil
@@ -176,22 +181,23 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 				},
 			}
 			m := NewMonitor(mockedClientProvider)
-			m.AddSubscription("sub0", 0, mockedSubscription)
-			m.AddMonitoredItems("existing1", "existing2")
+			m.AddSubscription("sub0", mockedSubscription)
 
-			err := m.Subscribe(context.Background(), "", mockedChannelProvider, sentinelNodes)
+			var nodes []string
+			for _, n := range sentinelNodes {
+				nodes = append(nodes, n.nodeID)
+			}
+			err := m.Subscribe(context.Background(), "", mockedChannelProvider, nodes)
 
 			var (
-				expectSubscribeCalled     = 0
-				expectMonitorCalled       = 0
-				expectSubscriptionsCount  = 1
-				expectMonitoredItemsCount = 2
+				expectSubscribeCalled    = 0
+				expectMonitorCalled      = 0
+				expectSubscriptionsCount = 1
 			)
 			if tc.expectNewSubscription {
 				expectSubscribeCalled = 1
 				expectMonitorCalled = 1
 				expectSubscriptionsCount = 2
-				expectMonitoredItemsCount = 5
 
 			}
 			if got, want := len(mockedClientProvider.SubscribeCalls()), expectSubscribeCalled; got != want {
@@ -203,14 +209,6 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 			if got, want := len(m.Subs()), expectSubscriptionsCount; got != want {
 				t.Errorf("subscriptions count: want %d, got %d", want, got)
 			}
-			if tc.expectNewSubscription {
-				if got, want := m.Chans()[56461].Name(), tc.subName; got != want {
-					t.Errorf("Centrifugo channels map: want an item with %q name, got %q", want, got)
-				}
-			}
-			if got, want := len(m.Items()), expectMonitoredItemsCount; got != want {
-				t.Errorf("monitored items count: want %d, got %d", want, got)
-			}
 			if msg := testutils.AssertError(t, err, false); msg != "" {
 				t.Errorf(msg)
 			}
@@ -220,13 +218,11 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 
 func TestMonitorGetDataChange(t *testing.T) {
 	cases := []struct {
-		name              string
-		contextCancelled  bool
-		publish           *opcua.PublishNotificationData
-		missingChannel    bool
-		expectError       bool
-		expectChannelName string
-		expectJSON        []byte
+		name             string
+		contextCancelled bool
+		publish          *opcua.PublishNotificationData
+		missingChannel   bool
+		expectError      bool
 	}{
 		{
 			name:             "ContextCancelled",
@@ -235,37 +231,29 @@ func TestMonitorGetDataChange(t *testing.T) {
 				SubscriptionID: 5616,
 				Value:          &ua.DataChangeNotification{},
 			},
-			missingChannel:    false,
-			expectError:       true,
-			expectChannelName: "",
-			expectJSON:        nil,
+			missingChannel: false,
+			expectError:    true,
 		},
 		{
-			name:              "NotificationDataError",
-			contextCancelled:  false,
-			publish:           &opcua.PublishNotificationData{Error: testutils.ErrTesting},
-			missingChannel:    false,
-			expectError:       true,
-			expectChannelName: "",
-			expectJSON:        nil,
+			name:             "NotificationDataError",
+			contextCancelled: false,
+			publish:          &opcua.PublishNotificationData{Error: testutils.ErrTesting},
+			missingChannel:   false,
+			expectError:      true,
 		},
 		{
-			name:              "EventNotificationList",
-			contextCancelled:  false,
-			publish:           &opcua.PublishNotificationData{Value: &ua.EventNotificationList{}},
-			missingChannel:    false,
-			expectError:       true,
-			expectChannelName: "",
-			expectJSON:        nil,
+			name:             "EventNotificationList",
+			contextCancelled: false,
+			publish:          &opcua.PublishNotificationData{Value: &ua.EventNotificationList{}},
+			missingChannel:   false,
+			expectError:      true,
 		},
 		{
-			name:              "StatusChangeNotification",
-			contextCancelled:  false,
-			publish:           &opcua.PublishNotificationData{Value: &ua.StatusChangeNotification{}},
-			missingChannel:    false,
-			expectError:       true,
-			expectChannelName: "",
-			expectJSON:        nil,
+			name:             "StatusChangeNotification",
+			contextCancelled: false,
+			publish:          &opcua.PublishNotificationData{Value: &ua.StatusChangeNotification{}},
+			missingChannel:   false,
+			expectError:      true,
 		},
 		{
 			name:             "CentrifugoChannelNotFound",
@@ -274,10 +262,8 @@ func TestMonitorGetDataChange(t *testing.T) {
 				SubscriptionID: 5616,
 				Value:          &ua.DataChangeNotification{},
 			},
-			missingChannel:    true,
-			expectError:       true,
-			expectChannelName: "",
-			expectJSON:        nil,
+			missingChannel: true,
+			expectError:    true,
 		},
 		{
 			name:             "JSONMarshalError",
@@ -294,10 +280,8 @@ func TestMonitorGetDataChange(t *testing.T) {
 					},
 				},
 			},
-			missingChannel:    false,
-			expectError:       true,
-			expectChannelName: "",
-			expectJSON:        nil,
+			missingChannel: false,
+			expectError:    true,
 		},
 		{
 			name:             "Success",
@@ -306,29 +290,26 @@ func TestMonitorGetDataChange(t *testing.T) {
 				SubscriptionID: 5616,
 				Value: &ua.DataChangeNotification{
 					MonitoredItems: []*ua.MonitoredItemNotification{
-						{ClientHandle: 0, Value: &ua.DataValue{Value: ua.MustVariant("string")}},
-						{ClientHandle: 1, Value: &ua.DataValue{Value: ua.MustVariant(uint8(42))}},
-						{ClientHandle: 2, Value: &ua.DataValue{Value: ua.MustVariant(time.UnixMilli(0))}},
-						{ClientHandle: 3, Value: &ua.DataValue{Value: ua.MustVariant(37.5)}},
+						{ClientHandle: 1, Value: &ua.DataValue{Value: ua.MustVariant("string")}},
+						{ClientHandle: 8, Value: &ua.DataValue{Value: ua.MustVariant(uint8(42))}},
+						{ClientHandle: 12, Value: &ua.DataValue{Value: ua.MustVariant(time.UnixMilli(0))}},
+						{ClientHandle: 13, Value: &ua.DataValue{Value: ua.MustVariant(37.5)}},
 					},
 				},
 			},
-			missingChannel:    false,
-			expectError:       false,
-			expectChannelName: "MockedChannel",
-			expectJSON:        []byte(`{"node0":"string","node1":42,"node2":"1970-01-01T00:00:00Z","node3":37.5}`),
+			missingChannel: false,
+			expectError:    false,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockedChannelProvider := &ChannelProviderMock{
-				NameFunc: func() string { return "MockedChannel" },
-			}
 			m := NewMonitor(&ClientProviderMock{})
-			m.AddMonitoredItems("node0", "node1", "node2", "node3")
 			if !tc.missingChannel {
-				m.AddChan(5616, mockedChannelProvider)
+				mockedSubscriptionProvider := &SubscriptionProviderMock{
+					IDFunc: func() uint32 { return 5616 },
+				}
+				m.AddSubscription("subforchannel", mockedSubscriptionProvider)
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
@@ -343,10 +324,23 @@ func TestMonitorGetDataChange(t *testing.T) {
 			if msg := testutils.AssertError(t, err, tc.expectError); msg != "" {
 				t.Errorf(msg)
 			}
-			if got, want := n, tc.expectChannelName; got != want {
+			if tc.expectError {
+				return
+			}
+			if got, want := n, "subforchannel"; got != want {
 				t.Errorf("channel name: want %q, got %q", want, got)
 			}
-			if got, want := d, tc.expectJSON; !bytes.Equal(got, want) {
+			expected := map[string]interface{}{
+				"0":  "string",
+				"7":  42.0,
+				"11": "1970-01-01T00:00:00Z",
+				"12": 37.5,
+			}
+			var g map[string]interface{}
+			if err := json.Unmarshal(d, &g); err != nil {
+				t.Fatalf("error unmarshalling: %v", err)
+			}
+			if got, want := g, expected; !reflect.DeepEqual(got, want) {
 				t.Errorf("JSON data: want %q, got %q", want, got)
 			}
 		})
@@ -356,7 +350,7 @@ func TestMonitorGetDataChange(t *testing.T) {
 func TestMonitorPurge(t *testing.T) {
 	cases := []struct {
 		name                  string
-		intervals             []time.Duration
+		channels              []string
 		cancelError           bool
 		expectCancelCallCount int
 		expectRemainingSubs   int
@@ -364,7 +358,7 @@ func TestMonitorPurge(t *testing.T) {
 	}{
 		{
 			name:                  "NoSubscriptionRemoved",
-			intervals:             []time.Duration{1, 2, 3},
+			channels:              []string{"sub1", "sub2", "sub3"},
 			cancelError:           false,
 			expectCancelCallCount: 0,
 			expectRemainingSubs:   3,
@@ -372,7 +366,7 @@ func TestMonitorPurge(t *testing.T) {
 		},
 		{
 			name:                  "OneSubscriptionRemovedNoError",
-			intervals:             []time.Duration{2, 3},
+			channels:              []string{"sub2", "sub3"},
 			cancelError:           false,
 			expectCancelCallCount: 1,
 			expectRemainingSubs:   2,
@@ -380,7 +374,7 @@ func TestMonitorPurge(t *testing.T) {
 		},
 		{
 			name:                  "TwoSubscriptionsRemovedNoError",
-			intervals:             []time.Duration{2},
+			channels:              []string{"sub2"},
 			cancelError:           false,
 			expectCancelCallCount: 2,
 			expectRemainingSubs:   1,
@@ -388,7 +382,7 @@ func TestMonitorPurge(t *testing.T) {
 		},
 		{
 			name:                  "OneSubscriptionRemovedWithError",
-			intervals:             []time.Duration{1, 2},
+			channels:              []string{"sub1", "sub2"},
 			cancelError:           true,
 			expectCancelCallCount: 1,
 			expectRemainingSubs:   3,
@@ -396,7 +390,7 @@ func TestMonitorPurge(t *testing.T) {
 		},
 		{
 			name:                  "TwoSubscriptionsRemovedWithError",
-			intervals:             []time.Duration{2},
+			channels:              []string{"sub2"},
 			cancelError:           true,
 			expectCancelCallCount: 2,
 			expectRemainingSubs:   3,
@@ -415,11 +409,11 @@ func TestMonitorPurge(t *testing.T) {
 				},
 			}
 			m := NewMonitor(&ClientProviderMock{})
-			m.AddSubscription("sub0", 1, mockedSubscription)
-			m.AddSubscription("sub1", 2, &SubscriptionProviderMock{})
-			m.AddSubscription("sub2", 3, mockedSubscription)
+			m.AddSubscription("sub1", mockedSubscription)
+			m.AddSubscription("sub2", &SubscriptionProviderMock{})
+			m.AddSubscription("sub3", mockedSubscription)
 
-			errs := m.Purge(context.Background(), tc.intervals)
+			errs := m.Purge(context.Background(), tc.channels)
 
 			if got, want := len(mockedSubscription.CancelCalls()), tc.expectCancelCallCount; got != want {
 				t.Errorf("Cancel calls count: want %d, got %d", want, got)
@@ -453,7 +447,7 @@ func TestMonitorStop(t *testing.T) {
 			},
 		}
 		mockedSubscriptions[i] = mockedSubscription
-		m.AddSubscription(fmt.Sprintf("sub%d", i), time.Duration(i+1)*time.Second, mockedSubscription)
+		m.AddSubscription(fmt.Sprintf("sub%d", i), mockedSubscription)
 	}
 
 	errs := m.Stop(context.Background())

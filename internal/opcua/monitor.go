@@ -33,15 +33,8 @@ type SubscriptionProvider interface {
 
 // ChannelProvider is a consumer contract modelling a Centrifugo channel.
 type ChannelProvider interface {
-	Name() string
 	Interval() time.Duration
 	fmt.Stringer
-}
-
-// subShape models the characteristics of a subscription.
-type subShape struct {
-	name     string
-	interval time.Duration
 }
 
 // Monitor is an OPC-UA node monitor wrapping a client.
@@ -50,10 +43,8 @@ type Monitor struct {
 
 	notifyCh chan *opcua.PublishNotificationData
 
-	mu    sync.RWMutex
-	subs  map[subShape]SubscriptionProvider
-	chans map[uint32]ChannelProvider
-	items map[uint32]string
+	mu   sync.RWMutex
+	subs map[string]SubscriptionProvider // map of subscription by Centrifugo channel name
 }
 
 // NewMonitor creates an OPC-UA node monitor.
@@ -61,9 +52,7 @@ func NewMonitor(c ClientProvider) *Monitor {
 	return &Monitor{
 		client:   c,
 		notifyCh: make(chan *opcua.PublishNotificationData, QueueSize),
-		subs:     make(map[subShape]SubscriptionProvider),
-		chans:    make(map[uint32]ChannelProvider),
-		items:    make(map[uint32]string),
+		subs:     make(map[string]SubscriptionProvider),
 	}
 }
 
@@ -76,13 +65,8 @@ func (m *Monitor) Subscribe(ctx context.Context, nsURI string, ch ChannelProvide
 		return err
 	}
 
-	si := subShape{
-		name:     ch.Name(),
-		interval: ch.Interval(),
-	}
-
 	m.mu.RLock()
-	_, exists := m.subs[si]
+	_, exists := m.subs[ch.String()]
 	m.mu.RUnlock()
 
 	if exists {
@@ -100,14 +84,8 @@ func (m *Monitor) Subscribe(ctx context.Context, nsURI string, ch ChannelProvide
 		return fmt.Errorf("error creating subscription: %w", err)
 	}
 
-	im := make(map[uint32]string)
-	for k, v := range m.items {
-		im[k] = v
-	}
-
 	reqs := make([]*ua.MonitoredItemCreateRequest, len(nodes))
 	for i, node := range nodes {
-		handle := uint32(len(im))
 		reqs[i] = &ua.MonitoredItemCreateRequest{
 			ItemToMonitor: &ua.ReadValueID{
 				NodeID:       ua.NewStringNodeID(nsi, node),
@@ -116,12 +94,11 @@ func (m *Monitor) Subscribe(ctx context.Context, nsURI string, ch ChannelProvide
 			},
 			MonitoringMode: ua.MonitoringModeReporting,
 			RequestedParameters: &ua.MonitoringParameters{
-				ClientHandle:     handle,
+				ClientHandle:     uint32(i + 1),
 				SamplingInterval: -1,
 				QueueSize:        1,
 			},
 		}
-		im[handle] = node
 	}
 
 	res, err := sub.MonitorWithContext(ctx, ua.TimestampsToReturnNeither, reqs...)
@@ -135,9 +112,7 @@ func (m *Monitor) Subscribe(ctx context.Context, nsURI string, ch ChannelProvide
 		}
 	}
 
-	m.subs[si] = sub
-	m.items = im
-	m.chans[sub.ID()] = ch
+	m.subs[ch.String()] = sub
 
 	return nil
 }
@@ -161,46 +136,50 @@ func (m *Monitor) GetDataChange(ctx context.Context) (string, []byte, error) {
 		return "", nil, fmt.Errorf("not a data change notification")
 	}
 
-	im := make(map[string]interface{})
 	m.mu.RLock()
-
-	c, ok := m.chans[notif.SubscriptionID]
-	if !ok {
-		return "", nil, fmt.Errorf("Centrifugo channel not found")
+	const notFoundChannel = ":"
+	channel := notFoundChannel
+	for ch, sub := range m.subs {
+		if notif.SubscriptionID == sub.ID() {
+			channel = ch
+			break
+		}
 	}
-
-	for _, mi := range d.MonitoredItems {
-		n := m.items[mi.ClientHandle]
-		im[n] = mi.Value.Value.Value()
-	}
-
 	m.mu.RUnlock()
+	if channel == notFoundChannel {
+		return "", nil, fmt.Errorf("Centrifugo channel not found for subscription with ID %d", notif.SubscriptionID)
+	}
+
+	im := make(map[uint32]interface{})
+	for _, mi := range d.MonitoredItems {
+		im[mi.ClientHandle-1] = mi.Value.Value.Value()
+	}
 
 	j, err := json.Marshal(im)
 	if err != nil {
 		return "", nil, fmt.Errorf("JSON marshalling error: %w", err)
 	}
 
-	return c.Name(), j, nil
+	return channel, j, nil
 }
 
-// Purge unsubscribes and removes subscriptions for intervals that do not exist in provided slice.
-func (m *Monitor) Purge(ctx context.Context, intervals []time.Duration) (errs []error) {
-	is := make(map[time.Duration]bool)
-	for _, interval := range intervals {
-		is[interval] = true
+// Purge unsubscribes and removes subscriptions for Centrifugo channels that do not exist in provided slice.
+func (m *Monitor) Purge(ctx context.Context, channels []string) (errs []error) {
+	is := make(map[string]bool)
+	for _, ch := range channels {
+		is[ch] = true
 	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	for id, sub := range m.subs {
-		if !is[id.interval] {
+	for ch, sub := range m.subs {
+		if !is[ch] {
 			if err := sub.Cancel(ctx); err != nil {
 				errs = append(errs, err)
 				continue
 			}
-			delete(m.subs, id)
+			delete(m.subs, ch)
 		}
 	}
 
