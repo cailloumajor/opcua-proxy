@@ -191,6 +191,9 @@ func (m *Monitor) Purge(ctx context.Context, intervals []time.Duration) (errs []
 		is[interval] = true
 	}
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	for id, sub := range m.subs {
 		if !is[id.interval] {
 			if err := sub.Cancel(ctx); err != nil {
