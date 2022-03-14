@@ -11,7 +11,7 @@ import (
 	"github.com/gopcua/opcua/ua"
 )
 
-//go:generate moq -out monitor_mocks_test.go . ClientProvider SubscriptionProvider ChannelProvider
+//go:generate moq -out monitor_mocks_test.go . ClientProvider SubscriptionProvider ChannelProvider NodeIDProvider
 
 // QueueSize represents the size of the buffered channel for data change notifications.
 const QueueSize = 8
@@ -37,6 +37,11 @@ type ChannelProvider interface {
 	fmt.Stringer
 }
 
+// NodeIDProvider is a consumer contract modelling an OPC-UA NodeID provider.
+type NodeIDProvider interface {
+	NodeID(ns uint16) *ua.NodeID
+}
+
 // Monitor is an OPC-UA node monitor wrapping a client.
 type Monitor struct {
 	client ClientProvider
@@ -57,9 +62,7 @@ func NewMonitor(c ClientProvider) *Monitor {
 }
 
 // Subscribe subscribes for nodes data changes on the server.
-//
-// Provided nodes are string node identifiers.
-func (m *Monitor) Subscribe(ctx context.Context, nsURI string, ch ChannelProvider, nodes []string) error {
+func (m *Monitor) Subscribe(ctx context.Context, nsURI string, ch ChannelProvider, nodes []NodeIDProvider) error {
 	nsi, err := m.client.NamespaceIndex(ctx, nsURI)
 	if err != nil {
 		return err
@@ -88,7 +91,7 @@ func (m *Monitor) Subscribe(ctx context.Context, nsURI string, ch ChannelProvide
 	for i, node := range nodes {
 		reqs[i] = &ua.MonitoredItemCreateRequest{
 			ItemToMonitor: &ua.ReadValueID{
-				NodeID:       ua.NewStringNodeID(nsi, node),
+				NodeID:       node.NodeID(nsi),
 				AttributeID:  ua.AttributeIDValue,
 				DataEncoding: &ua.QualifiedName{},
 			},
@@ -108,7 +111,7 @@ func (m *Monitor) Subscribe(ctx context.Context, nsURI string, ch ChannelProvide
 	for i, s := range res.Results {
 		if s.StatusCode != ua.StatusOK {
 			_ = sub.Cancel(ctx) // Desperate attempt...
-			return fmt.Errorf("error creating %q monitored item: %w", nodes[i], s.StatusCode)
+			return fmt.Errorf("error creating %q monitored item: %w", reqs[i].ItemToMonitor.NodeID, s.StatusCode)
 		}
 	}
 

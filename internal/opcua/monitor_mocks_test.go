@@ -465,3 +465,68 @@ func (mock *ChannelProviderMock) StringCalls() []struct {
 	mock.lockString.RUnlock()
 	return calls
 }
+
+// Ensure, that NodeIDProviderMock does implement NodeIDProvider.
+// If this is not the case, regenerate this file with moq.
+var _ NodeIDProvider = &NodeIDProviderMock{}
+
+// NodeIDProviderMock is a mock implementation of NodeIDProvider.
+//
+// 	func TestSomethingThatUsesNodeIDProvider(t *testing.T) {
+//
+// 		// make and configure a mocked NodeIDProvider
+// 		mockedNodeIDProvider := &NodeIDProviderMock{
+// 			NodeIDFunc: func(ns uint16) *ua.NodeID {
+// 				panic("mock out the NodeID method")
+// 			},
+// 		}
+//
+// 		// use mockedNodeIDProvider in code that requires NodeIDProvider
+// 		// and then make assertions.
+//
+// 	}
+type NodeIDProviderMock struct {
+	// NodeIDFunc mocks the NodeID method.
+	NodeIDFunc func(ns uint16) *ua.NodeID
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// NodeID holds details about calls to the NodeID method.
+		NodeID []struct {
+			// Ns is the ns argument value.
+			Ns uint16
+		}
+	}
+	lockNodeID sync.RWMutex
+}
+
+// NodeID calls NodeIDFunc.
+func (mock *NodeIDProviderMock) NodeID(ns uint16) *ua.NodeID {
+	if mock.NodeIDFunc == nil {
+		panic("NodeIDProviderMock.NodeIDFunc: method is nil but NodeIDProvider.NodeID was just called")
+	}
+	callInfo := struct {
+		Ns uint16
+	}{
+		Ns: ns,
+	}
+	mock.lockNodeID.Lock()
+	mock.calls.NodeID = append(mock.calls.NodeID, callInfo)
+	mock.lockNodeID.Unlock()
+	return mock.NodeIDFunc(ns)
+}
+
+// NodeIDCalls gets all the calls that were made to NodeID.
+// Check the length with:
+//     len(mockedNodeIDProvider.NodeIDCalls())
+func (mock *NodeIDProviderMock) NodeIDCalls() []struct {
+	Ns uint16
+} {
+	var calls []struct {
+		Ns uint16
+	}
+	mock.lockNodeID.RLock()
+	calls = mock.calls.NodeID
+	mock.lockNodeID.RUnlock()
+	return calls
+}

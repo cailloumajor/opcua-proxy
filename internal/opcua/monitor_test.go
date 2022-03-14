@@ -65,6 +65,9 @@ func TestMonitorSubscribeError(t *testing.T) {
 				IntervalFunc: func() time.Duration { return 0 },
 				StringFunc:   func() string { return "" },
 			}
+			mockedNodeIDProvider := &NodeIDProviderMock{
+				NodeIDFunc: func(ns uint16) *ua.NodeID { return ua.NewNumericNodeID(0, 0) },
+			}
 			mockedSubscription := &SubscriptionProviderMock{
 				CancelFunc: func(ctx context.Context) error {
 					return nil
@@ -102,7 +105,7 @@ func TestMonitorSubscribeError(t *testing.T) {
 			}
 			m := NewMonitor(mockedClientProvider)
 
-			err := m.Subscribe(context.Background(), "", mockedChannelProvider, []string{"node1", "node2", "node3"})
+			err := m.Subscribe(context.Background(), "", mockedChannelProvider, []NodeIDProvider{mockedNodeIDProvider, mockedNodeIDProvider, mockedNodeIDProvider})
 
 			if got, want := len(mockedSubscription.CancelCalls()), tc.expectSubCancelCalls; got != want {
 				t.Errorf("Cancel call count: want %d, got %d", want, got)
@@ -117,50 +120,60 @@ func TestMonitorSubscribeError(t *testing.T) {
 	}
 }
 
+func newNodeIDProviderMock(t *testing.T, n *ua.NodeID, expNS uint16) *NodeIDProviderMock {
+	t.Helper()
+	return &NodeIDProviderMock{
+		NodeIDFunc: func(ns uint16) *ua.NodeID {
+			if got, want := ns, expNS; got != want {
+				t.Errorf("NodeID ns argument: want %d, got %d", want, got)
+			}
+			return n
+		},
+	}
+}
+
 func TestMonitorSubscribeSuccess(t *testing.T) {
 	cases := []struct {
 		name                  string
 		subName               string
-		interval              time.Duration
 		expectNewSubscription bool
 	}{
 		{
 			name:                  "ExistingSubscription",
 			subName:               "sub0",
-			interval:              0,
 			expectNewSubscription: false,
 		},
 		{
 			name:                  "NewSubscription",
 			subName:               "sub1",
-			interval:              1,
 			expectNewSubscription: true,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			sentinelNodes := [...]struct {
-				nodeID string
+			sentinelNodes := []struct {
+				nodeID *ua.NodeID
 				handle uint32
 			}{
-				{nodeID: "node1", handle: 1},
-				{nodeID: "node2", handle: 2},
-				{nodeID: "node3", handle: 3},
+				{nodeID: ua.NewNumericNodeID(2, 42), handle: 1},
+				{nodeID: ua.NewStringNodeID(2, "node1"), handle: 2},
+				{nodeID: ua.NewStringNodeID(2, "node2"), handle: 3},
+			}
+
+			mockedNodeIDProviders := make([]NodeIDProvider, len(sentinelNodes))
+			for i, sn := range sentinelNodes {
+				mockedNodeIDProviders[i] = newNodeIDProviderMock(t, sn.nodeID, 2)
 			}
 			mockedChannelProvider := &ChannelProviderMock{
-				IntervalFunc: func() time.Duration { return tc.interval },
+				IntervalFunc: func() time.Duration { return 5 * time.Minute },
 				StringFunc:   func() string { return tc.subName },
 			}
 			mockedSubscription := &SubscriptionProviderMock{
-				IDFunc: func() uint32 { return 56461 },
 				MonitorWithContextFunc: func(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error) {
 					for i, item := range items {
-						if got, want := item.ItemToMonitor.NodeID.Namespace(), uint16(2); got != want {
-							t.Errorf("Monitor call, %q node namespace: want %d, got %d", item.ItemToMonitor.NodeID, want, got)
-						}
-						if got, want := item.ItemToMonitor.NodeID.StringID(), sentinelNodes[i].nodeID; got != want {
-							t.Errorf("Monitor call, %q node string ID: want %q, got %q", item.ItemToMonitor.NodeID, want, got)
+						if got, want := item.ItemToMonitor.NodeID, sentinelNodes[i].nodeID; !reflect.DeepEqual(got, want) {
+							t.Errorf("Monitor call, %q NodeID: want %q, got %q", item.ItemToMonitor.NodeID, want, got)
 						}
 						if got, want := item.RequestedParameters.ClientHandle, sentinelNodes[i].handle; got != want {
 							t.Errorf("Monitor call, %q node requested client handle: want %d, got %d", item.ItemToMonitor.NodeID, want, got)
@@ -174,20 +187,16 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 					return 2, nil
 				},
 				SubscribeFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error) {
-					if got, want := params.Interval, time.Duration(tc.interval); got != want {
+					if got, want := params.Interval, 5*time.Minute; got != want {
 						t.Errorf("Subscribe Interval argument: want %v, got %v", want, got)
 					}
 					return mockedSubscription, nil
 				},
 			}
 			m := NewMonitor(mockedClientProvider)
-			m.AddSubscription("sub0", mockedSubscription)
+			m.AddSubscription("sub0", &SubscriptionProviderMock{})
 
-			var nodes []string
-			for _, n := range sentinelNodes {
-				nodes = append(nodes, n.nodeID)
-			}
-			err := m.Subscribe(context.Background(), "", mockedChannelProvider, nodes)
+			err := m.Subscribe(context.Background(), "", mockedChannelProvider, mockedNodeIDProviders)
 
 			var (
 				expectSubscribeCalled    = 0

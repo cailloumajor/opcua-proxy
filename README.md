@@ -10,6 +10,7 @@ A microservice to proxy OPC-UA data change subscription through Centrifugo.
 
 [1]: https://centrifugal.dev/docs/server/proxy#subscribe-proxy
 [2]: https://centrifugal.dev/docs/server/channels#channel-namespaces
+[3]: https://reference.opcfoundation.org/v105/Core/docs/Part3/8.2.3/
 
 - A Centrifugo server (at least v3.1.1) is configured to [proxy subscriptions][1] to this service.
 - Clients interested in OPC-UA values changes subscribe to Centrifugo with following characteristics:
@@ -19,7 +20,11 @@ A microservice to proxy OPC-UA data change subscription through Centrifugo.
     - **Note**: channel [namespace][2] is reserved for configuring the proxy endpoint.
   - *Data*: JSON object with following fields:
     - *namespaceURI*: namespace URI for nodes to monitor
-    - *nodes*: array of all individual nodes to monitor (structures and arrays must be flattened)
+    - *nodes*: array of node identifiers, with mapping below:
+      | JSON type                       | [NodeID type][3] |
+      |---------------------------------|------------------|
+      | Integer (positive whole number) | Numeric          |
+      | String                          | String           |
 
 ## Data flow
 

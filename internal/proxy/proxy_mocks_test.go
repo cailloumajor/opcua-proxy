@@ -23,7 +23,7 @@ var _ MonitorProvider = &MonitorProviderMock{}
 // 			StateFunc: func() gopcua.ConnState {
 // 				panic("mock out the State method")
 // 			},
-// 			SubscribeFunc: func(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []string) error {
+// 			SubscribeFunc: func(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []opcua.NodeIDProvider) error {
 // 				panic("mock out the Subscribe method")
 // 			},
 // 		}
@@ -37,7 +37,7 @@ type MonitorProviderMock struct {
 	StateFunc func() gopcua.ConnState
 
 	// SubscribeFunc mocks the Subscribe method.
-	SubscribeFunc func(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []string) error
+	SubscribeFunc func(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []opcua.NodeIDProvider) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -53,7 +53,7 @@ type MonitorProviderMock struct {
 			// Ch is the ch argument value.
 			Ch opcua.ChannelProvider
 			// Nodes is the nodes argument value.
-			Nodes []string
+			Nodes []opcua.NodeIDProvider
 		}
 	}
 	lockState     sync.RWMutex
@@ -87,7 +87,7 @@ func (mock *MonitorProviderMock) StateCalls() []struct {
 }
 
 // Subscribe calls SubscribeFunc.
-func (mock *MonitorProviderMock) Subscribe(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []string) error {
+func (mock *MonitorProviderMock) Subscribe(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []opcua.NodeIDProvider) error {
 	if mock.SubscribeFunc == nil {
 		panic("MonitorProviderMock.SubscribeFunc: method is nil but MonitorProvider.Subscribe was just called")
 	}
@@ -95,7 +95,7 @@ func (mock *MonitorProviderMock) Subscribe(ctx context.Context, nsURI string, ch
 		Ctx   context.Context
 		NsURI string
 		Ch    opcua.ChannelProvider
-		Nodes []string
+		Nodes []opcua.NodeIDProvider
 	}{
 		Ctx:   ctx,
 		NsURI: nsURI,
@@ -115,13 +115,13 @@ func (mock *MonitorProviderMock) SubscribeCalls() []struct {
 	Ctx   context.Context
 	NsURI string
 	Ch    opcua.ChannelProvider
-	Nodes []string
+	Nodes []opcua.NodeIDProvider
 } {
 	var calls []struct {
 		Ctx   context.Context
 		NsURI string
 		Ch    opcua.ChannelProvider
-		Nodes []string
+		Nodes []opcua.NodeIDProvider
 	}
 	mock.lockSubscribe.RLock()
 	calls = mock.calls.Subscribe

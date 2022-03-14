@@ -20,7 +20,7 @@ const subscribeTimeout = 5 * time.Second
 // MonitorProvider is a consumer contract modelling an OPC-UA monitor.
 type MonitorProvider interface {
 	State() gopcua.ConnState
-	Subscribe(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []string) error
+	Subscribe(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []opcua.NodeIDProvider) error
 }
 
 // CentrifugoChannelParser is a consumer contract modelling a Centrifugo channel parser.
@@ -81,8 +81,8 @@ func (p *Proxy) handleHealth(w http.ResponseWriter, r *http.Request) {
 type subscribeRequest struct {
 	Channel string `json:"channel"`
 	Data    struct {
-		NamespaceURI string   `json:"namespaceURI"`
-		Nodes        []string `json:"nodes"`
+		NamespaceURI string       `json:"namespaceURI"`
+		Nodes        []opcua.Node `json:"nodes"`
 	} `json:"data"`
 }
 
@@ -137,10 +137,15 @@ func (p *Proxy) handleCentrifugoSubscribe(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	nip := make([]opcua.NodeIDProvider, len(sr.Data.Nodes))
+	for i := range sr.Data.Nodes {
+		nip[i] = &sr.Data.Nodes[i]
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), subscribeTimeout)
 	defer cancel()
 
-	if err := p.m.Subscribe(ctx, sr.Data.NamespaceURI, cch, sr.Data.Nodes); err != nil {
+	if err := p.m.Subscribe(ctx, sr.Data.NamespaceURI, cch, nip); err != nil {
 		msg := fmt.Sprintf("error subscribing to OPC-UA data change: %v", err)
 		respond(newErrorResponse(1001, msg))
 		return

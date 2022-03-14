@@ -103,7 +103,7 @@ func TestCentrifugoSubscribe(t *testing.T) {
 		},
 		{
 			name:              "Subscribed",
-			body:              "{}",
+			body:              `{"channel":"ch1","data":{"namespaceURI":"uri","nodes":[""]}}`,
 			channelParseError: nil,
 			subscribeError:    false,
 			expectStatusCode:  http.StatusOK,
@@ -115,7 +115,7 @@ func TestCentrifugoSubscribe(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			mockedMonitorProvider := &MonitorProviderMock{
-				SubscribeFunc: func(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []string) error {
+				SubscribeFunc: func(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []opcua.NodeIDProvider) error {
 					if tc.subscribeError {
 						return testutils.ErrTesting
 					}
