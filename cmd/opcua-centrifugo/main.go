@@ -98,8 +98,10 @@ func main() {
 	}
 	logger = level.NewFilter(logger, loglevel)
 
-	var opcClient *opcua.Client
-	var opcMonitor *opcua.Monitor
+	var (
+		opcClient  *opcua.Client
+		opcMonitor *opcua.Monitor
+	)
 	func() {
 		l := log.With(logger, "during", "OPC-UA client creation")
 		ctx, cancel := context.WithTimeout(context.Background(), opcuaClientTimeout)
