@@ -140,6 +140,34 @@ func main() {
 	}
 
 	{
+		tidyLogger := log.With(logger, "component", "tidy")
+		ctx, cancel := context.WithCancel(context.Background())
+		ticker := time.NewTicker(opcuaTidyInterval)
+		g.Add(func() error {
+			defer level.Debug(tidyLogger).Log("msg", "stopping")
+			level.Debug(tidyLogger).Log("msg", "starting")
+			for {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-ticker.C:
+					ints, err := Channels(ctx, centrifugoClient, centrifugoNamespace)
+					if err != nil {
+						level.Info(tidyLogger).Log("during", "ChannelIntervals", "err", err)
+					}
+					errs := opcMonitor.Purge(ctx, ints)
+					for _, err := range errs {
+						level.Info(tidyLogger).Log("during", "monitor purge", "err", err)
+					}
+				}
+			}
+		}, func(err error) {
+			ticker.Stop()
+			cancel()
+		})
+	}
+
+	{
 		monitorLogger := log.With(logger, "component", "monitor")
 		ctx, cancel := context.WithCancel(context.Background())
 		g.Add(func() error {
@@ -171,34 +199,6 @@ func main() {
 			for _, err := range errs {
 				level.Info(monitorLogger).Log("during", "stop", "err", err)
 			}
-		})
-	}
-
-	{
-		tidyLogger := log.With(logger, "component", "tidy")
-		ctx, cancel := context.WithCancel(context.Background())
-		ticker := time.NewTicker(opcuaTidyInterval)
-		g.Add(func() error {
-			defer level.Debug(tidyLogger).Log("msg", "stopping")
-			level.Debug(tidyLogger).Log("msg", "starting")
-			for {
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				case <-ticker.C:
-					ints, err := Channels(ctx, centrifugoClient, centrifugoNamespace)
-					if err != nil {
-						level.Info(tidyLogger).Log("during", "ChannelIntervals", "err", err)
-					}
-					errs := opcMonitor.Purge(ctx, ints)
-					for _, err := range errs {
-						level.Info(tidyLogger).Log("during", "monitor purge", "err", err)
-					}
-				}
-			}
-		}, func(err error) {
-			ticker.Stop()
-			cancel()
 		})
 	}
 
