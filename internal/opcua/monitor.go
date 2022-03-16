@@ -18,7 +18,7 @@ const QueueSize = 8
 
 // ClientProvider is a consumer contract modelling an OPC-UA client provider.
 type ClientProvider interface {
-	CloseWithContext(ctx context.Context) error
+	Close(ctx context.Context) (errs []error)
 	NamespaceIndex(ctx context.Context, nsURI string) (uint16, error)
 	Subscribe(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error)
 	State() opcua.ConnState
@@ -202,9 +202,8 @@ func (m *Monitor) Stop(ctx context.Context) (errs []error) {
 		}
 	}
 
-	if err := m.client.CloseWithContext(ctx); err != nil {
-		errs = append(errs, err)
-	}
+	closeErrs := m.client.Close(ctx)
+	errs = append(errs, closeErrs...)
 
 	return
 }

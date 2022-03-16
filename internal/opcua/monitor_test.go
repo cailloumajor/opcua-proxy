@@ -439,8 +439,8 @@ func TestMonitorPurge(t *testing.T) {
 
 func TestMonitorStop(t *testing.T) {
 	mockedClientProvider := &ClientProviderMock{
-		CloseWithContextFunc: func(ctx context.Context) error {
-			return testutils.ErrTesting
+		CloseFunc: func(ctx context.Context) (errs []error) {
+			return []error{testutils.ErrTesting, testutils.ErrTesting}
 		},
 	}
 
@@ -449,7 +449,7 @@ func TestMonitorStop(t *testing.T) {
 	for i := range mockedSubscriptions {
 		mockedSubscription := &SubscriptionProviderMock{
 			CancelFunc: func(ctx context.Context) error {
-				if len(mockedClientProvider.CloseWithContextCalls()) > 0 {
+				if len(mockedClientProvider.CloseCalls()) > 0 {
 					t.Errorf("client has been closed before subscription cancel call")
 				}
 				return testutils.ErrTesting
@@ -461,7 +461,7 @@ func TestMonitorStop(t *testing.T) {
 
 	errs := m.Stop(context.Background())
 
-	if got, want := len(mockedClientProvider.CloseWithContextCalls()), 1; got != want {
+	if got, want := len(mockedClientProvider.CloseCalls()), 1; got != want {
 		t.Errorf("client.Close call count: want %d, got %d", want, got)
 	}
 	for _, v := range mockedSubscriptions {
@@ -469,7 +469,7 @@ func TestMonitorStop(t *testing.T) {
 			t.Errorf("Subscription.Unsubscribe call count: want %d, got %d", want, got)
 		}
 	}
-	if got, want := len(errs), 6; got != want {
+	if got, want := len(errs), 7; got != want {
 		t.Errorf("errors count: want %d, got %d", want, got)
 	}
 }

@@ -21,8 +21,8 @@ var _ ClientProvider = &ClientProviderMock{}
 //
 // 		// make and configure a mocked ClientProvider
 // 		mockedClientProvider := &ClientProviderMock{
-// 			CloseWithContextFunc: func(ctx context.Context) error {
-// 				panic("mock out the CloseWithContext method")
+// 			CloseFunc: func(ctx context.Context) []error {
+// 				panic("mock out the Close method")
 // 			},
 // 			NamespaceIndexFunc: func(ctx context.Context, nsURI string) (uint16, error) {
 // 				panic("mock out the NamespaceIndex method")
@@ -40,8 +40,8 @@ var _ ClientProvider = &ClientProviderMock{}
 //
 // 	}
 type ClientProviderMock struct {
-	// CloseWithContextFunc mocks the CloseWithContext method.
-	CloseWithContextFunc func(ctx context.Context) error
+	// CloseFunc mocks the Close method.
+	CloseFunc func(ctx context.Context) []error
 
 	// NamespaceIndexFunc mocks the NamespaceIndex method.
 	NamespaceIndexFunc func(ctx context.Context, nsURI string) (uint16, error)
@@ -54,8 +54,8 @@ type ClientProviderMock struct {
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// CloseWithContext holds details about calls to the CloseWithContext method.
-		CloseWithContext []struct {
+		// Close holds details about calls to the Close method.
+		Close []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 		}
@@ -79,40 +79,40 @@ type ClientProviderMock struct {
 			NotifyCh chan<- *opcua.PublishNotificationData
 		}
 	}
-	lockCloseWithContext sync.RWMutex
-	lockNamespaceIndex   sync.RWMutex
-	lockState            sync.RWMutex
-	lockSubscribe        sync.RWMutex
+	lockClose          sync.RWMutex
+	lockNamespaceIndex sync.RWMutex
+	lockState          sync.RWMutex
+	lockSubscribe      sync.RWMutex
 }
 
-// CloseWithContext calls CloseWithContextFunc.
-func (mock *ClientProviderMock) CloseWithContext(ctx context.Context) error {
-	if mock.CloseWithContextFunc == nil {
-		panic("ClientProviderMock.CloseWithContextFunc: method is nil but ClientProvider.CloseWithContext was just called")
+// Close calls CloseFunc.
+func (mock *ClientProviderMock) Close(ctx context.Context) []error {
+	if mock.CloseFunc == nil {
+		panic("ClientProviderMock.CloseFunc: method is nil but ClientProvider.Close was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
 	}{
 		Ctx: ctx,
 	}
-	mock.lockCloseWithContext.Lock()
-	mock.calls.CloseWithContext = append(mock.calls.CloseWithContext, callInfo)
-	mock.lockCloseWithContext.Unlock()
-	return mock.CloseWithContextFunc(ctx)
+	mock.lockClose.Lock()
+	mock.calls.Close = append(mock.calls.Close, callInfo)
+	mock.lockClose.Unlock()
+	return mock.CloseFunc(ctx)
 }
 
-// CloseWithContextCalls gets all the calls that were made to CloseWithContext.
+// CloseCalls gets all the calls that were made to Close.
 // Check the length with:
-//     len(mockedClientProvider.CloseWithContextCalls())
-func (mock *ClientProviderMock) CloseWithContextCalls() []struct {
+//     len(mockedClientProvider.CloseCalls())
+func (mock *ClientProviderMock) CloseCalls() []struct {
 	Ctx context.Context
 } {
 	var calls []struct {
 		Ctx context.Context
 	}
-	mock.lockCloseWithContext.RLock()
-	calls = mock.calls.CloseWithContext
-	mock.lockCloseWithContext.RUnlock()
+	mock.lockClose.RLock()
+	calls = mock.calls.Close
+	mock.lockClose.RUnlock()
 	return calls
 }
 

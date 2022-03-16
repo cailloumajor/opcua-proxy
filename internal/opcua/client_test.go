@@ -17,6 +17,9 @@ func TestNewClientSuccess(t *testing.T) {
 		ConnectFunc: func(contextMoqParam context.Context) error {
 			return nil
 		},
+		SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error) {
+			return &opcua.Subscription{}, nil
+		},
 	}
 	mockedClientExtDeps := &ClientExtDepsMock{
 		GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
@@ -100,29 +103,54 @@ func TestNewClientError(t *testing.T) {
 		getEndpointsError  bool
 		selectEndpointNil  bool
 		clientConnectError bool
+		subscribeError     bool
 	}{
 		{
 			name:               "GetEndpointsError",
 			getEndpointsError:  true,
 			selectEndpointNil:  false,
 			clientConnectError: false,
+			subscribeError:     false,
 		},
 		{
 			name:               "SelectEndpointNil",
 			getEndpointsError:  false,
 			selectEndpointNil:  true,
 			clientConnectError: false,
+			subscribeError:     false,
 		},
 		{
 			name:               "ClientConnectError",
 			getEndpointsError:  false,
 			selectEndpointNil:  false,
 			clientConnectError: true,
+			subscribeError:     false,
+		},
+		{
+			name:               "SubscribeError",
+			getEndpointsError:  false,
+			selectEndpointNil:  false,
+			clientConnectError: false,
+			subscribeError:     true,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			mockedRawClientProvider := &RawClientProviderMock{
+				ConnectFunc: func(contextMoqParam context.Context) error {
+					if tc.clientConnectError {
+						return testutils.ErrTesting
+					}
+					return nil
+				},
+				SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error) {
+					if tc.subscribeError {
+						return nil, testutils.ErrTesting
+					}
+					return &opcua.Subscription{}, nil
+				},
+			}
 			mockedClientExtDeps := &ClientExtDepsMock{
 				GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
 					if tc.getEndpointsError {
@@ -137,14 +165,7 @@ func TestNewClientError(t *testing.T) {
 					return &ua.EndpointDescription{}
 				},
 				NewClientFunc: func(endpoint string, opts ...opcua.Option) RawClientProvider {
-					return &RawClientProviderMock{
-						ConnectFunc: func(contextMoqParam context.Context) error {
-							if tc.clientConnectError {
-								return testutils.ErrTesting
-							}
-							return nil
-						},
-					}
+					return mockedRawClientProvider
 				},
 			}
 			mockedSecurityProvider := &SecurityProviderMock{
@@ -158,19 +179,15 @@ func TestNewClientError(t *testing.T) {
 			}
 
 			// Target of the test
-			m, err := NewClient(
+			_, err := NewClient(
 				context.Background(),
 				&Config{},
 				mockedClientExtDeps,
 				mockedSecurityProvider,
 			)
 
-			// Assertions about NewClient
-			if got := m; got != nil {
-				t.Errorf("NewClient return: want nil, got %+v", got)
-			}
-			if err == nil {
-				t.Error("NewClient error return: want an error, got nil")
+			if msg := testutils.AssertError(t, err, true); msg != "" {
+				t.Errorf(msg)
 			}
 		})
 	}
@@ -222,6 +239,9 @@ func TestGetMonitoredItems(t *testing.T) {
 						return nil, testutils.ErrTesting
 					}
 					return tc.callMethodResult, nil
+				},
+				SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error) {
+					return &opcua.Subscription{}, nil
 				},
 			}
 			mockedClientExtDeps := &ClientExtDepsMock{
@@ -324,6 +344,9 @@ func TestNamespaceIndex(t *testing.T) {
 						return nil, testutils.ErrTesting
 					}
 					return []string{"ns0", "ns1", "ns2", "ns3"}, nil
+				},
+				SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error) {
+					return &opcua.Subscription{}, nil
 				},
 			}
 			mockedClientExtDeps := &ClientExtDepsMock{

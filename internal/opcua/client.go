@@ -3,6 +3,7 @@ package opcua
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/id"
@@ -37,7 +38,9 @@ type SecurityProvider interface {
 
 // Client represents an OPC-UA client connected to a server.
 type Client struct {
-	inner RawClientProvider
+	inner    RawClientProvider
+	dummySub *opcua.Subscription
+	stopChan chan struct{}
 }
 
 // NewClient creates a new client and connects it to a server.
@@ -59,8 +62,32 @@ func NewClient(ctx context.Context, cfg *Config, deps ClientExtDeps, sec Securit
 		return nil, fmt.Errorf("failed to connect: %w", err)
 	}
 
+	nc := make(chan *opcua.PublishNotificationData)
+
+	sp := &opcua.SubscriptionParameters{
+		Interval: time.Minute,
+	}
+	ds, err := c.SubscribeWithContext(ctx, sp, nc)
+	if err != nil {
+		return nil, fmt.Errorf("error creating dummy subscription: %w", err)
+	}
+
+	sc := make(chan struct{})
+
+	go func(notifyCh <-chan *opcua.PublishNotificationData, stopChan <-chan struct{}) {
+		for {
+			select {
+			case <-stopChan:
+				return
+			case <-notifyCh: // drop notifications
+			}
+		}
+	}(nc, sc)
+
 	return &Client{
-		inner: c,
+		inner:    c,
+		dummySub: ds,
+		stopChan: sc,
 	}, nil
 }
 
@@ -108,9 +135,19 @@ func (c *Client) NamespaceIndex(ctx context.Context, nsURI string) (uint16, erro
 	return uint16(nsi), nil
 }
 
-// CloseWithContext stub.
-func (c *Client) CloseWithContext(ctx context.Context) error {
-	return c.inner.CloseWithContext(ctx)
+// Close wraps inner client close.
+func (c *Client) Close(ctx context.Context) (errs []error) {
+	if err := c.dummySub.Cancel(ctx); err != nil {
+		errs = append(errs, err)
+	}
+
+	c.stopChan <- struct{}{}
+
+	if err := c.inner.CloseWithContext(ctx); err != nil {
+		errs = append(errs, err)
+	}
+
+	return errs
 }
 
 // State stub.
