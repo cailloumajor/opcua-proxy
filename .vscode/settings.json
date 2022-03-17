@@ -1,0 +1,5 @@
+{
+  "[html][javascript]": {
+    "editor.formatOnSave": true
+  }
+}

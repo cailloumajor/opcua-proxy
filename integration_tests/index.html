@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Testing frontend</title>
+  <script src="https://cdn.jsdelivr.net/npm/centrifuge@2.8.4/dist/centrifuge.min.js"></script>
+</head>
+
+<body>
+  <div>
+    <label>Centrifugo URL: <input type="text" size="50" id="url-input"></label>
+    <input type="button" value="Connect" id="connect-button">
+    <span id="connect-status">not connected</span>
+  </div>
+
+  <div>
+    <label>Channel: <input type="text" id="channel-input"></label>
+    <label>Data: <input type="text" value="null" size="80" id="data-input"></label>
+    <input type="button" value="Subscribe" id="subscribe-button">
+    <input type="button" value="Unsubscribe" id="unsubscribe-button">
+    <span id="subscription-status">not subscribed</span>
+  </div>
+
+  <ol start="0" id="publication"></ol>
+
+  <script>
+    var centrifuge;
+    var subscription;
+
+    var urlInput = document.getElementById("url-input");
+    var connectBtn = document.getElementById("connect-button");
+    var connectStatus = document.getElementById("connect-status");
+    var channelInput = document.getElementById("channel-input");
+    var dataInput = document.getElementById("data-input");
+    var subscribeBtn = document.getElementById("subscribe-button");
+    var unsubscribeBtn = document.getElementById("unsubscribe-button");
+    var subscriptionStatus = document.getElementById("subscription-status");
+    var publication = document.getElementById("publication");
+
+    connectBtn.addEventListener("click", function (event) {
+      centrifuge = new Centrifuge(urlInput.value, { debug: true });
+      centrifuge.on("connect", function (context) {
+        connectStatus.innerText = "connected";
+      });
+      centrifuge.on("disconnect", function (context) {
+        connectStatus.innerText = "disconnected";
+      });
+      centrifuge.connect();
+    });
+
+    subscribeBtn.addEventListener("click", function (event) {
+      const data = JSON.parse(dataInput.value)
+      publication.innerHTML = ""
+      data.nodes.forEach((node, index) => {
+        const li = document.createElement("li")
+        publication.appendChild(li)
+      });
+      subscription = centrifuge.subscribe(channelInput.value, function (message) {
+        for (const [key, val] of Object.entries(message.data)) {
+          publication.children[parseInt(key)].innerText = val
+        }
+      }, { data });
+      unsubscribeBtn.addEventListener("click", function (event) {
+        subscription.unsubscribe();
+      });
+      subscription.on("subscribe", function (context) {
+        subscriptionStatus.innerText = "subscribed";
+      });
+      subscription.on("unsubscribe", function (context) {
+        subscriptionStatus.innerText = "unsubscribed";
+      });
+    });
+
+  </script>
+</body>
+
+</html>

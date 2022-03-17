@@ -1,1 +1,2 @@
 .devcontainer/** linguist-vendored
+integration_tests/** linguist-vendored

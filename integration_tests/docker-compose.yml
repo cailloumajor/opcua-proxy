@@ -1,0 +1,61 @@
+# Integration testing Compose file
+version: "3"
+
+services:
+
+  centrifugo:
+    image: centrifugo/centrifugo:v3.1.1
+    environment:
+      - CENTRIFUGO_LOG_LEVEL=debug
+      - CENTRIFUGO_TOKEN_HMAC_SECRET_KEY=dfa244ee-587f-43f9-adc5-b727a081d5de
+      - CENTRIFUGO_API_KEY=dc1e276a-9eb5-4950-a8bc-c13fe848154a
+      - CENTRIFUGO_ALLOWED_ORIGINS=*
+      - CENTRIFUGO_CLIENT_ANONYMOUS=true
+      - CENTRIFUGO_GRANULAR_PROXY_MODE=true
+      - CENTRIFUGO_PROXIES=[{"name":"subscribe_testing","endpoint":"http://opcua-centrifugo:8080/centrifugo/subscribe"}]
+      - CENTRIFUGO_NAMESPACES=[{"name":"testing","anonymous":true,"subscribe_proxy_name":"subscribe_testing"}]
+
+  opcua-server:
+    image: open62541/open62541:1.0
+    command:
+      - /opt/open62541/build/bin/examples/server_ctt
+      - /opt/open62541/pki/created/server_cert.der
+      - /opt/open62541/pki/created/server_key.der
+      - --trustlistFolder
+      - /opt/open62541/trusted
+    volumes:
+      - ../certs/testing_cert.der:/opt/open62541/trusted/testing_cert.der
+
+  opcua-centrifugo:
+    build: ..
+    image: opcua-centrifugo:integration-tests
+    command:
+      - /usr/local/bin/opcua-centrifugo
+      - -debug
+    environment:
+      - CENTRIFUGO_API_ADDRESS=http://centrifugo:8000/api
+      - CENTRIFUGO_API_KEY=dc1e276a-9eb5-4950-a8bc-c13fe848154a
+      - CENTRIFUGO_NAMESPACE=testing
+      - OPCUA_CERT_FILE=/certs/testing_cert.der
+      - OPCUA_KEY_FILE=/certs/testing_key.pem
+      - OPCUA_PASSWORD=password
+      - OPCUA_SERVER_URL=opc.tcp://opcua-server:4840
+      - OPCUA_TIDY_INTERVAL=10s
+      - OPCUA_USER=user1
+    user: root
+    volumes:
+      - ../certs/testing_cert.der:/certs/testing_cert.der
+      - ../certs/testing_key.pem:/certs/testing_key.pem
+
+  cypress:
+    image: cypress/included:9.5.2
+    depends_on:
+      - centrifugo
+      - opcua-server
+      - opcua-centrifugo
+    environment:
+      - CYPRESS_CENTRIFUGO_URL=ws://centrifugo:8000/connection/websocket
+      - CYPRESS_CENTRIFUGO_NAMESPACE=testing
+    volumes:
+      - .:/e2e
+    working_dir: /e2e
