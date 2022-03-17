@@ -8,11 +8,13 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
 	"syscall"
 	"text/tabwriter"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/cailloumajor/opcua-centrifugo/internal/opcua"
 	"github.com/cailloumajor/opcua-centrifugo/internal/proxy"
 	"github.com/centrifugal/gocent/v3"
@@ -61,7 +63,6 @@ func checkErr(l log.Logger, err error, code int) {
 func main() {
 	var (
 		opcuaConfig            opcua.Config
-		opcuaClientTimeout     time.Duration
 		opcuaTidyInterval      time.Duration
 		proxyListen            string
 		centrifugoNamespace    string
@@ -73,7 +74,6 @@ func main() {
 	fs.StringVar(&opcuaConfig.Password, "opcua-password", "", "password for OPC-UA authentication (optional)")
 	fs.StringVar(&opcuaConfig.CertFile, "opcua-cert-file", "", "certificate file path for OPC-UA secure channel (optional)")
 	fs.StringVar(&opcuaConfig.KeyFile, "opcua-key-file", "", "private key file path for OPC-UA secure channel (optional)")
-	fs.DurationVar(&opcuaClientTimeout, "opcua-client-timeout", 10*time.Second, "timeout for connecting the OPC-UA client")
 	fs.DurationVar(&opcuaTidyInterval, "opcua-tidy-interval", 30*time.Second, "interval at which to tidy-up OPC-UA subscriptions")
 	fs.StringVar(&proxyListen, "proxy-listen", ":8080", "Centrifugo proxy listen address")
 	fs.StringVar(&centrifugoClientConfig.Addr, "centrifugo-api-address", "", "Centrifugo API endpoint")
@@ -98,20 +98,40 @@ func main() {
 	}
 	logger = level.NewFilter(logger, loglevel)
 
-	var (
-		opcClient  *opcua.Client
-		opcMonitor *opcua.Monitor
-	)
-	func() {
-		l := log.With(logger, "during", "OPC-UA client creation")
-		ctx, cancel := context.WithTimeout(context.Background(), opcuaClientTimeout)
-		defer cancel()
+	var opcClient *opcua.Client
+	{
 		sec, err := opcua.NewSecurity(&opcuaConfig, opcua.DefaultSecurityOptsProvider{})
+		checkErr(log.With(logger, "during", "OPC-UA security configuration"), err, 1)
+
+		l := log.With(logger, "during", "OPC-UA client creation")
+		rCtx, rCancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+		err = retry.Do(
+			func() error {
+				ctx, cancel := context.WithTimeout(rCtx, 2*time.Second)
+				defer cancel()
+
+				opcClient, err = opcua.NewClient(ctx, &opcuaConfig, opcua.DefaultClientExtDeps{}, sec)
+				if err != nil {
+					return err
+				}
+
+				rCancel()
+				return nil
+			},
+			retry.Attempts(30),
+			retry.Context(rCtx),
+			retry.Delay(500*time.Millisecond),
+			retry.LastErrorOnly(true),
+			retry.MaxDelay(10*time.Second),
+			retry.OnRetry(func(n uint, err error) {
+				level.Info(l).Log("err", err, "retry", n)
+			}),
+		)
+		rCancel()
 		checkErr(l, err, 1)
-		opcClient, err = opcua.NewClient(ctx, &opcuaConfig, opcua.DefaultClientExtDeps{}, sec)
-		checkErr(l, err, 1)
-		opcMonitor = opcua.NewMonitor(opcClient)
-	}()
+	}
+
+	opcMonitor := opcua.NewMonitor(opcClient)
 
 	proxy := proxy.NewProxy(opcMonitor, proxy.DefaultCentrifugoChannelParser{}, centrifugoNamespace)
 
