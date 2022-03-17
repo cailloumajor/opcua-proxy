@@ -77,7 +77,6 @@ OPTIONS
   -centrifugo-namespace    CENTRIFUGO_NAMESPACE    Centrifugo channel namespace for this instance
   -debug                                           log debug information (default: false)
   -opcua-cert-file         OPCUA_CERT_FILE         certificate file path for OPC-UA secure channel (optional)
-  -opcua-client-timeout    OPCUA_CLIENT_TIMEOUT    timeout for connecting the OPC-UA client (default: 10s)
   -opcua-key-file          OPCUA_KEY_FILE          private key file path for OPC-UA secure channel (optional)
   -opcua-password          OPCUA_PASSWORD          password for OPC-UA authentication (optional)
   -opcua-server-url        OPCUA_SERVER_URL        OPC-UA server endpoint URL (default: opc.tcp://127.0.0.1:4840)
