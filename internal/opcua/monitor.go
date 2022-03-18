@@ -189,6 +189,11 @@ func (m *Monitor) Purge(ctx context.Context, channels []string) (errs []error) {
 	return
 }
 
+// HasSubscriptions returns whether the monitor has subscriptions or not.
+func (m *Monitor) HasSubscriptions() bool {
+	return len(m.subs) > 0
+}
+
 // Stop cancels all subscriptions and closes the wrapped client.
 //
 // Monitor must not be used after calling Stop().

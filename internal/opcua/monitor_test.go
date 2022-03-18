@@ -437,6 +437,17 @@ func TestMonitorPurge(t *testing.T) {
 	}
 }
 
+func TestMonitorHasSubscriptions(t *testing.T) {
+	m := NewMonitor(&ClientProviderMock{})
+	if m.HasSubscriptions() {
+		t.Error("expected monitor to not have subscriptions")
+	}
+	m.AddSubscription("chan1", &SubscriptionProviderMock{})
+	if !m.HasSubscriptions() {
+		t.Error("expected monitor to have subscriptions")
+	}
+}
+
 func TestMonitorStop(t *testing.T) {
 	mockedClientProvider := &ClientProviderMock{
 		CloseFunc: func(ctx context.Context) (errs []error) {

@@ -183,6 +183,9 @@ func main() {
 				case <-ctx.Done():
 					return ctx.Err()
 				case <-ticker.C:
+					if !opcMonitor.HasSubscriptions() {
+						continue
+					}
 					ints, err := Channels(ctx, centrifugoClient, centrifugoNamespace)
 					if err != nil {
 						level.Info(tidyLogger).Log("during", "Centrifugo channels query", "err", err)
