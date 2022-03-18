@@ -53,11 +53,9 @@ func usageFor(fs *flag.FlagSet, out io.Writer) func() {
 	}
 }
 
-func checkErr(l log.Logger, err error, code int) {
-	if err != nil {
-		level.Info(l).Log("err", err)
-		os.Exit(code)
-	}
+func errExit(l log.Logger, err error) {
+	level.Info(l).Log("err", err)
+	os.Exit(1)
 }
 
 func main() {
@@ -85,11 +83,11 @@ func main() {
 	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 
 	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
-		checkErr(log.With(logger, "during", "env file loading"), err, 1)
+		errExit(log.With(logger, "during", "env file loading"), err)
 	}
 
 	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVarNoPrefix()); err != nil {
-		checkErr(log.With(logger, "during", "flags parsing"), err, 2)
+		errExit(log.With(logger, "during", "flags parsing"), err)
 	}
 
 	loglevel := level.AllowInfo()
@@ -101,7 +99,9 @@ func main() {
 	var opcClient *opcua.Client
 	{
 		sec, err := opcua.NewSecurity(&opcuaConfig, opcua.DefaultSecurityOptsProvider{})
-		checkErr(log.With(logger, "during", "OPC-UA security configuration"), err, 1)
+		if err != nil {
+			errExit(log.With(logger, "during", "OPC-UA security configuration"), err)
+		}
 
 		l := log.With(logger, "during", "OPC-UA client creation")
 		rCtx, rCancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -128,7 +128,9 @@ func main() {
 			}),
 		)
 		rCancel()
-		checkErr(l, err, 1)
+		if err != nil {
+			errExit(l, err)
+		}
 	}
 
 	opcMonitor := opcua.NewMonitor(opcClient)
@@ -224,5 +226,12 @@ func main() {
 
 	g.Add(run.SignalHandler(context.Background(), syscall.SIGINT, syscall.SIGTERM))
 
-	level.Info(logger).Log("exit", g.Run())
+	runErr := g.Run()
+
+	var se run.SignalError
+	if !errors.As(runErr, &se) {
+		errExit(log.With(logger, "exit", "error"), runErr)
+	}
+
+	level.Info(logger).Log("exit", runErr)
 }
