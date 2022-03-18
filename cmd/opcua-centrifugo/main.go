@@ -145,9 +145,14 @@ func main() {
 
 	opcMonitor := opcua.NewMonitor(opcClient)
 
-	proxy := proxy.NewProxy(opcMonitor, proxy.DefaultCentrifugoChannelParser{}, centrifugoNamespace)
-
 	centrifugoClient := gocent.New(centrifugoClientConfig)
+
+	proxy := proxy.NewProxy(
+		opcMonitor,
+		proxy.DefaultCentrifugoChannelParser{},
+		centrifugoClient,
+		centrifugoNamespace,
+	)
 
 	var g run.Group
 
