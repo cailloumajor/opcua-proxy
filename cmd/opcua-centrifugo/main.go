@@ -175,7 +175,7 @@ func main() {
 				case <-ticker.C:
 					ints, err := Channels(ctx, centrifugoClient, centrifugoNamespace)
 					if err != nil {
-						level.Info(tidyLogger).Log("during", "ChannelIntervals", "err", err)
+						level.Info(tidyLogger).Log("during", "Centrifugo channels query", "err", err)
 					}
 					errs := opcMonitor.Purge(ctx, ints)
 					for _, err := range errs {
