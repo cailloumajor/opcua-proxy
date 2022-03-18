@@ -75,8 +75,8 @@ func main() {
 	fs.DurationVar(&opcuaTidyInterval, "opcua-tidy-interval", 30*time.Second, "interval at which to tidy-up OPC-UA subscriptions")
 	fs.StringVar(&proxyListen, "proxy-listen", ":8080", "Centrifugo proxy listen address")
 	fs.StringVar(&centrifugoClientConfig.Addr, "centrifugo-api-address", "", "Centrifugo API endpoint")
-	fs.StringVar(&centrifugoNamespace, "centrifugo-namespace", "", "Centrifugo channel namespace for this instance")
 	fs.StringVar(&centrifugoClientConfig.Key, "centrifugo-api-key", "", "Centrifugo API key")
+	fs.StringVar(&centrifugoNamespace, "centrifugo-namespace", "", "Centrifugo channel namespace for this instance")
 	debug := fs.Bool("debug", false, "log debug information")
 	fs.Usage = usageFor(fs, os.Stderr)
 
@@ -88,6 +88,16 @@ func main() {
 
 	if err := ff.Parse(fs, os.Args[1:], ff.WithEnvVarNoPrefix()); err != nil {
 		errExit(log.With(logger, "during", "flags parsing"), err)
+	}
+
+	{
+		l := log.With(logger, "during", "flags validation")
+		if err := ValidateCentrifugoAddress(centrifugoClientConfig.Addr); err != nil {
+			errExit(log.With(l, "flag", "centrifugo-api-address"), err)
+		}
+		if centrifugoNamespace == "" {
+			errExit(log.With(l, "flag", "centrifugo-namespace"), errors.New("missing namespace"))
+		}
 	}
 
 	loglevel := level.AllowInfo()
