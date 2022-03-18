@@ -6,6 +6,7 @@ package proxy
 import (
 	"context"
 	"github.com/cailloumajor/opcua-centrifugo/internal/opcua"
+	"github.com/centrifugal/gocent/v3"
 	gopcua "github.com/gopcua/opcua"
 	"sync"
 )
@@ -197,5 +198,70 @@ func (mock *CentrifugoChannelParserMock) ParseChannelCalls() []struct {
 	mock.lockParseChannel.RLock()
 	calls = mock.calls.ParseChannel
 	mock.lockParseChannel.RUnlock()
+	return calls
+}
+
+// Ensure, that CentrifugoInfoProviderMock does implement CentrifugoInfoProvider.
+// If this is not the case, regenerate this file with moq.
+var _ CentrifugoInfoProvider = &CentrifugoInfoProviderMock{}
+
+// CentrifugoInfoProviderMock is a mock implementation of CentrifugoInfoProvider.
+//
+// 	func TestSomethingThatUsesCentrifugoInfoProvider(t *testing.T) {
+//
+// 		// make and configure a mocked CentrifugoInfoProvider
+// 		mockedCentrifugoInfoProvider := &CentrifugoInfoProviderMock{
+// 			InfoFunc: func(ctx context.Context) (gocent.InfoResult, error) {
+// 				panic("mock out the Info method")
+// 			},
+// 		}
+//
+// 		// use mockedCentrifugoInfoProvider in code that requires CentrifugoInfoProvider
+// 		// and then make assertions.
+//
+// 	}
+type CentrifugoInfoProviderMock struct {
+	// InfoFunc mocks the Info method.
+	InfoFunc func(ctx context.Context) (gocent.InfoResult, error)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// Info holds details about calls to the Info method.
+		Info []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
+	}
+	lockInfo sync.RWMutex
+}
+
+// Info calls InfoFunc.
+func (mock *CentrifugoInfoProviderMock) Info(ctx context.Context) (gocent.InfoResult, error) {
+	if mock.InfoFunc == nil {
+		panic("CentrifugoInfoProviderMock.InfoFunc: method is nil but CentrifugoInfoProvider.Info was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockInfo.Lock()
+	mock.calls.Info = append(mock.calls.Info, callInfo)
+	mock.lockInfo.Unlock()
+	return mock.InfoFunc(ctx)
+}
+
+// InfoCalls gets all the calls that were made to Info.
+// Check the length with:
+//     len(mockedCentrifugoInfoProvider.InfoCalls())
+func (mock *CentrifugoInfoProviderMock) InfoCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockInfo.RLock()
+	calls = mock.calls.Info
+	mock.lockInfo.RUnlock()
 	return calls
 }

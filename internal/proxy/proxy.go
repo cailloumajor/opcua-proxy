@@ -10,10 +10,11 @@ import (
 
 	"github.com/cailloumajor/opcua-centrifugo/internal/centrifugo"
 	"github.com/cailloumajor/opcua-centrifugo/internal/opcua"
+	"github.com/centrifugal/gocent/v3"
 	gopcua "github.com/gopcua/opcua"
 )
 
-//go:generate moq -out proxy_mocks_test.go . MonitorProvider CentrifugoChannelParser
+//go:generate moq -out proxy_mocks_test.go . MonitorProvider CentrifugoChannelParser CentrifugoInfoProvider
 
 const subscribeTimeout = 5 * time.Second
 
@@ -26,6 +27,11 @@ type MonitorProvider interface {
 // CentrifugoChannelParser is a consumer contract modelling a Centrifugo channel parser.
 type CentrifugoChannelParser interface {
 	ParseChannel(s, namespace string) (opcua.ChannelProvider, error)
+}
+
+// CentrifugoInfoProvider is a consumer contract modelling a Centrifugo server informations provider.
+type CentrifugoInfoProvider interface {
+	Info(ctx context.Context) (gocent.InfoResult, error)
 }
 
 func methodHandler(m string, h http.Handler) http.Handler {
@@ -43,16 +49,18 @@ func methodHandler(m string, h http.Handler) http.Handler {
 type Proxy struct {
 	m  MonitorProvider
 	cp CentrifugoChannelParser
+	ci CentrifugoInfoProvider
 	ns string // expected namespace for this instance
 
 	http.Handler
 }
 
 // NewProxy creates and returns a ready to use proxy.
-func NewProxy(m MonitorProvider, cp CentrifugoChannelParser, ns string) *Proxy {
+func NewProxy(m MonitorProvider, cp CentrifugoChannelParser, ci CentrifugoInfoProvider, ns string) *Proxy {
 	p := &Proxy{
 		m:  m,
 		cp: cp,
+		ci: ci,
 		ns: ns,
 	}
 
@@ -72,9 +80,14 @@ func (p *Proxy) handleHealth(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, msg, http.StatusInternalServerError)
 	}
 
-	switch {
-	case p.m.State() != gopcua.Connected:
+	if p.m.State() != gopcua.Connected {
 		nok("OPC-UA client not connected")
+		return
+	}
+
+	if _, err := p.ci.Info(r.Context()); err != nil {
+		nok(err.Error())
+		return
 	}
 }
 

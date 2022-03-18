@@ -12,24 +12,34 @@ import (
 	"github.com/cailloumajor/opcua-centrifugo/internal/opcua"
 	. "github.com/cailloumajor/opcua-centrifugo/internal/proxy"
 	"github.com/cailloumajor/opcua-centrifugo/internal/testutils"
+	"github.com/centrifugal/gocent/v3"
 	gopcua "github.com/gopcua/opcua"
 )
 
 func TestHealth(t *testing.T) {
 	cases := []struct {
-		name             string
-		gotState         gopcua.ConnState
-		expectStatusCode int
+		name                string
+		gotState            gopcua.ConnState
+		centrifugoInfoError bool
+		expectStatusCode    int
 	}{
 		{
-			name:             "OpcClientNotConnected",
-			gotState:         gopcua.Disconnected,
-			expectStatusCode: 500,
+			name:                "OpcClientNotConnected",
+			gotState:            gopcua.Disconnected,
+			centrifugoInfoError: false,
+			expectStatusCode:    http.StatusInternalServerError,
 		},
 		{
-			name:             "OK",
-			gotState:         gopcua.Connected,
-			expectStatusCode: http.StatusOK,
+			name:                "CentrifugoInfoError",
+			gotState:            gopcua.Connected,
+			centrifugoInfoError: true,
+			expectStatusCode:    http.StatusInternalServerError,
+		},
+		{
+			name:                "OK",
+			gotState:            gopcua.Connected,
+			centrifugoInfoError: false,
+			expectStatusCode:    http.StatusOK,
 		},
 	}
 
@@ -40,7 +50,17 @@ func TestHealth(t *testing.T) {
 					return tc.gotState
 				},
 			}
-			proxy := NewProxy(mockedMonitorProvider, &CentrifugoChannelParserMock{}, "")
+			mockedCentrifugoInfoProvider := &CentrifugoInfoProviderMock{
+				InfoFunc: func(ctx context.Context) (gocent.InfoResult, error) {
+					if tc.centrifugoInfoError {
+						return gocent.InfoResult{}, testutils.ErrTesting
+					}
+					return gocent.InfoResult{
+						Nodes: []gocent.NodeInfo{{}},
+					}, nil
+				},
+			}
+			proxy := NewProxy(mockedMonitorProvider, &CentrifugoChannelParserMock{}, mockedCentrifugoInfoProvider, "")
 			srv := httptest.NewServer(proxy)
 			defer srv.Close()
 
@@ -130,7 +150,7 @@ func TestCentrifugoSubscribe(t *testing.T) {
 					return &centrifugo.Channel{}, nil
 				},
 			}
-			p := NewProxy(mockedMonitorProvider, mockedChannelParser, "")
+			p := NewProxy(mockedMonitorProvider, mockedChannelParser, &CentrifugoInfoProviderMock{}, "")
 			srv := httptest.NewServer(p)
 			defer srv.Close()
 
