@@ -16,5 +16,8 @@ FROM gcr.io/distroless/static-debian11
 
 COPY --from=builder /usr/src/app/bin/* /usr/local/bin/
 
+HEALTHCHECK CMD ["/usr/local/bin/healthcheck", "--port", "8080"]
+
 USER nonroot
+EXPOSE 8080
 CMD ["/usr/local/bin/opcua-centrifugo"]
