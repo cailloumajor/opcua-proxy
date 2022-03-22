@@ -31,8 +31,10 @@ jobs:
         with:
           go-version: 1.x <1.18
           check-latest: true
-      - name: golangci-lint
+      - name: Lint Go Code
         uses: golangci/golangci-lint-action@v3
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v1.7.0
   tests:
     name: Unit tests and code coverage
     runs-on: ubuntu-latest
