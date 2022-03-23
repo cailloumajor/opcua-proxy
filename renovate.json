@@ -6,5 +6,12 @@
   "postUpdateOptions": [
     "gomodTidy"
   ],
-  "semanticCommits": "enabled"
+  "semanticCommits": "enabled",
+  "packageRules": [
+    {
+      "matchPackageNames": ["golang"],
+      "matchManagers": ["dockerfile"],
+      "semanticCommitType": "fix"
+    }
+  ]
 }
