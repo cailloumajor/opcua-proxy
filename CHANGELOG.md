@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.3.0](https://github.com/cailloumajor/opcua-centrifugo/compare/v0.2.0...v0.3.0) (2022-03-23)
+
+
+### Features
+
+* add healthcheck tooling ([ea3b43e](https://github.com/cailloumajor/opcua-centrifugo/commit/ea3b43edd3b29896f9c198ac9acdd331a2df168e))
+* check centrifugo server for health status ([c34c1ce](https://github.com/cailloumajor/opcua-centrifugo/commit/c34c1ce618439aa5a5620e268826d5eb4b7dbe3b))
+
+
+### Bug Fixes
+
+* check Centrifugo address and namespace ([e8eacf0](https://github.com/cailloumajor/opcua-centrifugo/commit/e8eacf0aecc55f2d6de877304e98bf0a103f3fa2))
+* more consistent exit code ([4027831](https://github.com/cailloumajor/opcua-centrifugo/commit/40278311243460dfded28be38cf2144b80e69fb4))
+* outdated log message ([9595278](https://github.com/cailloumajor/opcua-centrifugo/commit/9595278f1729c06a4f57d5f2856aade7cdc4df7d))
+* skip tidy logic if monitor does not have ([6a082a3](https://github.com/cailloumajor/opcua-centrifugo/commit/6a082a33c4f4d352c3b0e6b2b490102f8f3ad4b7))
+
 ## [0.2.0](https://github.com/cailloumajor/opcua-centrifugo/compare/v0.1.1...v0.2.0) (2022-03-17)
 
 
