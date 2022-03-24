@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cailloumajor/opcua-centrifugo/internal/centrifugo"
-	"github.com/cailloumajor/opcua-centrifugo/internal/opcua"
+	"github.com/cailloumajor/opcua-proxy/internal/centrifugo"
+	"github.com/cailloumajor/opcua-proxy/internal/opcua"
 	"github.com/centrifugal/gocent/v3"
 	gopcua "github.com/gopcua/opcua"
 )

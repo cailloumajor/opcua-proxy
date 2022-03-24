@@ -5,7 +5,7 @@ package proxy
 
 import (
 	"context"
-	"github.com/cailloumajor/opcua-centrifugo/internal/opcua"
+	"github.com/cailloumajor/opcua-proxy/internal/opcua"
 	"github.com/centrifugal/gocent/v3"
 	gopcua "github.com/gopcua/opcua"
 	"sync"

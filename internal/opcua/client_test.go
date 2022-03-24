@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	. "github.com/cailloumajor/opcua-centrifugo/internal/opcua"
-	"github.com/cailloumajor/opcua-centrifugo/internal/testutils"
+	. "github.com/cailloumajor/opcua-proxy/internal/opcua"
+	"github.com/cailloumajor/opcua-proxy/internal/testutils"
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
 )

@@ -1,4 +1,4 @@
-module github.com/cailloumajor/opcua-centrifugo
+module github.com/cailloumajor/opcua-proxy
 
 go 1.17
 

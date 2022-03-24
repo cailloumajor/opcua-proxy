@@ -64,7 +64,7 @@ go.work
 
 # Binaries
 /bin/
-/opcua-centrifugo
+/opcua-proxy
 /healthcheck
 
 # Testing certificate and key

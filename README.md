@@ -1,32 +1,46 @@
 <!-- markdownlint-configure-file { "MD033": { "allowed_elements": [ "br" ] } } -->
-# OPC-UA / Centrifugo proxy
+# OPC-UA proxy
 
-[![Tests and code quality](https://github.com/cailloumajor/opcua-centrifugo/actions/workflows/tests.yml/badge.svg)](https://github.com/cailloumajor/opcua-centrifugo/actions/workflows/tests.yml)
+[![Tests and code quality](https://github.com/cailloumajor/opcua-proxy/actions/workflows/tests.yml/badge.svg)](https://github.com/cailloumajor/opcua-proxy/actions/workflows/tests.yml)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 
-A microservice to proxy OPC-UA data change subscription through Centrifugo.
+A proxy microservice connecting to an OPC-UA server and offering:
+
+- Data change subscriptions through Centrifugo.
 
 ## Specifications
+
+### Nodes object
+
+OPC-UA nodes are represented as a JSON object with following fields:
+
+- *namespaceURI*: namespace URI for nodes to monitor (string)
+- *nodes*: array of node identifiers, with mapping below:
+
+| JSON type                       | [NodeID type][3] |
+|---------------------------------|------------------|
+| Integer (positive whole number) | Numeric          |
+| String                          | String           |
+
+### Centrifugo subscriptions
 
 [1]: https://centrifugal.dev/docs/server/proxy#subscribe-proxy
 [2]: https://centrifugal.dev/docs/server/channels#channel-namespaces
 [3]: https://reference.opcfoundation.org/v105/Core/docs/Part3/8.2.3/
 
-- A Centrifugo server (at least v3.1.1) is configured to [proxy subscriptions][1] to this service.
+- A Centrifugo server (at least v3.1.1) is configured to [proxy subscriptions][1] to this service (`/centrifugo/subscribe` endpoint).
 - Clients interested in OPC-UA values changes subscribe to Centrifugo with following characteristics:
   - *Channel*: name and interval, separated by `@`, e.g. `my_nodes@2000`, with:
     - *name*: unique identifier for each nodes set.
     - *interval*: publishing interval in milliseconds.
     - **Note**: channel [namespace][2] is reserved for configuring the proxy endpoint.
-  - *Data*: JSON object with following fields:
-    - *namespaceURI*: namespace URI for nodes to monitor
-    - *nodes*: array of node identifiers, with mapping below:
-      | JSON type                       | [NodeID type][3] |
-      |---------------------------------|------------------|
-      | Integer (positive whole number) | Numeric          |
-      | String                          | String           |
+  - *Data*: Nodes object (see [above](#nodes-object)).
 
 ## Data flow
+
+Connection to OPC-UA server and session establishment are considered to have been done successfully.
+
+### Subscriptions
 
 ```mermaid
 sequenceDiagram
@@ -51,13 +65,15 @@ sequenceDiagram
         Proxy-->>-Centrifugo: Subscription allowed
         Centrifugo-->>-Client: Success
     end
-    OPCServer-)Proxy: Data change notification
-    activate Proxy
-    Proxy-)Centrifugo: Publish
-    deactivate Proxy
-    activate Centrifugo
-    Centrifugo-)Client: Publication
-    deactivate Centrifugo
+    loop Each publishing interval with data change
+        OPCServer-)Proxy: Data change notification
+        activate Proxy
+        Proxy-)Centrifugo: Publish
+        deactivate Proxy
+        activate Centrifugo
+        Centrifugo-)Client: Publication
+        deactivate Centrifugo
+    end
 ```
 
 ## Configuration
@@ -66,9 +82,9 @@ This project uses standard library's [flag](https://pkg.go.dev/flag) and <https:
 packages, configuration can be provided by flags or environment variables.
 
 ```ShellSession
-$ opcua-centrifugo -help
+$ opcua-proxy -help
 USAGE
-  opcua-centrifugo [options]
+  opcua-proxy [options]
 
 OPTIONS
   Flag                     Env Var                 Description

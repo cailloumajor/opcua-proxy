@@ -3,8 +3,8 @@ package main_test
 import (
 	"testing"
 
-	. "github.com/cailloumajor/opcua-centrifugo/cmd/opcua-centrifugo"
-	"github.com/cailloumajor/opcua-centrifugo/internal/testutils"
+	. "github.com/cailloumajor/opcua-proxy/cmd/opcua-proxy"
+	"github.com/cailloumajor/opcua-proxy/internal/testutils"
 )
 
 func TestValidateCentrifugoAddress(t *testing.T) {

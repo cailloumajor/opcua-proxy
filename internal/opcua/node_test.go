@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	. "github.com/cailloumajor/opcua-centrifugo/internal/opcua"
-	"github.com/cailloumajor/opcua-centrifugo/internal/testutils"
+	. "github.com/cailloumajor/opcua-proxy/internal/opcua"
+	"github.com/cailloumajor/opcua-proxy/internal/testutils"
 )
 
 func TestNode(t *testing.T) {

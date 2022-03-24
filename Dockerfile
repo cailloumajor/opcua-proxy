@@ -20,4 +20,4 @@ HEALTHCHECK CMD ["/usr/local/bin/healthcheck", "--port", "8080"]
 
 USER nonroot
 EXPOSE 8080
-CMD ["/usr/local/bin/opcua-centrifugo"]
+CMD ["/usr/local/bin/opcua-proxy"]
