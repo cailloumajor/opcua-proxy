@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cailloumajor/opcua-centrifugo/internal/centrifugo"
-	"github.com/cailloumajor/opcua-centrifugo/internal/opcua"
-	. "github.com/cailloumajor/opcua-centrifugo/internal/proxy"
-	"github.com/cailloumajor/opcua-centrifugo/internal/testutils"
+	"github.com/cailloumajor/opcua-proxy/internal/centrifugo"
+	"github.com/cailloumajor/opcua-proxy/internal/opcua"
+	. "github.com/cailloumajor/opcua-proxy/internal/proxy"
+	"github.com/cailloumajor/opcua-proxy/internal/testutils"
 	"github.com/centrifugal/gocent/v3"
 	gopcua "github.com/gopcua/opcua"
 )

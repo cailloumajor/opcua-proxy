@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/cailloumajor/opcua-centrifugo/internal/opcua"
-	"github.com/cailloumajor/opcua-centrifugo/internal/proxy"
+	"github.com/cailloumajor/opcua-proxy/internal/opcua"
+	"github.com/cailloumajor/opcua-proxy/internal/proxy"
 	"github.com/centrifugal/gocent/v3"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
@@ -66,7 +66,7 @@ func main() {
 		centrifugoNamespace    string
 		centrifugoClientConfig gocent.Config
 	)
-	fs := flag.NewFlagSet("opcua-centrifugo", flag.ExitOnError)
+	fs := flag.NewFlagSet("opcua-proxy", flag.ExitOnError)
 	fs.StringVar(&opcuaConfig.ServerURL, "opcua-server-url", "opc.tcp://127.0.0.1:4840", "OPC-UA server endpoint URL")
 	fs.StringVar(&opcuaConfig.User, "opcua-user", "", "user name for OPC-UA authentication (optional)")
 	fs.StringVar(&opcuaConfig.Password, "opcua-password", "", "password for OPC-UA authentication (optional)")

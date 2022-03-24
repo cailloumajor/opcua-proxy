@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cailloumajor/opcua-centrifugo/internal/centrifugo"
+	"github.com/cailloumajor/opcua-proxy/internal/centrifugo"
 	"github.com/centrifugal/gocent/v3"
 )
 

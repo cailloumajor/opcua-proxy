@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/cailloumajor/opcua-centrifugo/internal/centrifugo"
-	"github.com/cailloumajor/opcua-centrifugo/internal/testutils"
+	. "github.com/cailloumajor/opcua-proxy/internal/centrifugo"
+	"github.com/cailloumajor/opcua-proxy/internal/testutils"
 )
 
 func TestParseChannelSuccess(t *testing.T) {

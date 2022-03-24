@@ -12,7 +12,7 @@ services:
       - CENTRIFUGO_ALLOWED_ORIGINS=*
       - CENTRIFUGO_CLIENT_ANONYMOUS=true
       - CENTRIFUGO_GRANULAR_PROXY_MODE=true
-      - CENTRIFUGO_PROXIES=[{"name":"subscribe_testing","endpoint":"http://opcua-centrifugo:8080/centrifugo/subscribe"}]
+      - CENTRIFUGO_PROXIES=[{"name":"subscribe_testing","endpoint":"http://opcua-proxy:8080/centrifugo/subscribe"}]
       - CENTRIFUGO_NAMESPACES=[{"name":"testing","anonymous":true,"subscribe_proxy_name":"subscribe_testing"}]
 
   opcua-server:
@@ -26,11 +26,11 @@ services:
     volumes:
       - ../certs/testing_cert.der:/opt/open62541/trusted/testing_cert.der
 
-  opcua-centrifugo:
+  opcua-proxy:
     build: ..
-    image: opcua-centrifugo:integration-tests
+    image: opcua-proxy:integration-tests
     command:
-      - /usr/local/bin/opcua-centrifugo
+      - /usr/local/bin/opcua-proxy
       - -debug
     environment:
       - CENTRIFUGO_API_ADDRESS=http://centrifugo:8000/api
@@ -52,7 +52,7 @@ services:
     depends_on:
       - centrifugo
       - opcua-server
-      - opcua-centrifugo
+      - opcua-proxy
     environment:
       - CYPRESS_CENTRIFUGO_URL=ws://centrifugo:8000/connection/websocket
       - CYPRESS_CENTRIFUGO_NAMESPACE=testing

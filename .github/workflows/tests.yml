@@ -61,8 +61,8 @@ jobs:
       - name: Check command usage in README.md
         # Thanks to https://unix.stackexchange.com/a/17405
         run: diff
-          <(sed '1,/\$ opcua-centrifugo -help/d;/```/,$d' README.md)
-          <(go run ./cmd/opcua-centrifugo -help 2>&1)
+          <(sed '1,/\$ opcua-proxy -help/d;/```/,$d' README.md)
+          <(go run ./cmd/opcua-proxy -help 2>&1)
   integration:
     name: Integration tests
     runs-on: ubuntu-latest
@@ -78,7 +78,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           load: true
-          tags: opcua-centrifugo:integration-tests
+          tags: opcua-proxy:integration-tests
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Run integration tests
