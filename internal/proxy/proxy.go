@@ -35,6 +35,13 @@ type CentrifugoInfoProvider interface {
 	Info(ctx context.Context) (gocent.InfoResult, error)
 }
 
+func commonHeadersMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		next.ServeHTTP(w, r)
+	})
+}
+
 // Proxy handles requests for the service.
 type Proxy struct {
 	m  MonitorProvider
@@ -57,6 +64,7 @@ func NewProxy(m MonitorProvider, cp CentrifugoChannelParser, ci CentrifugoInfoPr
 	r := mux.NewRouter()
 	r.Methods("GET").Path("/health").HandlerFunc(p.handleHealth)
 	r.Methods("POST").Path("/centrifugo/subscribe").HandlerFunc(p.handleCentrifugoSubscribe)
+	r.Use(commonHeadersMiddleware)
 	p.Handler = r
 
 	return p
