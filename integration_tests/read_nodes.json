@@ -1,0 +1,16 @@
+[
+  {
+    "namespaceURI": "http://opcfoundation.org/UA/",
+    "nodes": [
+      2994,
+      2263
+    ]
+  },
+  {
+    "namespaceURI": "urn:open62541.server.application",
+    "nodes": [
+      "the.answer",
+      "myByteString"
+    ]
+  }
+]

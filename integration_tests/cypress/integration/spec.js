@@ -1,10 +1,13 @@
 const subscriptionInterval = 500
 
+before(() => {
+  cy.request({ url: `${Cypress.env("PROXY_URL")}/health`, retryOnStatusCodeFailure: true })
+})
+
 describe("Integration tests page", () => {
   before(() => {
     cy.visit("index.html")
     cy.window().its("Centrifuge").should("be.a", "function")
-    cy.request({ url: Cypress.env("HEALTH_URL"), retryOnStatusCodeFailure: true })
   })
 
   it("connects", () => {
@@ -55,5 +58,21 @@ describe("Integration tests page", () => {
         expect($li[0].innerText).to.equal("42")
         expect($li[1].innerText).to.equal(current_time)
       })
+  })
+})
+
+describe("Nodes values endpoint", () => {
+  it("returns valid data", () => {
+    cy.request(`${Cypress.env("PROXY_URL")}/values?tag=value`).then((response) => {
+      expect(response.body).to.have.property("timestamp").that.is.a("string")
+      expect(Date.parse(response.body.timestamp)).to.not.be.NaN
+      expect(response.body).to.have.deep.property("tags", { tag: "value" })
+      expect(response.body).to.have.deep.property("fields", {
+        "2994": false,
+        "2263": "open62541",
+        "the.answer": 42,
+        "myByteString": "dGVzdDEyMw=="
+      })
+    })
   })
 })
