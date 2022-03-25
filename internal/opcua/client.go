@@ -25,6 +25,7 @@ type RawClientProvider interface {
 	CloseWithContext(ctx context.Context) error
 	Connect(context.Context) (err error)
 	NamespaceArrayWithContext(ctx context.Context) ([]string, error)
+	ReadWithContext(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error)
 	State() opcua.ConnState
 	SubscribeWithContext(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error)
 }
@@ -148,6 +149,11 @@ func (c *Client) Close(ctx context.Context) (errs []error) {
 	}
 
 	return errs
+}
+
+// Read stub
+func (c *Client) Read(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
+	return c.inner.ReadWithContext(ctx, req)
 }
 
 // State stub.

@@ -213,6 +213,9 @@ var _ RawClientProvider = &RawClientProviderMock{}
 // 			NamespaceArrayWithContextFunc: func(ctx context.Context) ([]string, error) {
 // 				panic("mock out the NamespaceArrayWithContext method")
 // 			},
+// 			ReadWithContextFunc: func(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
+// 				panic("mock out the ReadWithContext method")
+// 			},
 // 			StateFunc: func() opcua.ConnState {
 // 				panic("mock out the State method")
 // 			},
@@ -237,6 +240,9 @@ type RawClientProviderMock struct {
 
 	// NamespaceArrayWithContextFunc mocks the NamespaceArrayWithContext method.
 	NamespaceArrayWithContextFunc func(ctx context.Context) ([]string, error)
+
+	// ReadWithContextFunc mocks the ReadWithContext method.
+	ReadWithContextFunc func(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error)
 
 	// StateFunc mocks the State method.
 	StateFunc func() opcua.ConnState
@@ -268,6 +274,13 @@ type RawClientProviderMock struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 		}
+		// ReadWithContext holds details about calls to the ReadWithContext method.
+		ReadWithContext []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Req is the req argument value.
+			Req *ua.ReadRequest
+		}
 		// State holds details about calls to the State method.
 		State []struct {
 		}
@@ -285,6 +298,7 @@ type RawClientProviderMock struct {
 	lockCloseWithContext          sync.RWMutex
 	lockConnect                   sync.RWMutex
 	lockNamespaceArrayWithContext sync.RWMutex
+	lockReadWithContext           sync.RWMutex
 	lockState                     sync.RWMutex
 	lockSubscribeWithContext      sync.RWMutex
 }
@@ -414,6 +428,41 @@ func (mock *RawClientProviderMock) NamespaceArrayWithContextCalls() []struct {
 	mock.lockNamespaceArrayWithContext.RLock()
 	calls = mock.calls.NamespaceArrayWithContext
 	mock.lockNamespaceArrayWithContext.RUnlock()
+	return calls
+}
+
+// ReadWithContext calls ReadWithContextFunc.
+func (mock *RawClientProviderMock) ReadWithContext(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
+	if mock.ReadWithContextFunc == nil {
+		panic("RawClientProviderMock.ReadWithContextFunc: method is nil but RawClientProvider.ReadWithContext was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		Req *ua.ReadRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	}
+	mock.lockReadWithContext.Lock()
+	mock.calls.ReadWithContext = append(mock.calls.ReadWithContext, callInfo)
+	mock.lockReadWithContext.Unlock()
+	return mock.ReadWithContextFunc(ctx, req)
+}
+
+// ReadWithContextCalls gets all the calls that were made to ReadWithContext.
+// Check the length with:
+//     len(mockedRawClientProvider.ReadWithContextCalls())
+func (mock *RawClientProviderMock) ReadWithContextCalls() []struct {
+	Ctx context.Context
+	Req *ua.ReadRequest
+} {
+	var calls []struct {
+		Ctx context.Context
+		Req *ua.ReadRequest
+	}
+	mock.lockReadWithContext.RLock()
+	calls = mock.calls.ReadWithContext
+	mock.lockReadWithContext.RUnlock()
 	return calls
 }
 

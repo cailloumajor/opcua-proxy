@@ -21,6 +21,9 @@ var _ MonitorProvider = &MonitorProviderMock{}
 //
 // 		// make and configure a mocked MonitorProvider
 // 		mockedMonitorProvider := &MonitorProviderMock{
+// 			ReadFunc: func(ctx context.Context) (*opcua.ReadValues, error) {
+// 				panic("mock out the Read method")
+// 			},
 // 			StateFunc: func() gopcua.ConnState {
 // 				panic("mock out the State method")
 // 			},
@@ -34,6 +37,9 @@ var _ MonitorProvider = &MonitorProviderMock{}
 //
 // 	}
 type MonitorProviderMock struct {
+	// ReadFunc mocks the Read method.
+	ReadFunc func(ctx context.Context) (*opcua.ReadValues, error)
+
 	// StateFunc mocks the State method.
 	StateFunc func() gopcua.ConnState
 
@@ -42,6 +48,11 @@ type MonitorProviderMock struct {
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// Read holds details about calls to the Read method.
+		Read []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
 		// State holds details about calls to the State method.
 		State []struct {
 		}
@@ -57,8 +68,40 @@ type MonitorProviderMock struct {
 			Nodes []opcua.NodeIDProvider
 		}
 	}
+	lockRead      sync.RWMutex
 	lockState     sync.RWMutex
 	lockSubscribe sync.RWMutex
+}
+
+// Read calls ReadFunc.
+func (mock *MonitorProviderMock) Read(ctx context.Context) (*opcua.ReadValues, error) {
+	if mock.ReadFunc == nil {
+		panic("MonitorProviderMock.ReadFunc: method is nil but MonitorProvider.Read was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockRead.Lock()
+	mock.calls.Read = append(mock.calls.Read, callInfo)
+	mock.lockRead.Unlock()
+	return mock.ReadFunc(ctx)
+}
+
+// ReadCalls gets all the calls that were made to Read.
+// Check the length with:
+//     len(mockedMonitorProvider.ReadCalls())
+func (mock *MonitorProviderMock) ReadCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockRead.RLock()
+	calls = mock.calls.Read
+	mock.lockRead.RUnlock()
+	return calls
 }
 
 // State calls StateFunc.

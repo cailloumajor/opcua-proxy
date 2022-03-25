@@ -15,6 +15,113 @@ import (
 	"github.com/gopcua/opcua/ua"
 )
 
+func TestMonitorRead(t *testing.T) {
+	cases := []struct {
+		name                string
+		namespaceIndexError bool
+		clientReadError     bool
+		badValueStatus      bool
+		expectError         bool
+		expectValues        *ReadValues
+	}{
+		{
+			name:                "NamespaceIndexError",
+			namespaceIndexError: true,
+			clientReadError:     false,
+			badValueStatus:      false,
+			expectError:         true,
+			expectValues:        nil,
+		},
+		{
+			name:                "ClientReadError",
+			namespaceIndexError: false,
+			clientReadError:     true,
+			badValueStatus:      false,
+			expectError:         true,
+			expectValues:        nil,
+		},
+		{
+			name:                "BadValueStatus",
+			namespaceIndexError: false,
+			clientReadError:     false,
+			badValueStatus:      true,
+			expectError:         true,
+			expectValues:        nil,
+		},
+		{
+			name:                "Success",
+			namespaceIndexError: false,
+			clientReadError:     false,
+			badValueStatus:      false,
+			expectError:         false,
+			expectValues: &ReadValues{
+				Timestamp: time.UnixMicro(0),
+				Values: map[string]interface{}{
+					"1":     37.5,
+					"2":     "val2",
+					"node3": int32(42),
+					"node4": true,
+				},
+			},
+		},
+	}
+
+	const nj = `[{"namespaceURI":"ns1","nodes":[1,2]},{"namespaceURI":"ns2","nodes":["node3","node4"]}]`
+	var no []NodesObject
+	if err := json.Unmarshal([]byte(nj), &no); err != nil {
+		t.Fatalf("error marshalling: %v", err)
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockedClientProvider := &ClientProviderMock{
+				NamespaceIndexFunc: func(ctx context.Context, nsURI string) (uint16, error) {
+					if tc.namespaceIndexError {
+						return 0, testutils.ErrTesting
+					}
+					return 42, nil
+				},
+				ReadFunc: func(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
+					if tc.clientReadError {
+						return nil, testutils.ErrTesting
+					}
+					resp := &ua.ReadResponse{
+						ResponseHeader: &ua.ResponseHeader{Timestamp: time.UnixMicro(0)},
+						Results: []*ua.DataValue{
+							{Value: ua.MustVariant(37.5), Status: ua.StatusOK},
+							{Value: ua.MustVariant("val2"), Status: ua.StatusOK},
+							{Value: ua.MustVariant(int32(42)), Status: ua.StatusOK},
+							{Value: ua.MustVariant(true), Status: ua.StatusOK},
+						},
+					}
+					if tc.badValueStatus {
+						resp.Results[1].Status = ua.StatusBad
+					}
+					return resp, nil
+				},
+			}
+			m := NewMonitor(mockedClientProvider, no)
+
+			fields, err := m.Read(context.Background())
+
+			if !tc.namespaceIndexError {
+				if got, want := mockedClientProvider.NamespaceIndexCalls()[0].NsURI, "ns1"; got != want {
+					t.Errorf("NamespaceIndex first call nsURI argument: want %q, got %q", want, got)
+				}
+				if got, want := mockedClientProvider.NamespaceIndexCalls()[1].NsURI, "ns2"; got != want {
+					t.Errorf("NamespaceIndex second call nsURI argument: want %q, got %q", want, got)
+				}
+			}
+			if msg := testutils.AssertError(t, err, tc.expectError); msg != "" {
+				t.Errorf(msg)
+			}
+			if got, want := fields, tc.expectValues; !reflect.DeepEqual(got, want) {
+				t.Errorf("fields map: want %#v, got %#v", want, got)
+			}
+		})
+	}
+}
+
 func TestMonitorSubscribeError(t *testing.T) {
 	cases := []struct {
 		name                     string
@@ -103,7 +210,7 @@ func TestMonitorSubscribeError(t *testing.T) {
 					return mockedSubscription, nil
 				},
 			}
-			m := NewMonitor(mockedClientProvider)
+			m := NewMonitor(mockedClientProvider, nil)
 
 			err := m.Subscribe(context.Background(), "", mockedChannelProvider, []NodeIDProvider{mockedNodeIDProvider, mockedNodeIDProvider, mockedNodeIDProvider})
 
@@ -193,7 +300,7 @@ func TestMonitorSubscribeSuccess(t *testing.T) {
 					return mockedSubscription, nil
 				},
 			}
-			m := NewMonitor(mockedClientProvider)
+			m := NewMonitor(mockedClientProvider, nil)
 			m.AddSubscription("sub0", &SubscriptionProviderMock{})
 
 			err := m.Subscribe(context.Background(), "", mockedChannelProvider, mockedNodeIDProviders)
@@ -313,7 +420,7 @@ func TestMonitorGetDataChange(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := NewMonitor(&ClientProviderMock{})
+			m := NewMonitor(&ClientProviderMock{}, nil)
 			if !tc.missingChannel {
 				mockedSubscriptionProvider := &SubscriptionProviderMock{
 					IDFunc: func() uint32 { return 5616 },
@@ -417,7 +524,7 @@ func TestMonitorPurge(t *testing.T) {
 					return nil
 				},
 			}
-			m := NewMonitor(&ClientProviderMock{})
+			m := NewMonitor(&ClientProviderMock{}, nil)
 			m.AddSubscription("sub1", mockedSubscription)
 			m.AddSubscription("sub2", &SubscriptionProviderMock{})
 			m.AddSubscription("sub3", mockedSubscription)
@@ -438,7 +545,7 @@ func TestMonitorPurge(t *testing.T) {
 }
 
 func TestMonitorHasSubscriptions(t *testing.T) {
-	m := NewMonitor(&ClientProviderMock{})
+	m := NewMonitor(&ClientProviderMock{}, nil)
 	if m.HasSubscriptions() {
 		t.Error("expected monitor to not have subscriptions")
 	}
@@ -455,7 +562,7 @@ func TestMonitorStop(t *testing.T) {
 		},
 	}
 
-	m := NewMonitor(mockedClientProvider)
+	m := NewMonitor(mockedClientProvider, nil)
 	var mockedSubscriptions [5]*SubscriptionProviderMock
 	for i := range mockedSubscriptions {
 		mockedSubscription := &SubscriptionProviderMock{
@@ -491,7 +598,7 @@ func TestState(t *testing.T) {
 			return opcua.ConnState(255)
 		},
 	}
-	m := NewMonitor(mockedClientProvider)
+	m := NewMonitor(mockedClientProvider, nil)
 
 	if got, want := m.State(), opcua.ConnState(255); got != want {
 		t.Errorf("State method: want %v, got %v", want, got)

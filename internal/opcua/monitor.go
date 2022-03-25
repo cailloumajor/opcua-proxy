@@ -20,6 +20,7 @@ const QueueSize = 8
 type ClientProvider interface {
 	Close(ctx context.Context) (errs []error)
 	NamespaceIndex(ctx context.Context, nsURI string) (uint16, error)
+	Read(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error)
 	Subscribe(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error)
 	State() opcua.ConnState
 }
@@ -42,9 +43,16 @@ type NodeIDProvider interface {
 	NodeID(ns uint16) *ua.NodeID
 }
 
-// Monitor is an OPC-UA node monitor wrapping a client.
+// ReadValues represents the data values of nodes read from OPC-UA server.
+type ReadValues struct {
+	Timestamp time.Time
+	Values    map[string]interface{}
+}
+
+// Monitor represents an OPC-UA monitor.
 type Monitor struct {
-	client ClientProvider
+	client    ClientProvider
+	readNodes []NodesObject
 
 	notifyCh chan *opcua.PublishNotificationData
 
@@ -53,12 +61,60 @@ type Monitor struct {
 }
 
 // NewMonitor creates an OPC-UA node monitor.
-func NewMonitor(c ClientProvider) *Monitor {
+func NewMonitor(c ClientProvider, n []NodesObject) *Monitor {
 	return &Monitor{
-		client:   c,
-		notifyCh: make(chan *opcua.PublishNotificationData, QueueSize),
-		subs:     make(map[string]SubscriptionProvider),
+		client:    c,
+		readNodes: n,
+		notifyCh:  make(chan *opcua.PublishNotificationData, QueueSize),
+		subs:      make(map[string]SubscriptionProvider),
 	}
+}
+
+// Read reads configured nodes data values and returns a map of fields.
+func (m *Monitor) Read(ctx context.Context) (*ReadValues, error) {
+	req := &ua.ReadRequest{
+		MaxAge:             0,
+		TimestampsToReturn: ua.TimestampsToReturnNeither,
+	}
+
+	var de ua.QualifiedName
+	var nid []string
+
+	for _, no := range m.readNodes {
+		nsi, err := m.client.NamespaceIndex(ctx, no.NamespaceURI)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, n := range no.Nodes {
+			nid = append(nid, n.String())
+			ntr := &ua.ReadValueID{
+				NodeID:       n.NodeID(nsi),
+				AttributeID:  ua.AttributeIDValue,
+				DataEncoding: &de,
+			}
+			req.NodesToRead = append(req.NodesToRead, ntr)
+		}
+	}
+
+	resp, err := m.client.Read(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("error reading OPC-UA nodes: %w", err)
+	}
+
+	rv := &ReadValues{
+		Timestamp: resp.ResponseHeader.Timestamp,
+		Values:    make(map[string]interface{}),
+	}
+
+	for i, dv := range resp.Results {
+		if dv.Status != ua.StatusOK {
+			return nil, fmt.Errorf("status error for node %q: %w", req.NodesToRead[i].NodeID.String(), dv.Status)
+		}
+		rv.Values[nid[i]] = dv.Value.Value()
+	}
+
+	return rv, nil
 }
 
 // Subscribe subscribes for nodes data changes on the server.
