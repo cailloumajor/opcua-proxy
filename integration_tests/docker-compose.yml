@@ -56,6 +56,7 @@ services:
     environment:
       - CYPRESS_CENTRIFUGO_URL=ws://centrifugo:8000/connection/websocket
       - CYPRESS_CENTRIFUGO_NAMESPACE=testing
+      - CYPRESS_HEALTH_URL=http://opcua-proxy:8080/health
     volumes:
       - .:/e2e
     working_dir: /e2e

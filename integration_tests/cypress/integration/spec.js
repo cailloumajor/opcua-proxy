@@ -4,6 +4,7 @@ describe("Integration tests page", () => {
   before(() => {
     cy.visit("index.html")
     cy.window().its("Centrifuge").should("be.a", "function")
+    cy.request({ url: Cypress.env("HEALTH_URL"), retryOnStatusCodeFailure: true })
   })
 
   it("connects", () => {
