@@ -34,14 +34,14 @@ type CentrifugoInfoProvider interface {
 	Info(ctx context.Context) (gocent.InfoResult, error)
 }
 
-func methodHandler(m string, h http.Handler) http.Handler {
+func methodHandler(m string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != m {
 			w.Header().Set("Allow", m)
 			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 			return
 		}
-		h.ServeHTTP(w, r)
+		next.ServeHTTP(w, r)
 	})
 }
 
