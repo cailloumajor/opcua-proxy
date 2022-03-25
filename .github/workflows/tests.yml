@@ -34,7 +34,7 @@ jobs:
       - name: Lint Go Code
         uses: golangci/golangci-lint-action@v3
       - name: Lint Dockerfile
-        uses: hadolint/hadolint-action@v1.7.0
+        uses: hadolint/hadolint-action@v2.0.0
   tests:
     name: Unit tests and code coverage
     runs-on: ubuntu-latest
