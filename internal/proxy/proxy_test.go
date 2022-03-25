@@ -82,6 +82,7 @@ func TestCentrifugoSubscribe(t *testing.T) {
 		channelParseError error
 		subscribeError    bool
 		expectStatusCode  int
+		expectContentType string
 		expectBody        string
 		ignoreBody        bool
 	}{
@@ -91,6 +92,7 @@ func TestCentrifugoSubscribe(t *testing.T) {
 			channelParseError: nil,
 			subscribeError:    false,
 			expectStatusCode:  http.StatusBadRequest,
+			expectContentType: "text/plain",
 			expectBody:        "",
 			ignoreBody:        true,
 		},
@@ -100,6 +102,7 @@ func TestCentrifugoSubscribe(t *testing.T) {
 			channelParseError: centrifugo.ErrIgnoredNamespace,
 			subscribeError:    false,
 			expectStatusCode:  http.StatusOK,
+			expectContentType: "application/json",
 			expectBody:        "{\"result\":{}}\n",
 			ignoreBody:        false,
 		},
@@ -109,6 +112,7 @@ func TestCentrifugoSubscribe(t *testing.T) {
 			channelParseError: testutils.ErrTesting,
 			subscribeError:    false,
 			expectStatusCode:  http.StatusOK,
+			expectContentType: "application/json",
 			expectBody:        "{\"error\":{\"code\":1000,\"message\":\"bad channel format: general error for testing\"}}\n",
 			ignoreBody:        false,
 		},
@@ -118,6 +122,7 @@ func TestCentrifugoSubscribe(t *testing.T) {
 			channelParseError: nil,
 			subscribeError:    true,
 			expectStatusCode:  http.StatusOK,
+			expectContentType: "application/json",
 			expectBody:        "{\"error\":{\"code\":1001,\"message\":\"error subscribing to OPC-UA data change: general error for testing\"}}\n",
 			ignoreBody:        false,
 		},
@@ -127,6 +132,7 @@ func TestCentrifugoSubscribe(t *testing.T) {
 			channelParseError: nil,
 			subscribeError:    false,
 			expectStatusCode:  http.StatusOK,
+			expectContentType: "application/json",
 			expectBody:        "{\"result\":{}}\n",
 			ignoreBody:        false,
 		},
@@ -169,6 +175,9 @@ func TestCentrifugoSubscribe(t *testing.T) {
 
 			if got, want := resp.StatusCode, tc.expectStatusCode; got != want {
 				t.Errorf("status code: want %d, got %d", want, got)
+			}
+			if got, want := resp.Header.Get("content-type"), tc.expectContentType; !strings.HasPrefix(got, want) {
+				t.Errorf("content type: want %q, got %q", want, got)
 			}
 			if got, want := string(body), tc.expectBody; !tc.ignoreBody && got != want {
 				t.Errorf("body: got %q, want %q", got, want)
