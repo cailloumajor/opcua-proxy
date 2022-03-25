@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.4.0](https://github.com/cailloumajor/opcua-proxy/compare/v0.3.0...v0.4.0) (2022-03-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* add nodes data values on-demand reading
+* rename the project
+
+### Features
+
+* add nodes data values on-demand reading ([b1fce4d](https://github.com/cailloumajor/opcua-proxy/commit/b1fce4d396f32505933cc8b60fa444c8c5c6bd98))
+
+
+### Bug Fixes
+
+* disable client MIME sniffing ([36e2515](https://github.com/cailloumajor/opcua-proxy/commit/36e2515aa39e1d85c79f50551593acf5e08bc2d5))
+* prevent variable capture ([c4a0fbf](https://github.com/cailloumajor/opcua-proxy/commit/c4a0fbfa57852836bb85dfd5b3563b99745d1911))
+
+
+### Code Refactoring
+
+* rename the project ([93dfa35](https://github.com/cailloumajor/opcua-proxy/commit/93dfa35fa206aeccacc08c0813c0702f13c9fe8e))
+
 ## [0.3.0](https://github.com/cailloumajor/opcua-proxy/compare/v0.2.0...v0.3.0) (2022-03-23)
 
 
