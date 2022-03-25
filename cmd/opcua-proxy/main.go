@@ -120,6 +120,7 @@ func main() {
 				ctx, cancel := context.WithTimeout(rCtx, 2*time.Second)
 				defer cancel()
 
+				var err error
 				opcClient, err = opcua.NewClient(ctx, &opcuaConfig, opcua.DefaultClientExtDeps{}, sec)
 				if err != nil {
 					return err
