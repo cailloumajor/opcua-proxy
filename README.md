@@ -7,6 +7,7 @@
 A proxy microservice connecting to an OPC-UA server and offering:
 
 - Data change subscriptions through Centrifugo.
+- Nodes values in JSON format.
 
 ## Specifications
 
@@ -35,6 +36,12 @@ OPC-UA nodes are represented as a JSON object with following fields:
     - *interval*: publishing interval in milliseconds.
     - **Note**: channel [namespace][2] is reserved for configuring the proxy endpoint.
   - *Data*: Nodes object (see [above](#nodes-object)).
+
+### Nodes values endpoint
+
+A `GET` request on `/values` endpoint returns the configured nodes data values, in JSON format. Request URL parameters are expected to each have one value and will end up in the `tags` property of JSON output.
+
+The nodes to be read are defined in a JSON file, located in configured path, and containing an array of Nodes objects (see [above](#nodes-object)).
 
 ## Data flow
 
@@ -76,6 +83,19 @@ sequenceDiagram
     end
 ```
 
+### Nodes values
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Proxy as Centrifugo / OPC-UA<br>proxy
+    participant OPCServer as OPC-UA server
+    Client->>+Proxy: Requests nodes values
+    Proxy->>+OPCServer: Reads nodes data values
+    OPCServer-->>-Proxy: Sends data values
+    Proxy-->>-Client: Sends values in JSON format
+```
+
 ## Configuration
 
 This project uses standard library's [flag](https://pkg.go.dev/flag) and <https://github.com/peterbourgon/ff>
@@ -99,4 +119,5 @@ OPTIONS
   -opcua-tidy-interval     OPCUA_TIDY_INTERVAL     interval at which to tidy-up OPC-UA subscriptions (default: 30s)
   -opcua-user              OPCUA_USER              user name for OPC-UA authentication (optional)
   -proxy-listen            PROXY_LISTEN            Centrifugo proxy listen address (default: :8080)
+  -read-nodes-config-file  READ_NODES_CONFIG_FILE  path of the JSON file containing nodes to read
 ```

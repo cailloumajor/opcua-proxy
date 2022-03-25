@@ -27,6 +27,9 @@ var _ ClientProvider = &ClientProviderMock{}
 // 			NamespaceIndexFunc: func(ctx context.Context, nsURI string) (uint16, error) {
 // 				panic("mock out the NamespaceIndex method")
 // 			},
+// 			ReadFunc: func(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
+// 				panic("mock out the Read method")
+// 			},
 // 			StateFunc: func() opcua.ConnState {
 // 				panic("mock out the State method")
 // 			},
@@ -45,6 +48,9 @@ type ClientProviderMock struct {
 
 	// NamespaceIndexFunc mocks the NamespaceIndex method.
 	NamespaceIndexFunc func(ctx context.Context, nsURI string) (uint16, error)
+
+	// ReadFunc mocks the Read method.
+	ReadFunc func(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error)
 
 	// StateFunc mocks the State method.
 	StateFunc func() opcua.ConnState
@@ -66,6 +72,13 @@ type ClientProviderMock struct {
 			// NsURI is the nsURI argument value.
 			NsURI string
 		}
+		// Read holds details about calls to the Read method.
+		Read []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Req is the req argument value.
+			Req *ua.ReadRequest
+		}
 		// State holds details about calls to the State method.
 		State []struct {
 		}
@@ -81,6 +94,7 @@ type ClientProviderMock struct {
 	}
 	lockClose          sync.RWMutex
 	lockNamespaceIndex sync.RWMutex
+	lockRead           sync.RWMutex
 	lockState          sync.RWMutex
 	lockSubscribe      sync.RWMutex
 }
@@ -148,6 +162,41 @@ func (mock *ClientProviderMock) NamespaceIndexCalls() []struct {
 	mock.lockNamespaceIndex.RLock()
 	calls = mock.calls.NamespaceIndex
 	mock.lockNamespaceIndex.RUnlock()
+	return calls
+}
+
+// Read calls ReadFunc.
+func (mock *ClientProviderMock) Read(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
+	if mock.ReadFunc == nil {
+		panic("ClientProviderMock.ReadFunc: method is nil but ClientProvider.Read was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		Req *ua.ReadRequest
+	}{
+		Ctx: ctx,
+		Req: req,
+	}
+	mock.lockRead.Lock()
+	mock.calls.Read = append(mock.calls.Read, callInfo)
+	mock.lockRead.Unlock()
+	return mock.ReadFunc(ctx, req)
+}
+
+// ReadCalls gets all the calls that were made to Read.
+// Check the length with:
+//     len(mockedClientProvider.ReadCalls())
+func (mock *ClientProviderMock) ReadCalls() []struct {
+	Ctx context.Context
+	Req *ua.ReadRequest
+} {
+	var calls []struct {
+		Ctx context.Context
+		Req *ua.ReadRequest
+	}
+	mock.lockRead.RLock()
+	calls = mock.calls.Read
+	mock.lockRead.RUnlock()
 	return calls
 }
 

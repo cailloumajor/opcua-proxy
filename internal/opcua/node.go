@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"os"
 	"strconv"
 
 	"github.com/gopcua/opcua/ua"
@@ -55,4 +56,40 @@ func (n *Node) NodeID(ns uint16) *ua.NodeID {
 	default:
 		return &ua.NodeID{}
 	}
+}
+
+// String returns the string representation of the Node.
+func (n *Node) String() string {
+	switch n.t {
+	case ua.IDTypeNumeric:
+		return strconv.FormatUint(uint64(n.numericID), 10)
+	case ua.IDTypeString:
+		return n.stringID
+	default:
+		return "!invalid!"
+	}
+}
+
+// NodesObject represent a group of nodes in the same namespace.
+type NodesObject struct {
+	NamespaceURI string `json:"namespaceURI"`
+	Nodes        []Node `json:"nodes"`
+}
+
+// NodesObjectsFromFile creates a slice of NodesObject from a JSON file content.
+func NodesObjectsFromFile(path string) ([]NodesObject, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("error opening file %q: %w", path, err)
+	}
+	defer func() {
+		_ = f.Close()
+	}()
+
+	var no []NodesObject
+	if err := json.NewDecoder(f).Decode(&no); err != nil {
+		return nil, fmt.Errorf("error decoding JSON from file %q: %w", path, err)
+	}
+
+	return no, nil
 }

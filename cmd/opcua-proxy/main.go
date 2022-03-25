@@ -65,6 +65,7 @@ func main() {
 		proxyListen            string
 		centrifugoNamespace    string
 		centrifugoClientConfig gocent.Config
+		readNodesConfigFile    string
 	)
 	fs := flag.NewFlagSet("opcua-proxy", flag.ExitOnError)
 	fs.StringVar(&opcuaConfig.ServerURL, "opcua-server-url", "opc.tcp://127.0.0.1:4840", "OPC-UA server endpoint URL")
@@ -77,6 +78,7 @@ func main() {
 	fs.StringVar(&centrifugoClientConfig.Addr, "centrifugo-api-address", "", "Centrifugo API endpoint")
 	fs.StringVar(&centrifugoClientConfig.Key, "centrifugo-api-key", "", "Centrifugo API key")
 	fs.StringVar(&centrifugoNamespace, "centrifugo-namespace", "", "Centrifugo channel namespace for this instance")
+	fs.StringVar(&readNodesConfigFile, "read-nodes-config-file", "", "path of the JSON file containing nodes to read")
 	debug := fs.Bool("debug", false, "log debug information")
 	fs.Usage = usageFor(fs, os.Stderr)
 
@@ -105,6 +107,15 @@ func main() {
 		loglevel = level.AllowDebug()
 	}
 	logger = level.NewFilter(logger, loglevel)
+
+	var nodesToRead []opcua.NodesObject
+	{
+		var err error
+		nodesToRead, err = opcua.NodesObjectsFromFile(readNodesConfigFile)
+		if err != nil {
+			errExit(log.With(logger, "during", "reading nodes objects from file"), err)
+		}
+	}
 
 	var opcClient *opcua.Client
 	{
@@ -144,21 +155,21 @@ func main() {
 		}
 	}
 
-	opcMonitor := opcua.NewMonitor(opcClient)
+	opcMonitor := opcua.NewMonitor(opcClient, nodesToRead)
 
 	centrifugoClient := gocent.New(centrifugoClientConfig)
-
-	proxy := proxy.NewProxy(
-		opcMonitor,
-		proxy.DefaultCentrifugoChannelParser{},
-		centrifugoClient,
-		centrifugoNamespace,
-	)
 
 	var g run.Group
 
 	{
 		proxyLogger := log.With(logger, "component", "proxy")
+		proxy := proxy.NewProxy(
+			proxyLogger,
+			opcMonitor,
+			proxy.DefaultCentrifugoChannelParser{},
+			centrifugoClient,
+			centrifugoNamespace,
+		)
 		srv := http.Server{
 			Addr:    proxyListen,
 			Handler: proxy,

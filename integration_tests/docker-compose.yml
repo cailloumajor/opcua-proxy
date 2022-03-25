@@ -24,7 +24,7 @@ services:
       - --trustlistFolder
       - /opt/open62541/trusted
     volumes:
-      - ../certs/testing_cert.der:/opt/open62541/trusted/testing_cert.der
+      - ../certs/testing_cert.der:/opt/open62541/trusted/testing_cert.der:ro
 
   opcua-proxy:
     build: ..
@@ -42,10 +42,12 @@ services:
       - OPCUA_SERVER_URL=opc.tcp://opcua-server:4840
       - OPCUA_TIDY_INTERVAL=10s
       - OPCUA_USER=user1
+      - READ_NODES_CONFIG_FILE=/config/read_nodes.json
     user: root
     volumes:
-      - ../certs/testing_cert.der:/certs/testing_cert.der
-      - ../certs/testing_key.pem:/certs/testing_key.pem
+      - ../certs/testing_cert.der:/certs/testing_cert.der:ro
+      - ../certs/testing_key.pem:/certs/testing_key.pem:ro
+      - ./read_nodes.json:/config/read_nodes.json:ro
 
   cypress:
     image: cypress/included:9.5.2
@@ -56,7 +58,7 @@ services:
     environment:
       - CYPRESS_CENTRIFUGO_URL=ws://centrifugo:8000/connection/websocket
       - CYPRESS_CENTRIFUGO_NAMESPACE=testing
-      - CYPRESS_HEALTH_URL=http://opcua-proxy:8080/health
+      - CYPRESS_PROXY_URL=http://opcua-proxy:8080
     volumes:
       - .:/e2e
     working_dir: /e2e
