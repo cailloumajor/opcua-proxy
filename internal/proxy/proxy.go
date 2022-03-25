@@ -12,6 +12,7 @@ import (
 	"github.com/cailloumajor/opcua-proxy/internal/opcua"
 	"github.com/centrifugal/gocent/v3"
 	gopcua "github.com/gopcua/opcua"
+	"github.com/gorilla/mux"
 )
 
 //go:generate moq -out proxy_mocks_test.go . MonitorProvider CentrifugoChannelParser CentrifugoInfoProvider
@@ -34,17 +35,6 @@ type CentrifugoInfoProvider interface {
 	Info(ctx context.Context) (gocent.InfoResult, error)
 }
 
-func methodHandler(m string, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != m {
-			w.Header().Set("Allow", m)
-			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
 // Proxy handles requests for the service.
 type Proxy struct {
 	m  MonitorProvider
@@ -64,13 +54,10 @@ func NewProxy(m MonitorProvider, cp CentrifugoChannelParser, ci CentrifugoInfoPr
 		ns: ns,
 	}
 
-	mux := http.NewServeMux()
-	mux.Handle("/health", methodHandler(http.MethodGet, http.HandlerFunc(p.handleHealth)))
-	mux.Handle(
-		"/centrifugo/subscribe",
-		methodHandler(http.MethodPost, http.HandlerFunc(p.handleCentrifugoSubscribe)),
-	)
-	p.Handler = mux
+	r := mux.NewRouter()
+	r.Methods("GET").Path("/health").HandlerFunc(p.handleHealth)
+	r.Methods("POST").Path("/centrifugo/subscribe").HandlerFunc(p.handleCentrifugoSubscribe)
+	p.Handler = r
 
 	return p
 }
