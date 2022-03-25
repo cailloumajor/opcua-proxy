@@ -78,7 +78,7 @@ func main() {
 	fs.StringVar(&centrifugoClientConfig.Addr, "centrifugo-api-address", "", "Centrifugo API endpoint")
 	fs.StringVar(&centrifugoClientConfig.Key, "centrifugo-api-key", "", "Centrifugo API key")
 	fs.StringVar(&centrifugoNamespace, "centrifugo-namespace", "", "Centrifugo channel namespace for this instance")
-	fs.StringVar(&readNodesConfigFile, "read-nodes-config-file", "", "path of the JSON file containg nodes to read")
+	fs.StringVar(&readNodesConfigFile, "read-nodes-config-file", "", "path of the JSON file containing nodes to read")
 	debug := fs.Bool("debug", false, "log debug information")
 	fs.Usage = usageFor(fs, os.Stderr)
 

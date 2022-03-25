@@ -119,4 +119,5 @@ OPTIONS
   -opcua-tidy-interval     OPCUA_TIDY_INTERVAL     interval at which to tidy-up OPC-UA subscriptions (default: 30s)
   -opcua-user              OPCUA_USER              user name for OPC-UA authentication (optional)
   -proxy-listen            PROXY_LISTEN            Centrifugo proxy listen address (default: :8080)
+  -read-nodes-config-file  READ_NODES_CONFIG_FILE  path of the JSON file containing nodes to read
 ```
