@@ -2,9 +2,8 @@ const subscriptionInterval = 500
 
 describe("Integration tests page", () => {
   before(() => {
-    cy.intercept({ hostname: "cdn.jsdelivr.net" }).as("cdn")
     cy.visit("index.html")
-    cy.wait("@cdn").its("response.statusCode").should("eq", 200)
+    cy.window().its("Centrifuge").should("be.a", "function")
   })
 
   it("connects", () => {
