@@ -12,6 +12,12 @@
       "matchPackageNames": ["golang"],
       "matchManagers": ["dockerfile"],
       "semanticCommitType": "fix"
+    },
+    {
+      "matchPackageNames": ["cypress/included"],
+      "matchManagers": ["docker-compose"],
+      "automerge": true,
+      "automergeType": "branch"
     }
   ]
 }
