@@ -6,7 +6,7 @@ require (
 	github.com/avast/retry-go/v4 v4.0.3
 	github.com/centrifugal/gocent/v3 v3.2.0
 	github.com/go-kit/log v0.2.0
-	github.com/gopcua/opcua v0.3.2
+	github.com/gopcua/opcua v0.3.3
 	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.4.0
 	github.com/oklog/run v1.1.0
