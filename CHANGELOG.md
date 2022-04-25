@@ -1,5 +1,13 @@
 # Changelog
 
+### [0.4.1](https://github.com/cailloumajor/opcua-proxy/compare/v0.4.0...v0.4.1) (2022-04-25)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/avast/retry-go/v4 to v4.0.4 ([a12b2ea](https://github.com/cailloumajor/opcua-proxy/commit/a12b2ea1465393662e92aed3a31129169fdfcf98))
+* **deps:** update module github.com/gopcua/opcua to v0.3.3 ([a0cd79c](https://github.com/cailloumajor/opcua-proxy/commit/a0cd79c7192a7fcd37f5878eed111a1f479b6997))
+
 ## [0.4.0](https://github.com/cailloumajor/opcua-proxy/compare/v0.3.0...v0.4.0) (2022-03-25)
 
 
