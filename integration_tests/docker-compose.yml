@@ -50,7 +50,7 @@ services:
       - ./read_nodes.json:/config/read_nodes.json:ro
 
   cypress:
-    image: cypress/included:9.5.4
+    image: cypress/included:9.6.0
     depends_on:
       - centrifugo
       - opcua-server
