@@ -36,7 +36,7 @@ func ParseChannel(s, namespace string) (*Channel, error) {
 	if len(p) != 2 {
 		return nil, ErrIgnoredChannel
 	}
-	if p[0] != namespace {
+	if p[0] != namespace || p[1] == HeartbeatChannel {
 		return nil, ErrIgnoredChannel
 	}
 	ns, name := p[0], p[1]

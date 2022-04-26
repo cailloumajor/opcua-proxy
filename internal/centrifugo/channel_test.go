@@ -45,6 +45,11 @@ func TestParseChannelError(t *testing.T) {
 			expectIgnoredChannel: true,
 		},
 		{
+			name:                 "HeartbeatChannel",
+			input:                "ns:" + HeartbeatChannel,
+			expectIgnoredChannel: true,
+		},
+		{
 			name:                 "NoInterval",
 			input:                "ns:my_tags",
 			expectIgnoredChannel: false,
