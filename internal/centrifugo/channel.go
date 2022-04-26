@@ -18,8 +18,8 @@ func (c channelError) Error() string {
 	return string(c)
 }
 
-// ErrIgnoredNamespace is returned when the namespace is to be ignored.
-const ErrIgnoredNamespace = channelError("namespace ignored")
+// ErrIgnoredChannel is returned when the chennel is to be ignored.
+const ErrIgnoredChannel = channelError("channel ignored")
 
 // Channel represents a Centrifugo channel suitable for OPC-UA use.
 type Channel struct {
@@ -34,10 +34,10 @@ type Channel struct {
 func ParseChannel(s, namespace string) (*Channel, error) {
 	p := strings.SplitN(s, NsSeparator, 2)
 	if len(p) != 2 {
-		return nil, ErrIgnoredNamespace
+		return nil, ErrIgnoredChannel
 	}
 	if p[0] != namespace {
-		return nil, ErrIgnoredNamespace
+		return nil, ErrIgnoredChannel
 	}
 	ns, name := p[0], p[1]
 

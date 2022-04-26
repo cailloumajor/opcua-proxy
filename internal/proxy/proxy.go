@@ -181,7 +181,7 @@ func (p *Proxy) handleCentrifugoSubscribe(w http.ResponseWriter, r *http.Request
 	w.Header().Set("content-type", "application/json")
 
 	cch, err := p.cp.ParseChannel(sr.Channel, p.ns)
-	if errors.Is(err, centrifugo.ErrIgnoredNamespace) {
+	if errors.Is(err, centrifugo.ErrIgnoredChannel) {
 		respond(&successResponse{})
 		return
 	}

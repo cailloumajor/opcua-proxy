@@ -188,9 +188,9 @@ func TestCentrifugoSubscribe(t *testing.T) {
 			ignoreBody:        true,
 		},
 		{
-			name:              "IgnoredNamespace",
+			name:              "IgnoredChannel",
 			body:              "{}",
-			channelParseError: centrifugo.ErrIgnoredNamespace,
+			channelParseError: centrifugo.ErrIgnoredChannel,
 			subscribeError:    false,
 			expectStatusCode:  http.StatusOK,
 			expectContentType: "application/json",
