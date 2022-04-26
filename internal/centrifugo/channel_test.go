@@ -10,7 +10,7 @@ import (
 )
 
 func TestParseChannelSuccess(t *testing.T) {
-	const channel = `ns:my_tags@1800000`
+	const channel = "ns:my_tags@1800000"
 
 	c, err := ParseChannel(channel, "ns")
 
@@ -56,17 +56,17 @@ func TestParseChannelError(t *testing.T) {
 		},
 		{
 			name:                 "IntervalParsingError",
-			input:                `ns:my_tags@interval`,
+			input:                "ns:my_tags@interval",
 			expectIgnoredChannel: false,
 		},
 		{
 			name:                 "NegativeInterval",
-			input:                `ns:my_tags@-1800000`,
+			input:                "ns:my_tags@-1800000",
 			expectIgnoredChannel: false,
 		},
 		{
 			name:                 "IntervalTooBig",
-			input:                `ns:my_tags@9223372036855`,
+			input:                "ns:my_tags@9223372036855",
 			expectIgnoredChannel: false,
 		},
 	}
