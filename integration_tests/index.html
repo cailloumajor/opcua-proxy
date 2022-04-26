@@ -5,7 +5,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Testing frontend</title>
-  <script src="https://cdn.jsdelivr.net/npm/centrifuge@2.8.4/dist/centrifuge.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
+    integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/centrifuge/2.8.4/centrifuge.min.js"
+    integrity="sha512-aOW5Alk4Adgb8UA4irUfbLsJXKpUDeLFWrFGQJ54HF2tp2QIZPC2p2spPD4i6pUNOVbDO4qa4QTcPQDnHBlcbw=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 
 <body>
@@ -29,47 +34,39 @@
     var centrifuge;
     var subscription;
 
-    var urlInput = document.getElementById("url-input");
-    var connectBtn = document.getElementById("connect-button");
-    var connectStatus = document.getElementById("connect-status");
-    var channelInput = document.getElementById("channel-input");
-    var dataInput = document.getElementById("data-input");
-    var subscribeBtn = document.getElementById("subscribe-button");
-    var unsubscribeBtn = document.getElementById("unsubscribe-button");
-    var subscriptionStatus = document.getElementById("subscription-status");
-    var publication = document.getElementById("publication");
-
-    connectBtn.addEventListener("click", function (event) {
-      centrifuge = new Centrifuge(urlInput.value, { debug: true });
+    $("#connect-button").click(function () {
+      centrifuge = new Centrifuge($("#url-input").val(), { debug: true });
+      const connectStatus = $("#connect-status");
       centrifuge.on("connect", function (context) {
-        connectStatus.innerText = "connected";
+        connectStatus.text("connected");
       });
       centrifuge.on("disconnect", function (context) {
-        connectStatus.innerText = "disconnected";
+        connectStatus.text("disconnected");
       });
       centrifuge.connect();
     });
 
-    subscribeBtn.addEventListener("click", function (event) {
-      const data = JSON.parse(dataInput.value)
-      publication.innerHTML = ""
-      data.nodes.forEach((node, index) => {
-        const li = document.createElement("li")
-        publication.appendChild(li)
+    $("#subscribe-button").click(function () {
+      const data = JSON.parse($("#data-input").val())
+      const publication = $("#publication");
+      publication.empty()
+      data.nodes.forEach(() => {
+        publication.append(document.createElement("li"))
       });
-      subscription = centrifuge.subscribe(channelInput.value, function (message) {
-        for (const [key, val] of Object.entries(message.data)) {
-          publication.children[parseInt(key)].innerText = val
-        }
+      subscription = centrifuge.subscribe($("#channel-input").val(), function (message) {
+        $.each(message.data, function (key, value) {
+          publication.children().get(parseInt(key)).innerText = value
+        })
       }, { data });
-      unsubscribeBtn.addEventListener("click", function (event) {
+      $("#unsubscribe-button").click(function () {
         subscription.unsubscribe();
       });
+      const subscriptionStatus = $("#subscription-status")
       subscription.on("subscribe", function (context) {
-        subscriptionStatus.innerText = "subscribed";
+        subscriptionStatus.text("subscribed");
       });
       subscription.on("unsubscribe", function (context) {
-        subscriptionStatus.innerText = "unsubscribed";
+        subscriptionStatus.text("unsubscribed");
       });
     });
 
