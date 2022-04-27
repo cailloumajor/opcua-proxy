@@ -1,5 +1,6 @@
 {
   "$schema": "https://on.cypress.io/cypress.schema.json",
+  "fixturesFolder": false,
   "pluginsFile": false,
   "supportFile": false
 }
