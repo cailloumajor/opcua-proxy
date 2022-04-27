@@ -36,6 +36,7 @@ services:
       - CENTRIFUGO_API_ADDRESS=http://centrifugo:8000/api
       - CENTRIFUGO_API_KEY=dc1e276a-9eb5-4950-a8bc-c13fe848154a
       - CENTRIFUGO_NAMESPACE=testing
+      - HEARTBEAT_INTERVAL=200ms
       - OPCUA_CERT_FILE=/certs/testing_cert.der
       - OPCUA_KEY_FILE=/certs/testing_key.pem
       - OPCUA_PASSWORD=password
@@ -58,6 +59,7 @@ services:
     environment:
       - CYPRESS_CENTRIFUGO_URL=ws://centrifugo:8000/connection/websocket
       - CYPRESS_CENTRIFUGO_NAMESPACE=testing
+      - CYPRESS_HEARTBEAT_INTERVAL=200
       - CYPRESS_PROXY_URL=http://opcua-proxy:8080
     volumes:
       - .:/e2e

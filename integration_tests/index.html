@@ -37,25 +37,52 @@
       <span id="subscription-status">not subscribed</span>
     </div>
 
+    <div>
+      <label
+        >Heartbeat channel: <input type="text" id="heartbeat-channel-input"
+      /></label>
+      <input type="button" value="Subscribe" id="heartbeat-subscribe-button" />
+      <input
+        type="button"
+        value="Unsubscribe"
+        id="heartbeat-unsubscribe-button"
+      />
+      <span id="heartbeat-subscription-status">not subscribed</span>
+    </div>
+
+    <h5>OPC-UA data</h5>
     <ol start="0" id="publication"></ol>
+
+    <table>
+      <caption>
+        Heartbeat publications
+      </caption>
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody id="heartbeat-publications"></tbody>
+    </table>
 
     <script>
       var centrifuge
       var subscription
 
-      $("#connect-button").click(function () {
+      $("#connect-button").click(() => {
         centrifuge = new Centrifuge($("#url-input").val(), { debug: true })
         const connectStatus = $("#connect-status")
-        centrifuge.on("connect", function (context) {
+        centrifuge.on("connect", (context) => {
           connectStatus.text("connected")
         })
-        centrifuge.on("disconnect", function (context) {
+        centrifuge.on("disconnect", (context) => {
           connectStatus.text("disconnected")
         })
         centrifuge.connect()
       })
 
-      $("#subscribe-button").click(function () {
+      $("#subscribe-button").click(() => {
         const data = JSON.parse($("#data-input").val())
         const publication = $("#publication")
         publication.empty()
@@ -64,24 +91,61 @@
         })
         subscription = centrifuge.subscribe(
           $("#channel-input").val(),
-          function (message) {
-            $.each(message.data, function (key, value) {
+          (message) => {
+            $.each(message.data, (key, value) => {
               publication.children().get(parseInt(key)).innerText = value
             })
           },
           { data }
         )
-        $("#unsubscribe-button").click(function () {
+        $("#unsubscribe-button").click(() => {
           subscription.unsubscribe()
         })
         const subscriptionStatus = $("#subscription-status")
-        subscription.on("subscribe", function (context) {
+        subscription.on("subscribe", () => {
           subscriptionStatus.text("subscribed")
         })
-        subscription.on("unsubscribe", function (context) {
+        subscription.on("unsubscribe", () => {
           subscriptionStatus.text("unsubscribed")
+        })
+      })
+
+      $("#heartbeat-subscribe-button").click(() => {
+        const $tbody = $("#heartbeat-publications").empty()
+        const subscription = centrifuge.subscribe(
+          $("#heartbeat-channel-input").val(),
+          (message) => {
+            const $tr = $("<tr>").appendTo($tbody)
+            $("<td>")
+              .attr("data-value-for-key", "status")
+              .text(message.data.status)
+              .appendTo($tr)
+            $("<td>")
+              .attr("data-value-for-key", "description")
+              .text(message.data.description)
+              .appendTo($tr)
+          }
+        )
+        $("#heartbeat-unsubscribe-button").click(() => {
+          subscription.unsubscribe()
+        })
+        const $subscriptionStatus = $("#heartbeat-subscription-status")
+        subscription.on("subscribe", () => {
+          $subscriptionStatus.text("subscribed")
+        })
+        subscription.on("unsubscribe", () => {
+          $subscriptionStatus.text("unsubscribed")
         })
       })
     </script>
   </body>
 </html>
+
+<style>
+  table,
+  th {
+    border-top: 1px solid black;
+    border-bottom: 1px solid black;
+    border-collapse: collapse;
+  }
+</style>
