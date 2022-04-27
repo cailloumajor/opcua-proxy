@@ -112,6 +112,7 @@ OPTIONS
   -centrifugo-api-key      CENTRIFUGO_API_KEY      Centrifugo API key
   -centrifugo-namespace    CENTRIFUGO_NAMESPACE    Centrifugo channel namespace for this instance
   -debug                                           log debug information (default: false)
+  -heartbeat-interval      HEARTBEAT_INTERVAL      Heartbeat interval (default: 5s)
   -opcua-cert-file         OPCUA_CERT_FILE         certificate file path for OPC-UA secure channel (optional)
   -opcua-key-file          OPCUA_KEY_FILE          private key file path for OPC-UA secure channel (optional)
   -opcua-password          OPCUA_PASSWORD          password for OPC-UA authentication (optional)

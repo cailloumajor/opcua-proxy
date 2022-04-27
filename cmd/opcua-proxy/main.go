@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/cailloumajor/opcua-proxy/internal/centrifugo"
 	"github.com/cailloumajor/opcua-proxy/internal/opcua"
 	"github.com/cailloumajor/opcua-proxy/internal/proxy"
 	"github.com/centrifugal/gocent/v3"
@@ -65,6 +66,7 @@ func main() {
 		proxyListen            string
 		centrifugoNamespace    string
 		centrifugoClientConfig gocent.Config
+		heartbeatInterval      time.Duration
 		readNodesConfigFile    string
 	)
 	fs := flag.NewFlagSet("opcua-proxy", flag.ExitOnError)
@@ -78,6 +80,7 @@ func main() {
 	fs.StringVar(&centrifugoClientConfig.Addr, "centrifugo-api-address", "", "Centrifugo API endpoint")
 	fs.StringVar(&centrifugoClientConfig.Key, "centrifugo-api-key", "", "Centrifugo API key")
 	fs.StringVar(&centrifugoNamespace, "centrifugo-namespace", "", "Centrifugo channel namespace for this instance")
+	fs.DurationVar(&heartbeatInterval, "heartbeat-interval", 5*time.Second, "Heartbeat interval")
 	fs.StringVar(&readNodesConfigFile, "read-nodes-config-file", "", "path of the JSON file containing nodes to read")
 	debug := fs.Bool("debug", false, "log debug information")
 	fs.Usage = usageFor(fs, os.Stderr)
@@ -185,6 +188,34 @@ func main() {
 			if err := srv.Shutdown(ctx); err != nil {
 				level.Info(proxyLogger).Log("during", "Shutdown", "err", err)
 			}
+		})
+	}
+
+	{
+		heartbeatLogger := log.With(logger, "component", "heartbeat")
+		ctx, cancel := context.WithCancel(context.Background())
+		ticker := time.NewTicker(heartbeatInterval)
+		g.Add(func() error {
+			defer level.Debug(heartbeatLogger).Log("msg", "stopping")
+			level.Debug(heartbeatLogger).Log("msg", "starting")
+			for {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-ticker.C:
+					if err := centrifugo.PublishStatus(
+						ctx,
+						centrifugoNamespace,
+						opcClient,
+						centrifugoClient,
+					); err != nil {
+						level.Info(heartbeatLogger).Log("during", "status publishing", "err", err)
+					}
+				}
+			}
+		}, func(err error) {
+			ticker.Stop()
+			cancel()
 		})
 	}
 

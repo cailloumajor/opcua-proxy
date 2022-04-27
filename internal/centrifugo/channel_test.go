@@ -10,7 +10,7 @@ import (
 )
 
 func TestParseChannelSuccess(t *testing.T) {
-	const channel = `ns:my_tags@1800000`
+	const channel = "ns:my_tags@1800000"
 
 	c, err := ParseChannel(channel, "ns")
 
@@ -30,44 +30,49 @@ func TestParseChannelSuccess(t *testing.T) {
 
 func TestParseChannelError(t *testing.T) {
 	cases := []struct {
-		name                   string
-		input                  string
-		expectIgnoredNamespace bool
+		name                 string
+		input                string
+		expectIgnoredChannel bool
 	}{
 		{
-			name:                   "MissingNamespace",
-			input:                  "my_tags@1800000",
-			expectIgnoredNamespace: true,
+			name:                 "MissingNamespace",
+			input:                "my_tags@1800000",
+			expectIgnoredChannel: true,
 		},
 		{
-			name:                   "NotExpectedNamespace",
-			input:                  "otherns:my_tags@1800000",
-			expectIgnoredNamespace: true,
+			name:                 "NotExpectedNamespace",
+			input:                "otherns:my_tags@1800000",
+			expectIgnoredChannel: true,
 		},
 		{
-			name:                   "NoInterval",
-			input:                  "ns:my_tags",
-			expectIgnoredNamespace: false,
+			name:                 "HeartbeatChannel",
+			input:                "ns:" + HeartbeatChannel,
+			expectIgnoredChannel: true,
 		},
 		{
-			name:                   "EmptyName",
-			input:                  "ns:@1800000",
-			expectIgnoredNamespace: false,
+			name:                 "NoInterval",
+			input:                "ns:my_tags",
+			expectIgnoredChannel: false,
 		},
 		{
-			name:                   "IntervalParsingError",
-			input:                  `ns:my_tags@interval`,
-			expectIgnoredNamespace: false,
+			name:                 "EmptyName",
+			input:                "ns:@1800000",
+			expectIgnoredChannel: false,
 		},
 		{
-			name:                   "NegativeInterval",
-			input:                  `ns:my_tags@-1800000`,
-			expectIgnoredNamespace: false,
+			name:                 "IntervalParsingError",
+			input:                "ns:my_tags@interval",
+			expectIgnoredChannel: false,
 		},
 		{
-			name:                   "IntervalTooBig",
-			input:                  `ns:my_tags@9223372036855`,
-			expectIgnoredNamespace: false,
+			name:                 "NegativeInterval",
+			input:                "ns:my_tags@-1800000",
+			expectIgnoredChannel: false,
+		},
+		{
+			name:                 "IntervalTooBig",
+			input:                "ns:my_tags@9223372036855",
+			expectIgnoredChannel: false,
 		},
 	}
 
@@ -78,7 +83,7 @@ func TestParseChannelError(t *testing.T) {
 			if msg := testutils.AssertError(t, err, true); msg != "" {
 				t.Errorf(msg)
 			}
-			if got, want := errors.Is(err, ErrIgnoredNamespace), tc.expectIgnoredNamespace; got != want {
+			if got, want := errors.Is(err, ErrIgnoredChannel), tc.expectIgnoredChannel; got != want {
 				t.Errorf("ignored namespace error returned: want %v, got %v", want, got)
 			}
 		})
