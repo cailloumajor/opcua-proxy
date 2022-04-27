@@ -1,7 +1,10 @@
 const subscriptionInterval = 500
 
 before(() => {
-  cy.request({ url: `${Cypress.env("PROXY_URL")}/health`, retryOnStatusCodeFailure: true })
+  cy.request({
+    url: `${Cypress.env("PROXY_URL")}/health`,
+    retryOnStatusCodeFailure: true,
+  })
 })
 
 describe("Integration tests page", () => {
@@ -20,7 +23,7 @@ describe("Integration tests page", () => {
     const ns = Cypress.env("CENTRIFUGO_NAMESPACE")
     const data = {
       namespaceURI: "urn:open62541.server.application",
-      nodes: ["the.answer", 2345]
+      nodes: ["the.answer", 2345],
     }
     cy.get("#channel-input").type(`${ns}:integration@${subscriptionInterval}`)
     cy.get("#data-input")
@@ -29,7 +32,9 @@ describe("Integration tests page", () => {
     cy.get("#subscribe-button").click()
     cy.get("#subscription-status").should("have.text", "subscribed")
     let initialDate
-    cy.get("#publication").children("li").as("publications")
+    cy.get("#publication")
+      .children("li")
+      .as("publications")
       .should("have.length", 2)
       .its(0)
       .should("have.text", "42")
@@ -51,7 +56,9 @@ describe("Integration tests page", () => {
     cy.get("#unsubscribe-button").click()
     cy.get("#subscription-status").should("have.text", "unsubscribed")
     let currentTime
-    cy.get(("#publication")).children("li").as("publications")
+    cy.get("#publication")
+      .children("li")
+      .as("publications")
       .then(($li) => {
         currentTime = $li[1].innerText
       })
@@ -70,16 +77,18 @@ describe("Integration tests page", () => {
 
 describe("Nodes values endpoint", () => {
   it("returns valid data", () => {
-    cy.request(`${Cypress.env("PROXY_URL")}/values?tag=value`).then((response) => {
-      expect(response.body).to.have.property("timestamp").that.is.a("string")
-      expect(Date.parse(response.body.timestamp)).to.not.be.NaN
-      expect(response.body).to.have.deep.property("tags", { tag: "value" })
-      expect(response.body).to.have.deep.property("fields", {
-        "2994": false,
-        "2263": "open62541",
-        "the.answer": 42,
-        "myByteString": "dGVzdDEyMw=="
-      })
-    })
+    cy.request(`${Cypress.env("PROXY_URL")}/values?tag=value`).then(
+      (response) => {
+        expect(response.body).to.have.property("timestamp").that.is.a("string")
+        expect(Date.parse(response.body.timestamp)).to.not.be.NaN
+        expect(response.body).to.have.deep.property("tags", { tag: "value" })
+        expect(response.body).to.have.deep.property("fields", {
+          2994: false,
+          2263: "open62541",
+          "the.answer": 42,
+          myByteString: "dGVzdDEyMw==",
+        })
+      }
+    )
   })
 })
