@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/cailloumajor/opcua-proxy/compare/v0.4.1...v0.5.0) (2022-04-27)
+
+
+### Features
+
+* add heartbeat publication ([182e743](https://github.com/cailloumajor/opcua-proxy/commit/182e7433103e5a9847addfab56f37c7024e51fe3))
+* **docs:** add heartbeat in the flow chart ([7ca3ad5](https://github.com/cailloumajor/opcua-proxy/commit/7ca3ad521f86ed76596dd48d1cc6901f2725fa54))
+
 ### [0.4.1](https://github.com/cailloumajor/opcua-proxy/compare/v0.4.0...v0.4.1) (2022-04-25)
 
 
