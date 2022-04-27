@@ -60,6 +60,15 @@ sequenceDiagram
         Centrifugo->>+Proxy: Proxies the subscription request
         Proxy-->>-Centrifugo: Subscription allowed
         Centrifugo-->>-Client: Success
+    else Heartbeat channel
+        Client->>+Centrifugo: Subscribes to heartbeat channel
+        Centrifugo->>+Proxy: Proxies the subscription request
+        Proxy-->>-Centrifugo: Subscription allowed
+        Centrifugo-->>-Client: Success
+        loop Each heartbeat interval
+            Proxy-)Centrifugo: Publishes status
+            Centrifugo-)Client: Notifies status
+        end
     else OPC-UA related channel
         Client->>+Centrifugo: Subscribes to a channel
         Centrifugo->>+Proxy: Proxies the subscription request
@@ -71,15 +80,15 @@ sequenceDiagram
         OPCServer-->>-Proxy: Monitored item created
         Proxy-->>-Centrifugo: Subscription allowed
         Centrifugo-->>-Client: Success
-    end
-    loop Each publishing interval with data change
-        OPCServer-)Proxy: Data change notification
-        activate Proxy
-        Proxy-)Centrifugo: Publish
-        deactivate Proxy
-        activate Centrifugo
-        Centrifugo-)Client: Publication
-        deactivate Centrifugo
+        loop Each publishing interval with data change
+            OPCServer-)Proxy: Data change notification
+            activate Proxy
+            Proxy-)Centrifugo: Publish
+            deactivate Proxy
+            activate Centrifugo
+            Centrifugo-)Client: Notifies data change
+            deactivate Centrifugo
+        end
     end
 ```
 
