@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.0](https://github.com/cailloumajor/opcua-proxy/compare/v0.5.0...v0.6.0) (2022-04-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* change heartbeat status code order
+
+### Features
+
+* change heartbeat status code order ([729a632](https://github.com/cailloumajor/opcua-proxy/commit/729a632d59e49e1296fdeccbaee36aec5deba6c6))
+
 ## [0.5.0](https://github.com/cailloumajor/opcua-proxy/compare/v0.4.1...v0.5.0) (2022-04-27)
 
 
