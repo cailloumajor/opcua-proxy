@@ -88,9 +88,9 @@ describe("Integration tests page", () => {
         .as("publications")
         .should("have.length.greaterThan", 1)
         .and(($rows) => {
-          expect($rows.find('[data-value-for-key="status"]')).to.contain("1")
+          expect($rows.find('[data-value-for-key="status"]')).to.contain("0")
           expect($rows.find('[data-value-for-key="description"]')).to.contain(
-            "OPC-UA connected"
+            "Everything OK"
           )
         })
     })

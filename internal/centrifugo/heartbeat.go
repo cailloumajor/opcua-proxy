@@ -8,8 +8,8 @@ import (
 	"github.com/gopcua/opcua"
 )
 
-//go:generate moq -out heartbeat_mocks_test.go . StateProvider Publisher
 //go:generate stringer -linecomment -trimprefix status -type status
+//go:generate moq -out heartbeat_mocks_test.go . StateProvider Publisher
 
 // HeartbeatChannel is theCentrifugo channel name for heartbeat messages.
 const HeartbeatChannel = "heartbeat"
@@ -27,15 +27,15 @@ type Publisher interface {
 type status uint8
 
 const (
-	statusOPCUaNotConnected status = iota // OPC-UA not connected
-	statusOpcUaConnected                  // OPC-UA connected
+	statusOK                status = iota // Everything OK
+	statusOPCUaNotConnected               // OPC-UA not connected
 )
 
 // PublishStatus publishes the status of the service to Centrifugo heartbeat channel.
 func PublishStatus(ctx context.Context, ns string, s StateProvider, p Publisher) error {
 	var st status
 	if s.State() == opcua.Connected {
-		st = statusOpcUaConnected
+		st = statusOK
 	} else {
 		st = statusOPCUaNotConnected
 	}
