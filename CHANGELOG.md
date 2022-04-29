@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/cailloumajor/opcua-proxy/compare/v0.6.0...v0.7.0) (2022-04-29)
+
+
+### Features
+
+* add a message to centrifugo subscribe success reply ([58087e0](https://github.com/cailloumajor/opcua-proxy/commit/58087e0ec54f8f46568496b4c6576554fae6c4e8))
+
 ## [0.6.0](https://github.com/cailloumajor/opcua-proxy/compare/v0.5.0...v0.6.0) (2022-04-28)
 
 
