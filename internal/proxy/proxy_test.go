@@ -194,7 +194,7 @@ func TestCentrifugoSubscribe(t *testing.T) {
 			subscribeError:    false,
 			expectStatusCode:  http.StatusOK,
 			expectContentType: "application/json",
-			expectBody:        "{\"result\":{}}\n",
+			expectBody:        "{\"result\":{\"data\":{\"proxyMsg\":\"ignored channel\"}}}\n",
 			ignoreBody:        false,
 		},
 		{
@@ -224,7 +224,7 @@ func TestCentrifugoSubscribe(t *testing.T) {
 			subscribeError:    false,
 			expectStatusCode:  http.StatusOK,
 			expectContentType: "application/json",
-			expectBody:        "{\"result\":{}}\n",
+			expectBody:        "{\"result\":{\"data\":{\"proxyMsg\":\"subscribed to OPC-UA data change\"}}}\n",
 			ignoreBody:        false,
 		},
 	}

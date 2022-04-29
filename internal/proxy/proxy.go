@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -140,37 +141,15 @@ type subscribeRequest struct {
 	Data    opcua.NodesObject `json:"data"`
 }
 
-type successResponse struct {
-	Result struct{} `json:"result"`
+func writeSuccessResponse(w io.Writer, msg string) {
+	fmt.Fprintf(w, "{\"result\":{\"data\":{\"proxyMsg\":%q}}}\n", msg)
 }
 
-type errorContent struct {
-	Code    uint32 `json:"code"`
-	Message string `json:"message"`
-}
-
-type errorResponse struct {
-	Error errorContent `json:"error"`
-}
-
-func newErrorResponse(code uint32, msg string) *errorResponse {
-	return &errorResponse{
-		Error: errorContent{
-			Code:    code,
-			Message: msg,
-		},
-	}
+func writeErrorResponse(w io.Writer, code uint32, msg string) {
+	fmt.Fprintf(w, "{\"error\":{\"code\":%d,\"message\":%q}}\n", code, msg)
 }
 
 func (p *Proxy) handleCentrifugoSubscribe(w http.ResponseWriter, r *http.Request) {
-	enc := json.NewEncoder(w)
-
-	respond := func(resp interface{}) {
-		if err := enc.Encode(resp); err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		}
-	}
-
 	var sr subscribeRequest
 	if err := json.NewDecoder(r.Body).Decode(&sr); err != nil {
 		msg := fmt.Sprintf("error decoding content: %v", err)
@@ -182,12 +161,12 @@ func (p *Proxy) handleCentrifugoSubscribe(w http.ResponseWriter, r *http.Request
 
 	cch, err := p.cp.ParseChannel(sr.Channel, p.ns)
 	if errors.Is(err, centrifugo.ErrIgnoredChannel) {
-		respond(&successResponse{})
+		writeSuccessResponse(w, "ignored channel")
 		return
 	}
 	if err != nil {
 		msg := fmt.Sprintf("bad channel format: %v", err)
-		respond(newErrorResponse(1000, msg))
+		writeErrorResponse(w, 1000, msg)
 		return
 	}
 
@@ -201,11 +180,11 @@ func (p *Proxy) handleCentrifugoSubscribe(w http.ResponseWriter, r *http.Request
 
 	if err := p.m.Subscribe(ctx, sr.Data.NamespaceURI, cch, nip); err != nil {
 		msg := fmt.Sprintf("error subscribing to OPC-UA data change: %v", err)
-		respond(newErrorResponse(1001, msg))
+		writeErrorResponse(w, 1001, msg)
 		return
 	}
 
-	respond(&successResponse{})
+	writeSuccessResponse(w, "subscribed to OPC-UA data change")
 }
 
 // DefaultCentrifugoChannelParser is the default implementation of CentrifugoChannelParser.
