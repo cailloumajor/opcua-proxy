@@ -1,5 +1,12 @@
 # Changelog
 
+### [0.7.1](https://github.com/cailloumajor/opcua-proxy/compare/v0.7.0...v0.7.1) (2022-05-06)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/gopcua/opcua to v0.3.4 ([6f0aa70](https://github.com/cailloumajor/opcua-proxy/commit/6f0aa70c48928943e08b719135b3cd2b0fef79b3))
+
 ## [0.7.0](https://github.com/cailloumajor/opcua-proxy/compare/v0.6.0...v0.7.0) (2022-04-29)
 
 
