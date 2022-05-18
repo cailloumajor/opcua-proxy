@@ -1,5 +1,13 @@
 # Changelog
 
+### [0.7.3](https://github.com/cailloumajor/opcua-proxy/compare/v0.7.2...v0.7.3) (2022-05-18)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/avast/retry-go/v4 to v4.0.5 ([dfaeced](https://github.com/cailloumajor/opcua-proxy/commit/dfaeced2f873775e90644f8c4773e5a66adb8a4e))
+* **deps:** update module github.com/go-kit/log to v0.2.1 ([218a893](https://github.com/cailloumajor/opcua-proxy/commit/218a893e7fc5db689675bd9d84c40daa279d116d))
+
 ### [0.7.2](https://github.com/cailloumajor/opcua-proxy/compare/v0.7.1...v0.7.2) (2022-05-12)
 
 
