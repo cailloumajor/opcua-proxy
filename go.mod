@@ -3,7 +3,7 @@ module github.com/cailloumajor/opcua-proxy
 go 1.17
 
 require (
-	github.com/avast/retry-go/v4 v4.0.4
+	github.com/avast/retry-go/v4 v4.0.5
 	github.com/centrifugal/gocent/v3 v3.2.0
 	github.com/go-kit/log v0.2.0
 	github.com/gopcua/opcua v0.3.4
