@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.4](https://github.com/cailloumajor/opcua-proxy/compare/v0.7.3...v0.7.4) (2022-06-02)
+
+
+### Bug Fixes
+
+* **deps:** update dependency golang to v1.18.3 ([2330967](https://github.com/cailloumajor/opcua-proxy/commit/23309671b729f62453bed461b444eab968346d25))
+
 ### [0.7.3](https://github.com/cailloumajor/opcua-proxy/compare/v0.7.2...v0.7.3) (2022-05-18)
 
 
