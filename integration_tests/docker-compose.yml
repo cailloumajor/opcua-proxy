@@ -26,9 +26,16 @@ services:
     volumes:
       - ../certs/testing_cert.der:/opt/open62541/trusted/testing_cert.der:ro
 
+  read-nodes-json:
+    image: halverneus/static-file-server
+    volumes:
+      - ./read_nodes.json:/web/read_nodes.json:ro
+
   opcua-proxy:
     build: ..
     image: opcua-proxy:integration-tests
+    depends_on:
+      - read-nodes-json
     command:
       - /usr/local/bin/opcua-proxy
       - -debug
@@ -43,12 +50,11 @@ services:
       - OPCUA_SERVER_URL=opc.tcp://opcua-server:4840
       - OPCUA_TIDY_INTERVAL=10s
       - OPCUA_USER=user1
-      - READ_NODES_CONFIG_FILE=/config/read_nodes.json
+      - READ_NODES_URL=http://read-nodes-json:8080/read_nodes.json
     user: root
     volumes:
       - ../certs/testing_cert.der:/certs/testing_cert.der:ro
       - ../certs/testing_key.pem:/certs/testing_key.pem:ro
-      - ./read_nodes.json:/config/read_nodes.json:ro
 
   cypress:
     image: cypress/included:9.7.0

@@ -1,8 +1,11 @@
 package opcua_test
 
 import (
+	"context"
 	"encoding/json"
-	"os"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	. "github.com/cailloumajor/opcua-proxy/internal/opcua"
@@ -82,52 +85,77 @@ func TestNode(t *testing.T) {
 	}
 }
 
-func TestNodesObjectsFromFile(t *testing.T) {
+func TestNodesObjectsFromURL(t *testing.T) {
 	cases := []struct {
-		name        string
-		createFile  bool
-		fileContent string
-		expectError bool
+		name            string
+		newRequestError bool
+		requestError    bool
+		httpError       bool
+		content         string
+		expectError     bool
 	}{
 		{
-			name:        "NoFile",
-			createFile:  false,
-			fileContent: "",
-			expectError: true,
+			name:            "NewRequestError",
+			newRequestError: true,
+			requestError:    false,
+			httpError:       false,
+			content:         "",
+			expectError:     true,
 		},
 		{
-			name:        "IncompleteFile",
-			createFile:  true,
-			fileContent: `[{"namespaceURI":"ns","nodes":[1,2]}`,
-			expectError: true,
+			name:            "RequestError",
+			newRequestError: false,
+			requestError:    true,
+			httpError:       false,
+			content:         "",
+			expectError:     true,
 		},
 		{
-			name:        "Success",
-			createFile:  true,
-			fileContent: `[{"namespaceURI":"ns1","nodes":[1,2]},{"namespaceURI":"ns2","nodes":["3","4"]}]`,
-			expectError: false,
+			name:            "HttpError",
+			newRequestError: false,
+			requestError:    false,
+			httpError:       true,
+			content:         "",
+			expectError:     true,
+		},
+		{
+			name:            "DecodeError",
+			newRequestError: false,
+			requestError:    false,
+			httpError:       false,
+			content:         `[{"namespaceURI":"ns","nodes":[1,2]}`,
+			expectError:     true,
+		},
+		{
+			name:            "Success",
+			newRequestError: false,
+			requestError:    false,
+			httpError:       false,
+			content:         `[{"namespaceURI":"ns1","nodes":[1,2]},{"namespaceURI":"ns2","nodes":["3","4"]}]`,
+			expectError:     false,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			dir := t.TempDir()
-			fn := "nonexistent.json"
-			if tc.createFile {
-				f, err := os.CreateTemp(dir, "*.json")
-				if err != nil {
-					t.Fatalf("error creating the file: %v", err)
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if tc.httpError {
+					http.Error(w, "testing error", http.StatusInternalServerError)
+				} else {
+					fmt.Fprintln(w, tc.content)
 				}
-				fn = f.Name()
-				if _, err := f.Write([]byte(tc.fileContent)); err != nil {
-					t.Fatalf("error writing the file: %v", err)
-				}
-				if err := f.Close(); err != nil {
-					t.Fatalf("error closing the file: %v", err)
-				}
+			}))
+			if tc.requestError {
+				ts.Close()
+			}
+			defer ts.Close()
+
+			var ctx context.Context
+			if !tc.newRequestError {
+				ctx = context.Background()
 			}
 
-			no, err := NodesObjectsFromFile(fn)
+			no, err := NodesObjectsFromURL(ctx, ts.URL)
 
 			if msg := testutils.AssertError(t, err, tc.expectError); msg != "" {
 				t.Errorf(msg)

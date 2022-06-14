@@ -1,10 +1,11 @@
 package opcua
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
-	"os"
+	"net/http"
 	"strconv"
 
 	"github.com/gopcua/opcua/ua"
@@ -76,19 +77,25 @@ type NodesObject struct {
 	Nodes        []Node `json:"nodes"`
 }
 
-// NodesObjectsFromFile creates a slice of NodesObject from a JSON file content.
-func NodesObjectsFromFile(path string) ([]NodesObject, error) {
-	f, err := os.Open(path)
+// NodesObjectsFromURL gets nodes objects from given URL and returns the corresponding slice.
+func NodesObjectsFromURL(ctx context.Context, url string) ([]NodesObject, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("error opening file %q: %w", path, err)
+		return nil, fmt.Errorf("error building request: %w", err)
 	}
-	defer func() {
-		_ = f.Close()
-	}()
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request error: %w", err)
+	}
+
+	if res.StatusCode > 299 {
+		return nil, fmt.Errorf("bad status code: %d", res.StatusCode)
+	}
 
 	var no []NodesObject
-	if err := json.NewDecoder(f).Decode(&no); err != nil {
-		return nil, fmt.Errorf("error decoding JSON from file %q: %w", path, err)
+	if err := json.NewDecoder(res.Body).Decode(&no); err != nil {
+		return nil, fmt.Errorf("decoding error: %w", err)
 	}
 
 	return no, nil
