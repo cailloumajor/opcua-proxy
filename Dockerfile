@@ -1,15 +1,20 @@
 # syntax=docker/dockerfile:1.3
 
-FROM golang:1.18.3-bullseye AS builder
+FROM --platform=$BUILDPLATFORM tonistiigi/xx:1.1.1 as xx
+
+FROM --platform=$BUILDPLATFORM golang:1.18.3-bullseye AS builder
+
+COPY --from=xx / /
 
 WORKDIR /usr/src/app
 COPY go.mod go.sum ./
 COPY cmd ./cmd
 COPY internal ./internal
+ARG TARGETPLATFORM
 ENV CGO_ENABLED=0
 RUN --mount=type=cache,target=/root/.cache/go-build \
-    go build -o bin/ -v ./...
-
+    xx-go build -o bin/ -v ./... && \
+    xx-verify bin/*
 
 # hadolint ignore=DL3006
 FROM gcr.io/distroless/static-debian11
