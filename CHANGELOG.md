@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/cailloumajor/opcua-proxy/compare/v1.0.0...v1.1.0) (2022-06-14)
+
+
+### Features
+
+* use cross-compilation to build image ([f7b493f](https://github.com/cailloumajor/opcua-proxy/commit/f7b493f7f68696581bb672d122e06194718ba587))
+
 ## [1.0.0](https://github.com/cailloumajor/opcua-proxy/compare/v0.7.4...v1.0.0) (2022-06-14)
 
 
