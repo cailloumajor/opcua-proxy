@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.0](https://github.com/cailloumajor/opcua-proxy/compare/v0.7.4...v1.0.0) (2022-06-14)
+
+
+### Features
+
+* get nodes to read from HTTP ([d4c0c3b](https://github.com/cailloumajor/opcua-proxy/commit/d4c0c3bca721e8df3c0f741d722590095ad21f3a))
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/avast/retry-go/v4 to v4.1.0 ([754b4d1](https://github.com/cailloumajor/opcua-proxy/commit/754b4d1cbcab501c51bc4c4b385e9f9adef5f43a))
+
+
+### Miscellaneous Chores
+
+* release 1.0.0 ([fabeab9](https://github.com/cailloumajor/opcua-proxy/commit/fabeab9b125a4faafde94cc6ee5453c0bce83f72))
+
 ## [0.7.4](https://github.com/cailloumajor/opcua-proxy/compare/v0.7.3...v0.7.4) (2022-06-02)
 
 
