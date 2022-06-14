@@ -59,6 +59,32 @@ func errExit(l log.Logger, err error) {
 	os.Exit(1)
 }
 
+type retryableInit struct {
+	logger   log.Logger
+	attempts uint
+	maxDelay time.Duration
+}
+
+func (r *retryableInit) Do(f func(ctx context.Context) error) {
+	rCtx, rCancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer rCancel()
+
+	err := retry.Do(
+		func() error { return f(rCtx) },
+		retry.Attempts(r.attempts),
+		retry.Context(rCtx),
+		retry.Delay(500*time.Millisecond),
+		retry.LastErrorOnly(true),
+		retry.MaxDelay(r.maxDelay),
+		retry.OnRetry(func(n uint, err error) {
+			level.Info(r.logger).Log("err", err, "retry", n)
+		}),
+	)
+	if err != nil {
+		errExit(r.logger, err)
+	}
+}
+
 func main() {
 	var (
 		opcuaConfig            opcua.Config
@@ -67,7 +93,7 @@ func main() {
 		centrifugoNamespace    string
 		centrifugoClientConfig gocent.Config
 		heartbeatInterval      time.Duration
-		readNodesConfigFile    string
+		readNodesURL           string
 	)
 	fs := flag.NewFlagSet("opcua-proxy", flag.ExitOnError)
 	fs.StringVar(&opcuaConfig.ServerURL, "opcua-server-url", "opc.tcp://127.0.0.1:4840", "OPC-UA server endpoint URL")
@@ -81,7 +107,7 @@ func main() {
 	fs.StringVar(&centrifugoClientConfig.Key, "centrifugo-api-key", "", "Centrifugo API key")
 	fs.StringVar(&centrifugoNamespace, "centrifugo-namespace", "", "Centrifugo channel namespace for this instance")
 	fs.DurationVar(&heartbeatInterval, "heartbeat-interval", 5*time.Second, "Heartbeat interval")
-	fs.StringVar(&readNodesConfigFile, "read-nodes-config-file", "", "path of the JSON file containing nodes to read")
+	fs.StringVar(&readNodesURL, "read-nodes-url", "", "URL to query for nodes to read")
 	debug := fs.Bool("debug", false, "log debug information")
 	fs.Usage = usageFor(fs, os.Stderr)
 
@@ -113,11 +139,16 @@ func main() {
 
 	var nodesToRead []opcua.NodesObject
 	{
-		var err error
-		nodesToRead, err = opcua.NodesObjectsFromFile(readNodesConfigFile)
-		if err != nil {
-			errExit(log.With(logger, "during", "reading nodes objects from file"), err)
+		r := &retryableInit{
+			logger:   log.With(logger, "during", "getting nodes objects from URL"),
+			attempts: 10,
+			maxDelay: 2 * time.Second,
 		}
+		r.Do(func(ctx context.Context) error {
+			var err error
+			nodesToRead, err = opcua.NodesObjectsFromURL(ctx, readNodesURL)
+			return err
+		})
 	}
 
 	var opcClient *opcua.Client
@@ -127,35 +158,19 @@ func main() {
 			errExit(log.With(logger, "during", "OPC-UA security configuration"), err)
 		}
 
-		l := log.With(logger, "during", "OPC-UA client creation")
-		rCtx, rCancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-		err = retry.Do(
-			func() error {
-				ctx, cancel := context.WithTimeout(rCtx, 2*time.Second)
-				defer cancel()
-
-				var err error
-				opcClient, err = opcua.NewClient(ctx, &opcuaConfig, opcua.DefaultClientExtDeps{}, sec)
-				if err != nil {
-					return err
-				}
-
-				rCancel()
-				return nil
-			},
-			retry.Attempts(30),
-			retry.Context(rCtx),
-			retry.Delay(500*time.Millisecond),
-			retry.LastErrorOnly(true),
-			retry.MaxDelay(10*time.Second),
-			retry.OnRetry(func(n uint, err error) {
-				level.Info(l).Log("err", err, "retry", n)
-			}),
-		)
-		rCancel()
-		if err != nil {
-			errExit(l, err)
+		r := &retryableInit{
+			logger:   log.With(logger, "during", "OPC-UA client creation"),
+			attempts: 30,
+			maxDelay: 10 * time.Second,
 		}
+		r.Do(func(ctx context.Context) error {
+			tCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+			defer cancel()
+
+			var err error
+			opcClient, err = opcua.NewClient(tCtx, &opcuaConfig, opcua.DefaultClientExtDeps{}, sec)
+			return err
+		})
 	}
 
 	opcMonitor := opcua.NewMonitor(opcClient, nodesToRead)
