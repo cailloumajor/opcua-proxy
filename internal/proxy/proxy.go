@@ -10,12 +10,14 @@ import (
 	"time"
 
 	"github.com/cailloumajor/opcua-proxy/internal/centrifugo"
+	"github.com/cailloumajor/opcua-proxy/internal/lineprotocol"
 	"github.com/cailloumajor/opcua-proxy/internal/opcua"
 	"github.com/centrifugal/gocent/v3"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	gopcua "github.com/gopcua/opcua"
 	"github.com/gorilla/mux"
+	lp "github.com/influxdata/line-protocol/v2/lineprotocol"
 )
 
 //go:generate moq -out proxy_mocks_test.go . MonitorProvider CentrifugoChannelParser CentrifugoInfoProvider
@@ -69,7 +71,7 @@ func NewProxy(l log.Logger, m MonitorProvider, cp CentrifugoChannelParser, ci Ce
 
 	r := mux.NewRouter()
 	r.Methods("GET").Path("/health").HandlerFunc(p.handleHealth)
-	r.Methods("GET").Path("/values").HandlerFunc(p.handleValues)
+	r.Methods("GET").Path("/influxdb-metrics").HandlerFunc(p.handleInfluxdbMetrics)
 	r.Methods("POST").Path("/centrifugo/subscribe").HandlerFunc(p.handleCentrifugoSubscribe)
 	r.Use(commonHeadersMiddleware)
 	p.Handler = r
@@ -93,45 +95,63 @@ func (p *Proxy) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type valuesResponse struct {
-	Timestamp time.Time              `json:"timestamp"`
-	Tags      map[string]string      `json:"tags"`
-	Fields    map[string]interface{} `json:"fields"`
-}
-
-func (p *Proxy) handleValues(w http.ResponseWriter, r *http.Request) {
-	handleErr := func(during string, err error) {
+func (p *Proxy) handleInfluxdbMetrics(w http.ResponseWriter, r *http.Request) {
+	handleErr := func(during string, err error, status int) {
 		level.Info(p.logger).Log("during", during, "err", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, http.StatusText(status), status)
 	}
 
 	if err := r.ParseForm(); err != nil {
-		handleErr("parse request form", err)
+		handleErr("parse request form", err, http.StatusInternalServerError)
 		return
 	}
 
-	resp := &valuesResponse{
-		Tags:   make(map[string]string),
-		Fields: make(map[string]interface{}),
+	const measurementKey = "measurement"
+	m := r.Form.Get(measurementKey)
+	if m == "" {
+		handleErr(
+			"getting measurement query parameter",
+			fmt.Errorf("missing measurement"),
+			http.StatusBadRequest,
+		)
+		return
 	}
+	r.Form.Del(measurementKey)
+
+	var enc lp.Encoder
+	enc.SetPrecision(lp.Second)
+	enc.StartLine(m)
 
 	for k := range r.Form {
-		resp.Tags[k] = r.Form.Get(k)
+		enc.AddTag(k, r.Form.Get(k))
 	}
 
 	vals, err := p.m.Read(r.Context())
 	if err != nil {
-		handleErr("nodes reading", err)
+		handleErr("nodes reading", err, http.StatusInternalServerError)
 		return
 	}
 
-	resp.Timestamp = vals.Timestamp.UTC()
-	resp.Fields = vals.Values
+	for k, v := range vals.Values {
+		val, err := lineprotocol.NewValueFromVariant(v)
+		if err != nil {
+			handleErr("converting variant to value", err, http.StatusInternalServerError)
+			return
+		}
+		enc.AddField(k, val)
+	}
 
-	w.Header().Set("content-type", "application/json")
+	enc.EndLine(vals.Timestamp.UTC())
 
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		handleErr("response encoding", err)
+	if err := enc.Err(); err != nil {
+		handleErr("encoding line protocol", err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("content-type", "text/plain; charset=utf-8")
+
+	if _, err := w.Write(enc.Bytes()); err != nil {
+		handleErr("response data writing", err, http.StatusInternalServerError)
 		return
 	}
 }

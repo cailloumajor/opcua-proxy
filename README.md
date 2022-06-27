@@ -37,9 +37,9 @@ OPC-UA nodes are represented as a JSON object with following fields:
     - **Note**: channel [namespace][2] is reserved for configuring the proxy endpoint.
   - *Data*: Nodes object (see [above](#nodes-object)).
 
-### Nodes values endpoint
+### InfluxDB metrics endpoint
 
-A `GET` request on `/values` endpoint returns the configured nodes data values, in JSON format. Request URL parameters are expected to each have one value and will end up in the `tags` property of JSON output.
+A `GET` request on `/influxdb-metrics` endpoint returns the configured nodes data values, in InfluxDB line protocol format. Request URL parameters are expected to each have one value and will be emitted as tags.
 
 The nodes to be read are defined in a JSON file, located in configured path, and containing an array of Nodes objects (see [above](#nodes-object)).
 
