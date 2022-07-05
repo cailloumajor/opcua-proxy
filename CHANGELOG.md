@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/cailloumajor/opcua-proxy/compare/v1.1.1...v2.0.0) (2022-07-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* implement InfluxDB metrics endpoint
+
+### Features
+
+* implement InfluxDB metrics endpoint ([1bc2a9c](https://github.com/cailloumajor/opcua-proxy/commit/1bc2a9c6d42619727e7e737ff41e2623971f613d))
+
 ## [1.1.1](https://github.com/cailloumajor/opcua-proxy/compare/v1.1.0...v1.1.1) (2022-06-16)
 
 
