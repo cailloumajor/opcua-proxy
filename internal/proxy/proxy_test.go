@@ -16,6 +16,7 @@ import (
 	"github.com/centrifugal/gocent/v3"
 	"github.com/go-kit/log"
 	gopcua "github.com/gopcua/opcua"
+	"github.com/gopcua/opcua/ua"
 )
 
 func TestHealth(t *testing.T) {
@@ -62,7 +63,13 @@ func TestHealth(t *testing.T) {
 					}, nil
 				},
 			}
-			proxy := NewProxy(log.NewNopLogger(), mockedMonitorProvider, &CentrifugoChannelParserMock{}, mockedCentrifugoInfoProvider, "")
+			proxy := NewProxy(
+				log.NewNopLogger(),
+				mockedMonitorProvider,
+				&CentrifugoChannelParserMock{},
+				mockedCentrifugoInfoProvider,
+				"",
+			)
 			srv := httptest.NewServer(proxy)
 			defer srv.Close()
 
@@ -77,42 +84,76 @@ func TestHealth(t *testing.T) {
 	}
 }
 
-func TestValues(t *testing.T) {
+func TestInfluxdbMetrics(t *testing.T) {
 	cases := []struct {
-		name              string
-		querystring       string
-		readError         bool
-		expectStatusCode  int
-		expectContentType string
-		expectBody        string
-		ignoreBody        bool
+		name                string
+		querystring         string
+		readError           bool
+		variantConvertError bool
+		encodingError       bool
+		expectStatusCode    int
+		expectBody          string
+		ignoreBody          bool
 	}{
 		{
-			name:              "InvalidQueryString",
-			querystring:       "tag1=val1&tag2=val2;",
-			readError:         false,
-			expectStatusCode:  http.StatusInternalServerError,
-			expectContentType: "text/plain",
-			expectBody:        "",
-			ignoreBody:        true,
+			name:                "InvalidQueryString",
+			querystring:         "measurement=meas&tag1=val1&tag2=val2;",
+			readError:           false,
+			variantConvertError: false,
+			encodingError:       false,
+			expectStatusCode:    http.StatusInternalServerError,
+			expectBody:          "",
+			ignoreBody:          true,
 		},
 		{
-			name:              "ReadError",
-			querystring:       "tag1=val1&tag2=val2",
-			readError:         true,
-			expectStatusCode:  http.StatusInternalServerError,
-			expectContentType: "text/plain",
-			expectBody:        "",
-			ignoreBody:        true,
+			name:                "MissingMeasurement",
+			querystring:         "tag1=val1&tag2=val2",
+			readError:           false,
+			variantConvertError: false,
+			encodingError:       false,
+			expectStatusCode:    http.StatusBadRequest,
+			expectBody:          "",
+			ignoreBody:          true,
 		},
 		{
-			name:              "Success",
-			querystring:       "tag1=val1&tag2=val2",
-			readError:         false,
-			expectStatusCode:  http.StatusOK,
-			expectContentType: "application/json",
-			expectBody:        `{"timestamp":"2006-01-02T22:04:05Z","tags":{"tag1":"val1","tag2":"val2"},"fields":{"field1":37.2,"field2":"value"}}` + "\n",
-			ignoreBody:        false,
+			name:                "ReadError",
+			querystring:         "measurement=meas&tag1=val1&tag2=val2",
+			readError:           true,
+			variantConvertError: false,
+			encodingError:       false,
+			expectStatusCode:    http.StatusInternalServerError,
+			expectBody:          "",
+			ignoreBody:          true,
+		},
+		{
+			name:                "VariantConvertError",
+			querystring:         "measurement=meas&tag1=val1&tag2=val2",
+			readError:           false,
+			variantConvertError: true,
+			encodingError:       false,
+			expectStatusCode:    http.StatusInternalServerError,
+			expectBody:          "",
+			ignoreBody:          true,
+		},
+		{
+			name:                "EncodingError",
+			querystring:         "measurement=meas&tag1=&tag2=val2",
+			readError:           false,
+			variantConvertError: false,
+			encodingError:       true,
+			expectStatusCode:    http.StatusInternalServerError,
+			expectBody:          "",
+			ignoreBody:          true,
+		},
+		{
+			name:                "Success",
+			querystring:         "measurement=meas&tag1=val1&tag2=val2",
+			readError:           false,
+			variantConvertError: false,
+			encodingError:       false,
+			expectStatusCode:    http.StatusOK,
+			expectBody:          `meas,tag1=val1,tag2=val2 field1=37.2,field2="value" 1136239445` + "\n",
+			ignoreBody:          false,
 		},
 	}
 
@@ -128,11 +169,15 @@ func TestValues(t *testing.T) {
 					if tc.readError {
 						return nil, testutils.ErrTesting
 					}
+					f := "value"
+					if tc.variantConvertError {
+						f = "aa\xe2"
+					}
 					return &opcua.ReadValues{
 						Timestamp: ts,
-						Values: map[string]interface{}{
-							"field1": 37.2,
-							"field2": "value",
+						Values: map[string]*ua.Variant{
+							"field1": ua.MustVariant(37.2),
+							"field2": ua.MustVariant(f),
 						},
 					}, nil
 				},
@@ -141,7 +186,7 @@ func TestValues(t *testing.T) {
 			srv := httptest.NewServer(p)
 			defer srv.Close()
 
-			resp, err := http.Get(srv.URL + "/values?" + tc.querystring)
+			resp, err := http.Get(srv.URL + "/influxdb-metrics?" + tc.querystring)
 			if err != nil {
 				t.Fatalf("request error: %v", err)
 			}
@@ -156,7 +201,7 @@ func TestValues(t *testing.T) {
 			if got, want := resp.StatusCode, tc.expectStatusCode; got != want {
 				t.Errorf("status code: want %d, got %d", want, got)
 			}
-			if got, want := resp.Header.Get("content-type"), tc.expectContentType; !strings.HasPrefix(got, want) {
+			if got, want := resp.Header.Get("content-type"), "text/plain"; !strings.HasPrefix(got, want) {
 				t.Errorf("content type: want %q, got %q", want, got)
 			}
 			if got, want := string(body), tc.expectBody; !tc.ignoreBody && got != want {
@@ -247,7 +292,13 @@ func TestCentrifugoSubscribe(t *testing.T) {
 					return &centrifugo.Channel{}, nil
 				},
 			}
-			p := NewProxy(log.NewNopLogger(), mockedMonitorProvider, mockedChannelParser, &CentrifugoInfoProviderMock{}, "")
+			p := NewProxy(
+				log.NewNopLogger(),
+				mockedMonitorProvider,
+				mockedChannelParser,
+				&CentrifugoInfoProviderMock{},
+				"",
+			)
 			srv := httptest.NewServer(p)
 			defer srv.Close()
 

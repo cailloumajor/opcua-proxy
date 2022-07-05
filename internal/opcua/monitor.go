@@ -46,7 +46,7 @@ type NodeIDProvider interface {
 // ReadValues represents the data values of nodes read from OPC-UA server.
 type ReadValues struct {
 	Timestamp time.Time
-	Values    map[string]interface{}
+	Values    map[string]*ua.Variant
 }
 
 // Monitor represents an OPC-UA monitor.
@@ -104,14 +104,14 @@ func (m *Monitor) Read(ctx context.Context) (*ReadValues, error) {
 
 	rv := &ReadValues{
 		Timestamp: resp.ResponseHeader.Timestamp,
-		Values:    make(map[string]interface{}),
+		Values:    make(map[string]*ua.Variant),
 	}
 
 	for i, dv := range resp.Results {
 		if dv.Status != ua.StatusOK {
 			return nil, fmt.Errorf("status error for node %q: %w", req.NodesToRead[i].NodeID.String(), dv.Status)
 		}
-		rv.Values[nid[i]] = dv.Value.Value()
+		rv.Values[nid[i]] = dv.Value
 	}
 
 	return rv, nil

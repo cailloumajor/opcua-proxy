@@ -6,8 +6,8 @@
 
 A proxy microservice connecting to an OPC-UA server and offering:
 
-- Data change subscriptions through Centrifugo.
-- Nodes values in JSON format.
+- Data change subscriptions through Centrifugo;
+- InfluxDB metrics.
 
 ## Specifications
 
@@ -37,9 +37,9 @@ OPC-UA nodes are represented as a JSON object with following fields:
     - **Note**: channel [namespace][2] is reserved for configuring the proxy endpoint.
   - *Data*: Nodes object (see [above](#nodes-object)).
 
-### Nodes values endpoint
+### InfluxDB metrics endpoint
 
-A `GET` request on `/values` endpoint returns the configured nodes data values, in JSON format. Request URL parameters are expected to each have one value and will end up in the `tags` property of JSON output.
+A `GET` request on `/influxdb-metrics` endpoint returns the configured nodes data values, in InfluxDB line protocol format. Measurement name must be given as the value of `measurement` URL parameter. Other query parameters are expected to each have one value and will be emitted as tags.
 
 The nodes to be read are defined in a JSON file, located in configured path, and containing an array of Nodes objects (see [above](#nodes-object)).
 
@@ -92,17 +92,17 @@ sequenceDiagram
     end
 ```
 
-### Nodes values
+### InfluxDB metrics
 
 ```mermaid
 sequenceDiagram
     participant Client
     participant Proxy as Centrifugo / OPC-UA<br>proxy
     participant OPCServer as OPC-UA server
-    Client->>+Proxy: Requests nodes values
+    Client->>+Proxy: Requests InfluxDB metrics
     Proxy->>+OPCServer: Reads nodes data values
     OPCServer-->>-Proxy: Sends data values
-    Proxy-->>-Client: Sends values in JSON format
+    Proxy-->>-Client: Sends values in line protocol format
 ```
 
 ## Configuration

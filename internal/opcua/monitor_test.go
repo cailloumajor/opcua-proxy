@@ -56,11 +56,11 @@ func TestMonitorRead(t *testing.T) {
 			expectError:         false,
 			expectValues: &ReadValues{
 				Timestamp: time.UnixMicro(0),
-				Values: map[string]interface{}{
-					"1":     37.5,
-					"2":     "val2",
-					"node3": int32(42),
-					"node4": true,
+				Values: map[string]*ua.Variant{
+					"1":     ua.MustVariant(37.5),
+					"2":     ua.MustVariant("val2"),
+					"node3": ua.MustVariant(int32(42)),
+					"node4": ua.MustVariant(true),
 				},
 			},
 		},

@@ -105,20 +105,23 @@ describe("Integration tests page", () => {
   })
 })
 
-describe("Nodes values endpoint", () => {
-  it("returns valid data", () => {
-    cy.request(`${Cypress.env("PROXY_URL")}/values?tag=value`).then(
-      (response) => {
-        expect(response.body).to.have.property("timestamp").that.is.a("string")
-        expect(Date.parse(response.body.timestamp)).to.not.be.NaN
-        expect(response.body).to.have.deep.property("tags", { tag: "value" })
-        expect(response.body).to.have.deep.property("fields", {
-          2994: false,
-          2263: "open62541",
-          "the.answer": 42,
-          myByteString: "dGVzdDEyMw==",
-        })
-      }
-    )
+describe("InfluxDB metrics endpoint", () => {
+  it.only("returns valid data", () => {
+    cy.request(
+      Cypress.env("PROXY_URL") +
+        "/influxdb-metrics?measurement=testing&tag=value"
+    ).then((response) => {
+      const parsed = /^(.+) (.+) (.+)\n$/.exec(response.body)
+      expect(parsed).to.have.length(4)
+      expect(parsed[1]).to.equal("testing,tag=value")
+      expect(parsed[2]).to.include("2994=false")
+      expect(parsed[2]).to.include('2263="open62541"')
+      expect(parsed[2]).to.include("the.answer=42")
+      expect(parsed[2]).to.include('myByteString="test123"')
+      const ts = new Date(parseInt(parsed[3], 10) * 1000)
+      const now = Date.now()
+      expect(ts).to.satisfy((d) => !isNaN(d), "date is not NaN")
+      expect(now - ts).to.be.below(10000)
+    })
   })
 })
