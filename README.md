@@ -6,8 +6,8 @@
 
 A proxy microservice connecting to an OPC-UA server and offering:
 
-- Data change subscriptions through Centrifugo.
-- Nodes values in JSON format.
+- Data change subscriptions through Centrifugo;
+- InfluxDB metrics.
 
 ## Specifications
 
@@ -92,17 +92,17 @@ sequenceDiagram
     end
 ```
 
-### Nodes values
+### InfluxDB metrics
 
 ```mermaid
 sequenceDiagram
     participant Client
     participant Proxy as Centrifugo / OPC-UA<br>proxy
     participant OPCServer as OPC-UA server
-    Client->>+Proxy: Requests nodes values
+    Client->>+Proxy: Requests InfluxDB metrics
     Proxy->>+OPCServer: Reads nodes data values
     OPCServer-->>-Proxy: Sends data values
-    Proxy-->>-Client: Sends values in JSON format
+    Proxy-->>-Client: Sends values in line protocol format
 ```
 
 ## Configuration
