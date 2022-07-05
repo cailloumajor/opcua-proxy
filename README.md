@@ -39,7 +39,7 @@ OPC-UA nodes are represented as a JSON object with following fields:
 
 ### InfluxDB metrics endpoint
 
-A `GET` request on `/influxdb-metrics` endpoint returns the configured nodes data values, in InfluxDB line protocol format. Request URL parameters are expected to each have one value and will be emitted as tags.
+A `GET` request on `/influxdb-metrics` endpoint returns the configured nodes data values, in InfluxDB line protocol format. Measurement name must be given as the value of `measurement` URL parameter. Other query parameters are expected to each have one value and will be emitted as tags.
 
 The nodes to be read are defined in a JSON file, located in configured path, and containing an array of Nodes objects (see [above](#nodes-object)).
 
