@@ -152,7 +152,7 @@ func TestInfluxdbMetrics(t *testing.T) {
 			variantConvertError: false,
 			encodingError:       false,
 			expectStatusCode:    http.StatusOK,
-			expectBody:          `meas,othertag=otherval,tag1=val1 field1=37.2,field2="value" 1136239445` + "\n",
+			expectBody:          `meas,othertag=otherval,tag1=val1 field1=37.2,field2="value" 1136239445000000000` + "\n",
 			ignoreBody:          false,
 		},
 	}

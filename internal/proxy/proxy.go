@@ -120,7 +120,6 @@ func (p *Proxy) handleInfluxdbMetrics(w http.ResponseWriter, r *http.Request) {
 	r.Form.Del(measurementKey)
 
 	var enc lp.Encoder
-	enc.SetPrecision(lp.Second)
 	enc.StartLine(m)
 
 	sk := make([]string, 0, len(r.Form))

@@ -118,7 +118,7 @@ describe("InfluxDB metrics endpoint", () => {
       expect(parsed[2]).to.include('2263="open62541"')
       expect(parsed[2]).to.include("the.answer=42")
       expect(parsed[2]).to.include('myByteString="test123"')
-      const ts = new Date(parseInt(parsed[3], 10) * 1000)
+      const ts = new Date(parseInt(parsed[3], 10) / 1e6)
       const now = Date.now()
       expect(ts).to.satisfy((d) => !isNaN(d), "date is not NaN")
       expect(now - ts).to.be.below(10000)
