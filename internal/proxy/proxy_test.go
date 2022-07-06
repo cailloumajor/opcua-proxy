@@ -97,7 +97,7 @@ func TestInfluxdbMetrics(t *testing.T) {
 	}{
 		{
 			name:                "InvalidQueryString",
-			querystring:         "measurement=meas&tag1=val1&tag2=val2;",
+			querystring:         "measurement=meas&tag1=val1&othertag=otherval;",
 			readError:           false,
 			variantConvertError: false,
 			encodingError:       false,
@@ -107,7 +107,7 @@ func TestInfluxdbMetrics(t *testing.T) {
 		},
 		{
 			name:                "MissingMeasurement",
-			querystring:         "tag1=val1&tag2=val2",
+			querystring:         "tag1=val1&othertag=otherval",
 			readError:           false,
 			variantConvertError: false,
 			encodingError:       false,
@@ -117,7 +117,7 @@ func TestInfluxdbMetrics(t *testing.T) {
 		},
 		{
 			name:                "ReadError",
-			querystring:         "measurement=meas&tag1=val1&tag2=val2",
+			querystring:         "measurement=meas&tag1=val1&othertag=otherval",
 			readError:           true,
 			variantConvertError: false,
 			encodingError:       false,
@@ -127,7 +127,7 @@ func TestInfluxdbMetrics(t *testing.T) {
 		},
 		{
 			name:                "VariantConvertError",
-			querystring:         "measurement=meas&tag1=val1&tag2=val2",
+			querystring:         "measurement=meas&tag1=val1&othertag=otherval",
 			readError:           false,
 			variantConvertError: true,
 			encodingError:       false,
@@ -137,7 +137,7 @@ func TestInfluxdbMetrics(t *testing.T) {
 		},
 		{
 			name:                "EncodingError",
-			querystring:         "measurement=meas&tag1=&tag2=val2",
+			querystring:         "measurement=meas&tag1=&othertag=otherval",
 			readError:           false,
 			variantConvertError: false,
 			encodingError:       true,
@@ -147,12 +147,12 @@ func TestInfluxdbMetrics(t *testing.T) {
 		},
 		{
 			name:                "Success",
-			querystring:         "measurement=meas&tag1=val1&tag2=val2",
+			querystring:         "measurement=meas&tag1=val1&othertag=otherval",
 			readError:           false,
 			variantConvertError: false,
 			encodingError:       false,
 			expectStatusCode:    http.StatusOK,
-			expectBody:          `meas,tag1=val1,tag2=val2 field1=37.2,field2="value" 1136239445` + "\n",
+			expectBody:          `meas,othertag=otherval,tag1=val1 field1=37.2,field2="value" 1136239445` + "\n",
 			ignoreBody:          false,
 		},
 	}

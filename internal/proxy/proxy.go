@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/cailloumajor/opcua-proxy/internal/centrifugo"
@@ -122,7 +123,13 @@ func (p *Proxy) handleInfluxdbMetrics(w http.ResponseWriter, r *http.Request) {
 	enc.SetPrecision(lp.Second)
 	enc.StartLine(m)
 
+	sk := make([]string, 0, len(r.Form))
 	for k := range r.Form {
+		sk = append(sk, k)
+	}
+	sort.Strings(sk)
+
+	for _, k := range sk {
 		enc.AddTag(k, r.Form.Get(k))
 	}
 
