@@ -106,7 +106,7 @@ describe("Integration tests page", () => {
 })
 
 describe("InfluxDB metrics endpoint", () => {
-  it.only("returns valid data", () => {
+  it("returns valid data", () => {
     cy.request(
       Cypress.env("PROXY_URL") +
         "/influxdb-metrics?measurement=testing&tag=value"
