@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/cailloumajor/opcua-proxy/compare/v2.0.0...v2.0.1) (2022-07-06)
+
+
+### Bug Fixes
+
+* sort tags ([5f1851e](https://github.com/cailloumajor/opcua-proxy/commit/5f1851ef2979cc8da29f68919002dcb6c128f3d3))
+
 ## [2.0.0](https://github.com/cailloumajor/opcua-proxy/compare/v1.1.1...v2.0.0) (2022-07-05)
 
 
