@@ -4,7 +4,7 @@ version: "3"
 services:
 
   centrifugo:
-    image: centrifugo/centrifugo:v3.1.1
+    image: centrifugo/centrifugo:v3.2.3
     environment:
       - CENTRIFUGO_LOG_LEVEL=debug
       - CENTRIFUGO_TOKEN_HMAC_SECRET_KEY=dfa244ee-587f-43f9-adc5-b727a081d5de
