@@ -1,4 +1,4 @@
-FROM golang:1.18.3-bullseye
+FROM golang:1.18.4-bullseye
 
 # Copy library scripts to execute
 COPY library-scripts/*.sh library-scripts/*.env /tmp/library-scripts/
