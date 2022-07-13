@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.2](https://github.com/cailloumajor/opcua-proxy/compare/v2.0.1...v2.0.2) (2022-07-13)
+
+
+### Bug Fixes
+
+* **deps:** update dependency golang to v1.18.4 ([8ac8af4](https://github.com/cailloumajor/opcua-proxy/commit/8ac8af4bd2f64d8a0f0abf8629087b1ffb63ef23))
+* do not set line protocol encoder precision ([0f3b05d](https://github.com/cailloumajor/opcua-proxy/commit/0f3b05d9bc295e22db56c280ec32b19ceffc1d6d))
+
 ## [2.0.1](https://github.com/cailloumajor/opcua-proxy/compare/v2.0.0...v2.0.1) (2022-07-06)
 
 
