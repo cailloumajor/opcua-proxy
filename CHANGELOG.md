@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0](https://github.com/cailloumajor/opcua-proxy/compare/v2.0.2...v2.1.0) (2022-07-19)
+
+
+### Features
+
+* also sort fields by name in metrics response ([4cc0c6f](https://github.com/cailloumajor/opcua-proxy/commit/4cc0c6f78fee45144df344fdbbdd660ff3e8dbd4))
+
+
+### Bug Fixes
+
+* **ci:** run golangci-lint with the same go version as tests ([646b2bf](https://github.com/cailloumajor/opcua-proxy/commit/646b2bf0c6f670f62f79860cb609977b5db02823))
+
 ## [2.0.2](https://github.com/cailloumajor/opcua-proxy/compare/v2.0.1...v2.0.2) (2022-07-13)
 
 
