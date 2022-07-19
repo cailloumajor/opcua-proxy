@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"sort"
 	"time"
 
 	"github.com/cailloumajor/opcua-proxy/internal/centrifugo"
@@ -19,6 +18,9 @@ import (
 	gopcua "github.com/gopcua/opcua"
 	"github.com/gorilla/mux"
 	lp "github.com/influxdata/line-protocol/v2/lineprotocol"
+	"golang.org/x/exp/constraints"
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 )
 
 //go:generate moq -out proxy_mocks_test.go . MonitorProvider CentrifugoChannelParser CentrifugoInfoProvider
@@ -40,6 +42,12 @@ type CentrifugoChannelParser interface {
 // CentrifugoInfoProvider is a consumer contract modelling a Centrifugo server informations provider.
 type CentrifugoInfoProvider interface {
 	Info(ctx context.Context) (gocent.InfoResult, error)
+}
+
+func sortedKeys[K constraints.Ordered, V any](m map[K]V) []K {
+	sk := maps.Keys(m)
+	slices.Sort(sk)
+	return sk
 }
 
 func commonHeadersMiddleware(next http.Handler) http.Handler {
@@ -122,14 +130,8 @@ func (p *Proxy) handleInfluxdbMetrics(w http.ResponseWriter, r *http.Request) {
 	var enc lp.Encoder
 	enc.StartLine(m)
 
-	sk := make([]string, 0, len(r.Form))
-	for k := range r.Form {
-		sk = append(sk, k)
-	}
-	sort.Strings(sk)
-
-	for _, k := range sk {
-		enc.AddTag(k, r.Form.Get(k))
+	for _, fk := range sortedKeys(r.Form) {
+		enc.AddTag(fk, r.Form.Get(fk))
 	}
 
 	vals, err := p.m.Read(r.Context())
@@ -138,13 +140,13 @@ func (p *Proxy) handleInfluxdbMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for k, v := range vals.Values {
-		val, err := lineprotocol.NewValueFromVariant(v)
+	for _, vk := range sortedKeys(vals.Values) {
+		val, err := lineprotocol.NewValueFromVariant(vals.Values[vk])
 		if err != nil {
 			handleErr("converting variant to value", err, http.StatusInternalServerError)
 			return
 		}
-		enc.AddField(k, val)
+		enc.AddField(vk, val)
 	}
 
 	enc.EndLine(vals.Timestamp.UTC())
