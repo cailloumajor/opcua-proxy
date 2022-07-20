@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.3
 
-FROM --platform=$BUILDPLATFORM tonistiigi/xx:1.1.1 as xx
+FROM --platform=$BUILDPLATFORM tonistiigi/xx:1.1.2 as xx
 
 FROM --platform=$BUILDPLATFORM golang:1.18.4-bullseye AS builder
 
