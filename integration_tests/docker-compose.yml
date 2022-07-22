@@ -57,7 +57,7 @@ services:
       - ../certs/testing_key.pem:/certs/testing_key.pem:ro
 
   cypress:
-    image: cypress/included:10.3.0
+    image: cypress/included:10.3.1
     depends_on:
       - centrifugo
       - opcua-server
