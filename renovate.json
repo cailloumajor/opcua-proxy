@@ -9,7 +9,7 @@
   "semanticCommits": "enabled",
   "packageRules": [
     {
-      "matchPackageNames": ["golang"],
+      "matchPackageNames": ["golang", "tonistiigi/xx"],
       "matchManagers": ["dockerfile"],
       "semanticCommitType": "fix"
     },
