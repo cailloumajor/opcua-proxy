@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1](https://github.com/cailloumajor/opcua-proxy/compare/v2.1.0...v2.1.1) (2022-07-22)
+
+
+### Bug Fixes
+
+* **deps:** update dependency tonistiigi/xx to v1.1.2 ([41080d4](https://github.com/cailloumajor/opcua-proxy/commit/41080d4a293be9c616ca163fcdd59b822c8600b0))
+
 ## [2.1.0](https://github.com/cailloumajor/opcua-proxy/compare/v2.0.2...v2.1.0) (2022-07-19)
 
 
