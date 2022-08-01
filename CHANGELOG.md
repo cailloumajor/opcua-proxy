@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.2](https://github.com/cailloumajor/opcua-proxy/compare/v2.1.1...v2.1.2) (2022-08-01)
+
+
+### Bug Fixes
+
+* **deps:** update golang.org/x/exp digest to a9213ee ([c947efc](https://github.com/cailloumajor/opcua-proxy/commit/c947efcb2518c917b93ddb34455c41741ebee696))
+
 ## [2.1.1](https://github.com/cailloumajor/opcua-proxy/compare/v2.1.0...v2.1.1) (2022-07-22)
 
 
