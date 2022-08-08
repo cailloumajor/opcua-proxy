@@ -12,7 +12,7 @@ import (
 
 //go:generate moq -out client_mocks_test.go . ClientExtDeps RawClientProvider SecurityProvider
 
-// ClientExtDeps is a consumer contract modelling external dependencies.
+// ClientExtDeps represents top-level functions of gopcua library related to OPC-UA client.
 type ClientExtDeps interface {
 	GetEndpoints(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error)
 	SelectEndpoint(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription
@@ -168,22 +168,4 @@ func (c *Client) Subscribe(ctx context.Context, params *opcua.SubscriptionParame
 		return nil, err
 	}
 	return &Subscription{inner: s}, nil
-}
-
-// DefaultClientExtDeps represents the default ClientExtDeps implementation.
-type DefaultClientExtDeps struct{}
-
-// GetEndpoints implements ClientExtDeps.
-func (DefaultClientExtDeps) GetEndpoints(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
-	return opcua.GetEndpoints(ctx, endpoint, opts...)
-}
-
-// SelectEndpoint implements ClientExtDeps.
-func (DefaultClientExtDeps) SelectEndpoint(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
-	return opcua.SelectEndpoint(endpoints, policy, mode)
-}
-
-// NewClient implements ClientExtDeps.
-func (DefaultClientExtDeps) NewClient(endpoint string, opts ...opcua.Option) RawClientProvider {
-	return opcua.NewClient(endpoint, opts...)
 }

@@ -153,7 +153,7 @@ func main() {
 
 	var opcClient *opcua.Client
 	{
-		sec, err := opcua.NewSecurity(&opcuaConfig, opcua.DefaultSecurityOptsProvider{})
+		sec, err := opcua.NewSecurity(&opcuaConfig, opcua.DefaultSecurityExtDeps{})
 		if err != nil {
 			errExit(log.With(logger, "during", "OPC-UA security configuration"), err)
 		}
