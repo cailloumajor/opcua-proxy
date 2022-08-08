@@ -197,7 +197,7 @@ func main() {
 			level.Debug(proxyLogger).Log("msg", "starting")
 			level.Info(proxyLogger).Log("listen", proxyListen)
 			return srv.ListenAndServe()
-		}, func(err error) {
+		}, func(error) {
 			ctx, cancel := context.WithTimeout(context.Background(), stopTimeout)
 			defer cancel()
 			if err := srv.Shutdown(ctx); err != nil {
@@ -228,7 +228,7 @@ func main() {
 					}
 				}
 			}
-		}, func(err error) {
+		}, func(error) {
 			ticker.Stop()
 			cancel()
 		})
@@ -259,7 +259,7 @@ func main() {
 					}
 				}
 			}
-		}, func(err error) {
+		}, func(error) {
 			ticker.Stop()
 			cancel()
 		})
@@ -289,7 +289,7 @@ func main() {
 					}
 				}
 			}
-		}, func(err error) {
+		}, func(error) {
 			cancel()
 			stopContext, stopCancel := context.WithTimeout(context.Background(), stopTimeout)
 			defer stopCancel()
