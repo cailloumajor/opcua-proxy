@@ -9,16 +9,16 @@ import (
 	"sync"
 )
 
-// Ensure, that SecurityOptsProviderMock does implement SecurityOptsProvider.
+// Ensure, that SecurityExtDepsMock does implement SecurityExtDeps.
 // If this is not the case, regenerate this file with moq.
-var _ SecurityOptsProvider = &SecurityOptsProviderMock{}
+var _ SecurityExtDeps = &SecurityExtDepsMock{}
 
-// SecurityOptsProviderMock is a mock implementation of SecurityOptsProvider.
+// SecurityExtDepsMock is a mock implementation of SecurityExtDeps.
 //
-// 	func TestSomethingThatUsesSecurityOptsProvider(t *testing.T) {
+// 	func TestSomethingThatUsesSecurityExtDeps(t *testing.T) {
 //
-// 		// make and configure a mocked SecurityOptsProvider
-// 		mockedSecurityOptsProvider := &SecurityOptsProviderMock{
+// 		// make and configure a mocked SecurityExtDeps
+// 		mockedSecurityExtDeps := &SecurityExtDepsMock{
 // 			AuthUsernameFunc: func(user string, pass string) opcua.Option {
 // 				panic("mock out the AuthUsername method")
 // 			},
@@ -33,11 +33,11 @@ var _ SecurityOptsProvider = &SecurityOptsProviderMock{}
 // 			},
 // 		}
 //
-// 		// use mockedSecurityOptsProvider in code that requires SecurityOptsProvider
+// 		// use mockedSecurityExtDeps in code that requires SecurityExtDeps
 // 		// and then make assertions.
 //
 // 	}
-type SecurityOptsProviderMock struct {
+type SecurityExtDepsMock struct {
 	// AuthUsernameFunc mocks the AuthUsername method.
 	AuthUsernameFunc func(user string, pass string) opcua.Option
 
@@ -84,9 +84,9 @@ type SecurityOptsProviderMock struct {
 }
 
 // AuthUsername calls AuthUsernameFunc.
-func (mock *SecurityOptsProviderMock) AuthUsername(user string, pass string) opcua.Option {
+func (mock *SecurityExtDepsMock) AuthUsername(user string, pass string) opcua.Option {
 	if mock.AuthUsernameFunc == nil {
-		panic("SecurityOptsProviderMock.AuthUsernameFunc: method is nil but SecurityOptsProvider.AuthUsername was just called")
+		panic("SecurityExtDepsMock.AuthUsernameFunc: method is nil but SecurityExtDeps.AuthUsername was just called")
 	}
 	callInfo := struct {
 		User string
@@ -103,8 +103,8 @@ func (mock *SecurityOptsProviderMock) AuthUsername(user string, pass string) opc
 
 // AuthUsernameCalls gets all the calls that were made to AuthUsername.
 // Check the length with:
-//     len(mockedSecurityOptsProvider.AuthUsernameCalls())
-func (mock *SecurityOptsProviderMock) AuthUsernameCalls() []struct {
+//     len(mockedSecurityExtDeps.AuthUsernameCalls())
+func (mock *SecurityExtDepsMock) AuthUsernameCalls() []struct {
 	User string
 	Pass string
 } {
@@ -119,9 +119,9 @@ func (mock *SecurityOptsProviderMock) AuthUsernameCalls() []struct {
 }
 
 // CertificateFile calls CertificateFileFunc.
-func (mock *SecurityOptsProviderMock) CertificateFile(filename string) opcua.Option {
+func (mock *SecurityExtDepsMock) CertificateFile(filename string) opcua.Option {
 	if mock.CertificateFileFunc == nil {
-		panic("SecurityOptsProviderMock.CertificateFileFunc: method is nil but SecurityOptsProvider.CertificateFile was just called")
+		panic("SecurityExtDepsMock.CertificateFileFunc: method is nil but SecurityExtDeps.CertificateFile was just called")
 	}
 	callInfo := struct {
 		Filename string
@@ -136,8 +136,8 @@ func (mock *SecurityOptsProviderMock) CertificateFile(filename string) opcua.Opt
 
 // CertificateFileCalls gets all the calls that were made to CertificateFile.
 // Check the length with:
-//     len(mockedSecurityOptsProvider.CertificateFileCalls())
-func (mock *SecurityOptsProviderMock) CertificateFileCalls() []struct {
+//     len(mockedSecurityExtDeps.CertificateFileCalls())
+func (mock *SecurityExtDepsMock) CertificateFileCalls() []struct {
 	Filename string
 } {
 	var calls []struct {
@@ -150,9 +150,9 @@ func (mock *SecurityOptsProviderMock) CertificateFileCalls() []struct {
 }
 
 // PrivateKeyFile calls PrivateKeyFileFunc.
-func (mock *SecurityOptsProviderMock) PrivateKeyFile(filename string) opcua.Option {
+func (mock *SecurityExtDepsMock) PrivateKeyFile(filename string) opcua.Option {
 	if mock.PrivateKeyFileFunc == nil {
-		panic("SecurityOptsProviderMock.PrivateKeyFileFunc: method is nil but SecurityOptsProvider.PrivateKeyFile was just called")
+		panic("SecurityExtDepsMock.PrivateKeyFileFunc: method is nil but SecurityExtDeps.PrivateKeyFile was just called")
 	}
 	callInfo := struct {
 		Filename string
@@ -167,8 +167,8 @@ func (mock *SecurityOptsProviderMock) PrivateKeyFile(filename string) opcua.Opti
 
 // PrivateKeyFileCalls gets all the calls that were made to PrivateKeyFile.
 // Check the length with:
-//     len(mockedSecurityOptsProvider.PrivateKeyFileCalls())
-func (mock *SecurityOptsProviderMock) PrivateKeyFileCalls() []struct {
+//     len(mockedSecurityExtDeps.PrivateKeyFileCalls())
+func (mock *SecurityExtDepsMock) PrivateKeyFileCalls() []struct {
 	Filename string
 } {
 	var calls []struct {
@@ -181,9 +181,9 @@ func (mock *SecurityOptsProviderMock) PrivateKeyFileCalls() []struct {
 }
 
 // SecurityFromEndpoint calls SecurityFromEndpointFunc.
-func (mock *SecurityOptsProviderMock) SecurityFromEndpoint(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option {
+func (mock *SecurityExtDepsMock) SecurityFromEndpoint(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option {
 	if mock.SecurityFromEndpointFunc == nil {
-		panic("SecurityOptsProviderMock.SecurityFromEndpointFunc: method is nil but SecurityOptsProvider.SecurityFromEndpoint was just called")
+		panic("SecurityExtDepsMock.SecurityFromEndpointFunc: method is nil but SecurityExtDeps.SecurityFromEndpoint was just called")
 	}
 	callInfo := struct {
 		Ep       *ua.EndpointDescription
@@ -200,8 +200,8 @@ func (mock *SecurityOptsProviderMock) SecurityFromEndpoint(ep *ua.EndpointDescri
 
 // SecurityFromEndpointCalls gets all the calls that were made to SecurityFromEndpoint.
 // Check the length with:
-//     len(mockedSecurityOptsProvider.SecurityFromEndpointCalls())
-func (mock *SecurityOptsProviderMock) SecurityFromEndpointCalls() []struct {
+//     len(mockedSecurityExtDeps.SecurityFromEndpointCalls())
+func (mock *SecurityExtDepsMock) SecurityFromEndpointCalls() []struct {
 	Ep       *ua.EndpointDescription
 	AuthType ua.UserTokenType
 } {

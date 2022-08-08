@@ -7,10 +7,11 @@ import (
 	"github.com/gopcua/opcua/ua"
 )
 
-//go:generate moq -out security_mocks_test.go . SecurityOptsProvider
+//go:generate moq -out security_mocks_test.go . SecurityExtDeps
 
-// SecurityOptsProvider models an OPC-UA security options provider.
-type SecurityOptsProvider interface {
+// SecurityExtDeps represents top-level functions of gopcua library related
+// to security options.
+type SecurityExtDeps interface {
 	AuthUsername(user, pass string) opcua.Option
 	CertificateFile(filename string) opcua.Option
 	PrivateKeyFile(filename string) opcua.Option
@@ -19,7 +20,7 @@ type SecurityOptsProvider interface {
 
 // Security represents OPC-UA security parameters.
 type Security struct {
-	sop SecurityOptsProvider
+	ed SecurityExtDeps
 
 	utt    ua.UserTokenType
 	msm    ua.MessageSecurityMode
@@ -29,7 +30,7 @@ type Security struct {
 
 // NewSecurity returns a Security structure populated from given configuration,
 // or an error in case of erroneous configuration.
-func NewSecurity(cfg *Config, sop SecurityOptsProvider) (*Security, error) {
+func NewSecurity(cfg *Config, ed SecurityExtDeps) (*Security, error) {
 	if cfg.User == "" && cfg.Password != "" {
 		return nil, fmt.Errorf("missing username")
 	}
@@ -41,7 +42,7 @@ func NewSecurity(cfg *Config, sop SecurityOptsProvider) (*Security, error) {
 	}
 
 	s := &Security{
-		sop:  sop,
+		ed:   ed,
 		opts: []opcua.Option{},
 	}
 
@@ -49,7 +50,7 @@ func NewSecurity(cfg *Config, sop SecurityOptsProvider) (*Security, error) {
 		s.utt = ua.UserTokenTypeAnonymous
 	} else {
 		s.utt = ua.UserTokenTypeUserName
-		s.opts = append(s.opts, sop.AuthUsername(cfg.User, cfg.Password))
+		s.opts = append(s.opts, ed.AuthUsername(cfg.User, cfg.Password))
 	}
 
 	if cfg.CertFile == "" {
@@ -60,8 +61,8 @@ func NewSecurity(cfg *Config, sop SecurityOptsProvider) (*Security, error) {
 		s.policy = "Basic256Sha256"
 		s.opts = append(
 			s.opts,
-			sop.CertificateFile(cfg.CertFile),
-			sop.PrivateKeyFile(cfg.KeyFile),
+			ed.CertificateFile(cfg.CertFile),
+			ed.PrivateKeyFile(cfg.KeyFile),
 		)
 	}
 
@@ -80,28 +81,5 @@ func (s *Security) Policy() string {
 
 // Options returns security related OPC-UA options.
 func (s *Security) Options(ep *ua.EndpointDescription) []opcua.Option {
-	return append(s.opts, s.sop.SecurityFromEndpoint(ep, s.utt))
-}
-
-// DefaultSecurityOptsProvider represents the default SecurityOptsProvider implementation.
-type DefaultSecurityOptsProvider struct{}
-
-// AuthUsername implements SecurityOptsProvider.
-func (d DefaultSecurityOptsProvider) AuthUsername(user, pass string) opcua.Option {
-	return opcua.AuthUsername(user, pass)
-}
-
-// CertificateFile implements SecurityOptsProvider.
-func (d DefaultSecurityOptsProvider) CertificateFile(filename string) opcua.Option {
-	return opcua.CertificateFile(filename)
-}
-
-// PrivateKeyFile implements SecurityOptsProvider.
-func (d DefaultSecurityOptsProvider) PrivateKeyFile(filename string) opcua.Option {
-	return opcua.PrivateKeyFile(filename)
-}
-
-// SecurityFromEndpoint implements SecurityOptsProvider.
-func (d DefaultSecurityOptsProvider) SecurityFromEndpoint(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option {
-	return opcua.SecurityFromEndpoint(ep, authType)
+	return append(s.opts, s.ed.SecurityFromEndpoint(ep, s.utt))
 }

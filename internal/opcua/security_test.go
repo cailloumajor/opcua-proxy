@@ -11,7 +11,7 @@ import (
 )
 
 func TestNewSecurityFailure(t *testing.T) {
-	mockedSecurityOptsProvider := &SecurityOptsProviderMock{}
+	mockedSecurityExtDeps := &SecurityExtDepsMock{}
 
 	cases := []struct {
 		name   string
@@ -33,7 +33,7 @@ func TestNewSecurityFailure(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewSecurity(&tc.config, mockedSecurityOptsProvider)
+			_, err := NewSecurity(&tc.config, mockedSecurityExtDeps)
 
 			if msg := testutils.AssertError(t, err, true); msg != "" {
 				t.Errorf("NewSecurity(): %s", msg)
@@ -119,7 +119,7 @@ func TestSecuritySuccess(t *testing.T) {
 			certificateFileCalls := []CertificateFileCall{}
 			privateKeyFileCalls := []PrivateKeyFileCall{}
 			ep := &ua.EndpointDescription{}
-			mockedSecurityOptsProvider := &SecurityOptsProviderMock{
+			mockedSecurityExtDeps := &SecurityExtDepsMock{
 				AuthUsernameFunc: func(user, pass string) opcua.Option {
 					return func(c *opcua.Config) {}
 				},
@@ -134,7 +134,7 @@ func TestSecuritySuccess(t *testing.T) {
 				},
 			}
 
-			s, err := NewSecurity(&tc.config, mockedSecurityOptsProvider)
+			s, err := NewSecurity(&tc.config, mockedSecurityExtDeps)
 
 			if msg := testutils.AssertError(t, err, false); msg != "" {
 				t.Fatalf("NewSecurity(): %s", msg)
@@ -152,34 +152,34 @@ func TestSecuritySuccess(t *testing.T) {
 				t.Errorf("Options() count: want %d, got %d", want, got)
 			}
 			// AuthUserName dependency assertions
-			for _, c := range mockedSecurityOptsProvider.AuthUsernameCalls() {
+			for _, c := range mockedSecurityExtDeps.AuthUsernameCalls() {
 				authUsernameCalls = append(authUsernameCalls, AuthUserNameCall{user: c.User, pass: c.Pass})
 			}
 			if got, want := authUsernameCalls, tc.expectAuthUserNameCalls; !reflect.DeepEqual(got, want) {
 				t.Errorf("AuthUsername calls: want %#v, got %#v", want, got)
 			}
 			// CertificateFile dependency assertions
-			for _, c := range mockedSecurityOptsProvider.CertificateFileCalls() {
+			for _, c := range mockedSecurityExtDeps.CertificateFileCalls() {
 				certificateFileCalls = append(certificateFileCalls, CertificateFileCall{filename: c.Filename})
 			}
 			if got, want := certificateFileCalls, tc.expectCertificateFileCalls; !reflect.DeepEqual(got, want) {
 				t.Errorf("CertificateFile calls: want %#v, got %#v", want, got)
 			}
 			// PrivateKeyFile dependency assertions
-			for _, c := range mockedSecurityOptsProvider.PrivateKeyFileCalls() {
+			for _, c := range mockedSecurityExtDeps.PrivateKeyFileCalls() {
 				privateKeyFileCalls = append(privateKeyFileCalls, PrivateKeyFileCall{filename: c.Filename})
 			}
 			if got, want := privateKeyFileCalls, tc.expectPrivateKeyFileCalls; !reflect.DeepEqual(got, want) {
 				t.Errorf("PrivateKeyFile calls: want %#v, got %#v", want, got)
 			}
 			// SecurityFromEndpoint dependency assertions
-			if got, want := len(mockedSecurityOptsProvider.SecurityFromEndpointCalls()), 1; got != want {
+			if got, want := len(mockedSecurityExtDeps.SecurityFromEndpointCalls()), 1; got != want {
 				t.Errorf("SecurityFromEndpoint call count: want %d, got %d", want, got)
 			}
-			if got, want := mockedSecurityOptsProvider.SecurityFromEndpointCalls()[0].Ep, ep; got != want {
+			if got, want := mockedSecurityExtDeps.SecurityFromEndpointCalls()[0].Ep, ep; got != want {
 				t.Errorf("SecurityFromEndpoint ep argument: want %v, got %v", want, got)
 			}
-			if got, want := mockedSecurityOptsProvider.SecurityFromEndpointCalls()[0].AuthType, tc.expectUserTokenType; got != want {
+			if got, want := mockedSecurityExtDeps.SecurityFromEndpointCalls()[0].AuthType, tc.expectUserTokenType; got != want {
 				t.Errorf("SecurityFromEndpoint authType argument: want %v, got %v", want, got)
 			}
 		})
