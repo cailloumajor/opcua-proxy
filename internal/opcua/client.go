@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gopcua/opcua"
-	"github.com/gopcua/opcua/id"
 	"github.com/gopcua/opcua/ua"
 )
 
@@ -90,29 +89,6 @@ func NewClient(ctx context.Context, cfg *Config, deps ClientExtDeps, sec Securit
 		dummySub: ds,
 		stopChan: sc,
 	}, nil
-}
-
-// GetMonitoredItems executes the eponymous method on the provided caller.
-//
-// See https://reference.opcfoundation.org/Core/docs/Part5/9.1
-//
-// Upon success, it returns a slice of monitored items client handles.
-func (c *Client) GetMonitoredItems(ctx context.Context, subID uint32) ([]uint32, error) {
-	req := &ua.CallMethodRequest{
-		ObjectID:       ua.NewNumericNodeID(0, id.Server),
-		MethodID:       ua.NewNumericNodeID(0, id.Server_GetMonitoredItems),
-		InputArguments: []*ua.Variant{ua.MustVariant(subID)},
-	}
-
-	res, err := c.inner.CallWithContext(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("error calling the method: %w", err)
-	}
-	if res.StatusCode != ua.StatusOK {
-		return nil, fmt.Errorf("method call failed: %w", res.StatusCode)
-	}
-
-	return res.OutputArguments[1].Value().([]uint32), nil
 }
 
 // NamespaceIndex returns the index of the provided namespace URI in the server namespace array.
