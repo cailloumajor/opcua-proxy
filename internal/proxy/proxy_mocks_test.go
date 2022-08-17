@@ -17,25 +17,25 @@ var _ MonitorProvider = &MonitorProviderMock{}
 
 // MonitorProviderMock is a mock implementation of MonitorProvider.
 //
-// 	func TestSomethingThatUsesMonitorProvider(t *testing.T) {
+//	func TestSomethingThatUsesMonitorProvider(t *testing.T) {
 //
-// 		// make and configure a mocked MonitorProvider
-// 		mockedMonitorProvider := &MonitorProviderMock{
-// 			ReadFunc: func(ctx context.Context) (*opcua.ReadValues, error) {
-// 				panic("mock out the Read method")
-// 			},
-// 			StateFunc: func() gopcua.ConnState {
-// 				panic("mock out the State method")
-// 			},
-// 			SubscribeFunc: func(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []opcua.NodeIDProvider) error {
-// 				panic("mock out the Subscribe method")
-// 			},
-// 		}
+//		// make and configure a mocked MonitorProvider
+//		mockedMonitorProvider := &MonitorProviderMock{
+//			ReadFunc: func(ctx context.Context) (*opcua.ReadValues, error) {
+//				panic("mock out the Read method")
+//			},
+//			StateFunc: func() gopcua.ConnState {
+//				panic("mock out the State method")
+//			},
+//			SubscribeFunc: func(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []opcua.NodeIDProvider) error {
+//				panic("mock out the Subscribe method")
+//			},
+//		}
 //
-// 		// use mockedMonitorProvider in code that requires MonitorProvider
-// 		// and then make assertions.
+//		// use mockedMonitorProvider in code that requires MonitorProvider
+//		// and then make assertions.
 //
-// 	}
+//	}
 type MonitorProviderMock struct {
 	// ReadFunc mocks the Read method.
 	ReadFunc func(ctx context.Context) (*opcua.ReadValues, error)
@@ -91,7 +91,8 @@ func (mock *MonitorProviderMock) Read(ctx context.Context) (*opcua.ReadValues, e
 
 // ReadCalls gets all the calls that were made to Read.
 // Check the length with:
-//     len(mockedMonitorProvider.ReadCalls())
+//
+//	len(mockedMonitorProvider.ReadCalls())
 func (mock *MonitorProviderMock) ReadCalls() []struct {
 	Ctx context.Context
 } {
@@ -119,7 +120,8 @@ func (mock *MonitorProviderMock) State() gopcua.ConnState {
 
 // StateCalls gets all the calls that were made to State.
 // Check the length with:
-//     len(mockedMonitorProvider.StateCalls())
+//
+//	len(mockedMonitorProvider.StateCalls())
 func (mock *MonitorProviderMock) StateCalls() []struct {
 } {
 	var calls []struct {
@@ -154,7 +156,8 @@ func (mock *MonitorProviderMock) Subscribe(ctx context.Context, nsURI string, ch
 
 // SubscribeCalls gets all the calls that were made to Subscribe.
 // Check the length with:
-//     len(mockedMonitorProvider.SubscribeCalls())
+//
+//	len(mockedMonitorProvider.SubscribeCalls())
 func (mock *MonitorProviderMock) SubscribeCalls() []struct {
 	Ctx   context.Context
 	NsURI string
@@ -179,19 +182,19 @@ var _ CentrifugoChannelParser = &CentrifugoChannelParserMock{}
 
 // CentrifugoChannelParserMock is a mock implementation of CentrifugoChannelParser.
 //
-// 	func TestSomethingThatUsesCentrifugoChannelParser(t *testing.T) {
+//	func TestSomethingThatUsesCentrifugoChannelParser(t *testing.T) {
 //
-// 		// make and configure a mocked CentrifugoChannelParser
-// 		mockedCentrifugoChannelParser := &CentrifugoChannelParserMock{
-// 			ParseChannelFunc: func(s string, namespace string) (opcua.ChannelProvider, error) {
-// 				panic("mock out the ParseChannel method")
-// 			},
-// 		}
+//		// make and configure a mocked CentrifugoChannelParser
+//		mockedCentrifugoChannelParser := &CentrifugoChannelParserMock{
+//			ParseChannelFunc: func(s string, namespace string) (opcua.ChannelProvider, error) {
+//				panic("mock out the ParseChannel method")
+//			},
+//		}
 //
-// 		// use mockedCentrifugoChannelParser in code that requires CentrifugoChannelParser
-// 		// and then make assertions.
+//		// use mockedCentrifugoChannelParser in code that requires CentrifugoChannelParser
+//		// and then make assertions.
 //
-// 	}
+//	}
 type CentrifugoChannelParserMock struct {
 	// ParseChannelFunc mocks the ParseChannel method.
 	ParseChannelFunc func(s string, namespace string) (opcua.ChannelProvider, error)
@@ -229,7 +232,8 @@ func (mock *CentrifugoChannelParserMock) ParseChannel(s string, namespace string
 
 // ParseChannelCalls gets all the calls that were made to ParseChannel.
 // Check the length with:
-//     len(mockedCentrifugoChannelParser.ParseChannelCalls())
+//
+//	len(mockedCentrifugoChannelParser.ParseChannelCalls())
 func (mock *CentrifugoChannelParserMock) ParseChannelCalls() []struct {
 	S         string
 	Namespace string
@@ -250,19 +254,19 @@ var _ CentrifugoInfoProvider = &CentrifugoInfoProviderMock{}
 
 // CentrifugoInfoProviderMock is a mock implementation of CentrifugoInfoProvider.
 //
-// 	func TestSomethingThatUsesCentrifugoInfoProvider(t *testing.T) {
+//	func TestSomethingThatUsesCentrifugoInfoProvider(t *testing.T) {
 //
-// 		// make and configure a mocked CentrifugoInfoProvider
-// 		mockedCentrifugoInfoProvider := &CentrifugoInfoProviderMock{
-// 			InfoFunc: func(ctx context.Context) (gocent.InfoResult, error) {
-// 				panic("mock out the Info method")
-// 			},
-// 		}
+//		// make and configure a mocked CentrifugoInfoProvider
+//		mockedCentrifugoInfoProvider := &CentrifugoInfoProviderMock{
+//			InfoFunc: func(ctx context.Context) (gocent.InfoResult, error) {
+//				panic("mock out the Info method")
+//			},
+//		}
 //
-// 		// use mockedCentrifugoInfoProvider in code that requires CentrifugoInfoProvider
-// 		// and then make assertions.
+//		// use mockedCentrifugoInfoProvider in code that requires CentrifugoInfoProvider
+//		// and then make assertions.
 //
-// 	}
+//	}
 type CentrifugoInfoProviderMock struct {
 	// InfoFunc mocks the Info method.
 	InfoFunc func(ctx context.Context) (gocent.InfoResult, error)
@@ -296,7 +300,8 @@ func (mock *CentrifugoInfoProviderMock) Info(ctx context.Context) (gocent.InfoRe
 
 // InfoCalls gets all the calls that were made to Info.
 // Check the length with:
-//     len(mockedCentrifugoInfoProvider.InfoCalls())
+//
+//	len(mockedCentrifugoInfoProvider.InfoCalls())
 func (mock *CentrifugoInfoProviderMock) InfoCalls() []struct {
 	Ctx context.Context
 } {

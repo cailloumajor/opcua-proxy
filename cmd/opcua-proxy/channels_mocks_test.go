@@ -15,19 +15,19 @@ var _ CentrifugoChannels = &CentrifugoChannelsMock{}
 
 // CentrifugoChannelsMock is a mock implementation of CentrifugoChannels.
 //
-// 	func TestSomethingThatUsesCentrifugoChannels(t *testing.T) {
+//	func TestSomethingThatUsesCentrifugoChannels(t *testing.T) {
 //
-// 		// make and configure a mocked CentrifugoChannels
-// 		mockedCentrifugoChannels := &CentrifugoChannelsMock{
-// 			ChannelsFunc: func(ctx context.Context, opts ...gocent.ChannelsOption) (gocent.ChannelsResult, error) {
-// 				panic("mock out the Channels method")
-// 			},
-// 		}
+//		// make and configure a mocked CentrifugoChannels
+//		mockedCentrifugoChannels := &CentrifugoChannelsMock{
+//			ChannelsFunc: func(ctx context.Context, opts ...gocent.ChannelsOption) (gocent.ChannelsResult, error) {
+//				panic("mock out the Channels method")
+//			},
+//		}
 //
-// 		// use mockedCentrifugoChannels in code that requires CentrifugoChannels
-// 		// and then make assertions.
+//		// use mockedCentrifugoChannels in code that requires CentrifugoChannels
+//		// and then make assertions.
 //
-// 	}
+//	}
 type CentrifugoChannelsMock struct {
 	// ChannelsFunc mocks the Channels method.
 	ChannelsFunc func(ctx context.Context, opts ...gocent.ChannelsOption) (gocent.ChannelsResult, error)
@@ -65,7 +65,8 @@ func (mock *CentrifugoChannelsMock) Channels(ctx context.Context, opts ...gocent
 
 // ChannelsCalls gets all the calls that were made to Channels.
 // Check the length with:
-//     len(mockedCentrifugoChannels.ChannelsCalls())
+//
+//	len(mockedCentrifugoChannels.ChannelsCalls())
 func (mock *CentrifugoChannelsMock) ChannelsCalls() []struct {
 	Ctx  context.Context
 	Opts []gocent.ChannelsOption

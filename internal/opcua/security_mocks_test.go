@@ -15,28 +15,28 @@ var _ SecurityExtDeps = &SecurityExtDepsMock{}
 
 // SecurityExtDepsMock is a mock implementation of SecurityExtDeps.
 //
-// 	func TestSomethingThatUsesSecurityExtDeps(t *testing.T) {
+//	func TestSomethingThatUsesSecurityExtDeps(t *testing.T) {
 //
-// 		// make and configure a mocked SecurityExtDeps
-// 		mockedSecurityExtDeps := &SecurityExtDepsMock{
-// 			AuthUsernameFunc: func(user string, pass string) opcua.Option {
-// 				panic("mock out the AuthUsername method")
-// 			},
-// 			CertificateFileFunc: func(filename string) opcua.Option {
-// 				panic("mock out the CertificateFile method")
-// 			},
-// 			PrivateKeyFileFunc: func(filename string) opcua.Option {
-// 				panic("mock out the PrivateKeyFile method")
-// 			},
-// 			SecurityFromEndpointFunc: func(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option {
-// 				panic("mock out the SecurityFromEndpoint method")
-// 			},
-// 		}
+//		// make and configure a mocked SecurityExtDeps
+//		mockedSecurityExtDeps := &SecurityExtDepsMock{
+//			AuthUsernameFunc: func(user string, pass string) opcua.Option {
+//				panic("mock out the AuthUsername method")
+//			},
+//			CertificateFileFunc: func(filename string) opcua.Option {
+//				panic("mock out the CertificateFile method")
+//			},
+//			PrivateKeyFileFunc: func(filename string) opcua.Option {
+//				panic("mock out the PrivateKeyFile method")
+//			},
+//			SecurityFromEndpointFunc: func(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option {
+//				panic("mock out the SecurityFromEndpoint method")
+//			},
+//		}
 //
-// 		// use mockedSecurityExtDeps in code that requires SecurityExtDeps
-// 		// and then make assertions.
+//		// use mockedSecurityExtDeps in code that requires SecurityExtDeps
+//		// and then make assertions.
 //
-// 	}
+//	}
 type SecurityExtDepsMock struct {
 	// AuthUsernameFunc mocks the AuthUsername method.
 	AuthUsernameFunc func(user string, pass string) opcua.Option
@@ -103,7 +103,8 @@ func (mock *SecurityExtDepsMock) AuthUsername(user string, pass string) opcua.Op
 
 // AuthUsernameCalls gets all the calls that were made to AuthUsername.
 // Check the length with:
-//     len(mockedSecurityExtDeps.AuthUsernameCalls())
+//
+//	len(mockedSecurityExtDeps.AuthUsernameCalls())
 func (mock *SecurityExtDepsMock) AuthUsernameCalls() []struct {
 	User string
 	Pass string
@@ -136,7 +137,8 @@ func (mock *SecurityExtDepsMock) CertificateFile(filename string) opcua.Option {
 
 // CertificateFileCalls gets all the calls that were made to CertificateFile.
 // Check the length with:
-//     len(mockedSecurityExtDeps.CertificateFileCalls())
+//
+//	len(mockedSecurityExtDeps.CertificateFileCalls())
 func (mock *SecurityExtDepsMock) CertificateFileCalls() []struct {
 	Filename string
 } {
@@ -167,7 +169,8 @@ func (mock *SecurityExtDepsMock) PrivateKeyFile(filename string) opcua.Option {
 
 // PrivateKeyFileCalls gets all the calls that were made to PrivateKeyFile.
 // Check the length with:
-//     len(mockedSecurityExtDeps.PrivateKeyFileCalls())
+//
+//	len(mockedSecurityExtDeps.PrivateKeyFileCalls())
 func (mock *SecurityExtDepsMock) PrivateKeyFileCalls() []struct {
 	Filename string
 } {
@@ -200,7 +203,8 @@ func (mock *SecurityExtDepsMock) SecurityFromEndpoint(ep *ua.EndpointDescription
 
 // SecurityFromEndpointCalls gets all the calls that were made to SecurityFromEndpoint.
 // Check the length with:
-//     len(mockedSecurityExtDeps.SecurityFromEndpointCalls())
+//
+//	len(mockedSecurityExtDeps.SecurityFromEndpointCalls())
 func (mock *SecurityExtDepsMock) SecurityFromEndpointCalls() []struct {
 	Ep       *ua.EndpointDescription
 	AuthType ua.UserTokenType

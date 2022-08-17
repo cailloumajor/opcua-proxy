@@ -16,19 +16,19 @@ var _ StateProvider = &StateProviderMock{}
 
 // StateProviderMock is a mock implementation of StateProvider.
 //
-// 	func TestSomethingThatUsesStateProvider(t *testing.T) {
+//	func TestSomethingThatUsesStateProvider(t *testing.T) {
 //
-// 		// make and configure a mocked StateProvider
-// 		mockedStateProvider := &StateProviderMock{
-// 			StateFunc: func() opcua.ConnState {
-// 				panic("mock out the State method")
-// 			},
-// 		}
+//		// make and configure a mocked StateProvider
+//		mockedStateProvider := &StateProviderMock{
+//			StateFunc: func() opcua.ConnState {
+//				panic("mock out the State method")
+//			},
+//		}
 //
-// 		// use mockedStateProvider in code that requires StateProvider
-// 		// and then make assertions.
+//		// use mockedStateProvider in code that requires StateProvider
+//		// and then make assertions.
 //
-// 	}
+//	}
 type StateProviderMock struct {
 	// StateFunc mocks the State method.
 	StateFunc func() opcua.ConnState
@@ -57,7 +57,8 @@ func (mock *StateProviderMock) State() opcua.ConnState {
 
 // StateCalls gets all the calls that were made to State.
 // Check the length with:
-//     len(mockedStateProvider.StateCalls())
+//
+//	len(mockedStateProvider.StateCalls())
 func (mock *StateProviderMock) StateCalls() []struct {
 } {
 	var calls []struct {
@@ -74,19 +75,19 @@ var _ Publisher = &PublisherMock{}
 
 // PublisherMock is a mock implementation of Publisher.
 //
-// 	func TestSomethingThatUsesPublisher(t *testing.T) {
+//	func TestSomethingThatUsesPublisher(t *testing.T) {
 //
-// 		// make and configure a mocked Publisher
-// 		mockedPublisher := &PublisherMock{
-// 			PublishFunc: func(ctx context.Context, channel string, data []byte, opts ...gocent.PublishOption) (gocent.PublishResult, error) {
-// 				panic("mock out the Publish method")
-// 			},
-// 		}
+//		// make and configure a mocked Publisher
+//		mockedPublisher := &PublisherMock{
+//			PublishFunc: func(ctx context.Context, channel string, data []byte, opts ...gocent.PublishOption) (gocent.PublishResult, error) {
+//				panic("mock out the Publish method")
+//			},
+//		}
 //
-// 		// use mockedPublisher in code that requires Publisher
-// 		// and then make assertions.
+//		// use mockedPublisher in code that requires Publisher
+//		// and then make assertions.
 //
-// 	}
+//	}
 type PublisherMock struct {
 	// PublishFunc mocks the Publish method.
 	PublishFunc func(ctx context.Context, channel string, data []byte, opts ...gocent.PublishOption) (gocent.PublishResult, error)
@@ -132,7 +133,8 @@ func (mock *PublisherMock) Publish(ctx context.Context, channel string, data []b
 
 // PublishCalls gets all the calls that were made to Publish.
 // Check the length with:
-//     len(mockedPublisher.PublishCalls())
+//
+//	len(mockedPublisher.PublishCalls())
 func (mock *PublisherMock) PublishCalls() []struct {
 	Ctx     context.Context
 	Channel string

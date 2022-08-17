@@ -17,31 +17,31 @@ var _ ClientProvider = &ClientProviderMock{}
 
 // ClientProviderMock is a mock implementation of ClientProvider.
 //
-// 	func TestSomethingThatUsesClientProvider(t *testing.T) {
+//	func TestSomethingThatUsesClientProvider(t *testing.T) {
 //
-// 		// make and configure a mocked ClientProvider
-// 		mockedClientProvider := &ClientProviderMock{
-// 			CloseFunc: func(ctx context.Context) []error {
-// 				panic("mock out the Close method")
-// 			},
-// 			NamespaceIndexFunc: func(ctx context.Context, nsURI string) (uint16, error) {
-// 				panic("mock out the NamespaceIndex method")
-// 			},
-// 			ReadFunc: func(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
-// 				panic("mock out the Read method")
-// 			},
-// 			StateFunc: func() opcua.ConnState {
-// 				panic("mock out the State method")
-// 			},
-// 			SubscribeFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error) {
-// 				panic("mock out the Subscribe method")
-// 			},
-// 		}
+//		// make and configure a mocked ClientProvider
+//		mockedClientProvider := &ClientProviderMock{
+//			CloseFunc: func(ctx context.Context) []error {
+//				panic("mock out the Close method")
+//			},
+//			NamespaceIndexFunc: func(ctx context.Context, nsURI string) (uint16, error) {
+//				panic("mock out the NamespaceIndex method")
+//			},
+//			ReadFunc: func(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
+//				panic("mock out the Read method")
+//			},
+//			StateFunc: func() opcua.ConnState {
+//				panic("mock out the State method")
+//			},
+//			SubscribeFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error) {
+//				panic("mock out the Subscribe method")
+//			},
+//		}
 //
-// 		// use mockedClientProvider in code that requires ClientProvider
-// 		// and then make assertions.
+//		// use mockedClientProvider in code that requires ClientProvider
+//		// and then make assertions.
 //
-// 	}
+//	}
 type ClientProviderMock struct {
 	// CloseFunc mocks the Close method.
 	CloseFunc func(ctx context.Context) []error
@@ -117,7 +117,8 @@ func (mock *ClientProviderMock) Close(ctx context.Context) []error {
 
 // CloseCalls gets all the calls that were made to Close.
 // Check the length with:
-//     len(mockedClientProvider.CloseCalls())
+//
+//	len(mockedClientProvider.CloseCalls())
 func (mock *ClientProviderMock) CloseCalls() []struct {
 	Ctx context.Context
 } {
@@ -150,7 +151,8 @@ func (mock *ClientProviderMock) NamespaceIndex(ctx context.Context, nsURI string
 
 // NamespaceIndexCalls gets all the calls that were made to NamespaceIndex.
 // Check the length with:
-//     len(mockedClientProvider.NamespaceIndexCalls())
+//
+//	len(mockedClientProvider.NamespaceIndexCalls())
 func (mock *ClientProviderMock) NamespaceIndexCalls() []struct {
 	Ctx   context.Context
 	NsURI string
@@ -185,7 +187,8 @@ func (mock *ClientProviderMock) Read(ctx context.Context, req *ua.ReadRequest) (
 
 // ReadCalls gets all the calls that were made to Read.
 // Check the length with:
-//     len(mockedClientProvider.ReadCalls())
+//
+//	len(mockedClientProvider.ReadCalls())
 func (mock *ClientProviderMock) ReadCalls() []struct {
 	Ctx context.Context
 	Req *ua.ReadRequest
@@ -215,7 +218,8 @@ func (mock *ClientProviderMock) State() opcua.ConnState {
 
 // StateCalls gets all the calls that were made to State.
 // Check the length with:
-//     len(mockedClientProvider.StateCalls())
+//
+//	len(mockedClientProvider.StateCalls())
 func (mock *ClientProviderMock) StateCalls() []struct {
 } {
 	var calls []struct {
@@ -248,7 +252,8 @@ func (mock *ClientProviderMock) Subscribe(ctx context.Context, params *opcua.Sub
 
 // SubscribeCalls gets all the calls that were made to Subscribe.
 // Check the length with:
-//     len(mockedClientProvider.SubscribeCalls())
+//
+//	len(mockedClientProvider.SubscribeCalls())
 func (mock *ClientProviderMock) SubscribeCalls() []struct {
 	Ctx      context.Context
 	Params   *opcua.SubscriptionParameters
@@ -271,25 +276,25 @@ var _ SubscriptionProvider = &SubscriptionProviderMock{}
 
 // SubscriptionProviderMock is a mock implementation of SubscriptionProvider.
 //
-// 	func TestSomethingThatUsesSubscriptionProvider(t *testing.T) {
+//	func TestSomethingThatUsesSubscriptionProvider(t *testing.T) {
 //
-// 		// make and configure a mocked SubscriptionProvider
-// 		mockedSubscriptionProvider := &SubscriptionProviderMock{
-// 			CancelFunc: func(ctx context.Context) error {
-// 				panic("mock out the Cancel method")
-// 			},
-// 			IDFunc: func() uint32 {
-// 				panic("mock out the ID method")
-// 			},
-// 			MonitorWithContextFunc: func(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error) {
-// 				panic("mock out the MonitorWithContext method")
-// 			},
-// 		}
+//		// make and configure a mocked SubscriptionProvider
+//		mockedSubscriptionProvider := &SubscriptionProviderMock{
+//			CancelFunc: func(ctx context.Context) error {
+//				panic("mock out the Cancel method")
+//			},
+//			IDFunc: func() uint32 {
+//				panic("mock out the ID method")
+//			},
+//			MonitorWithContextFunc: func(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error) {
+//				panic("mock out the MonitorWithContext method")
+//			},
+//		}
 //
-// 		// use mockedSubscriptionProvider in code that requires SubscriptionProvider
-// 		// and then make assertions.
+//		// use mockedSubscriptionProvider in code that requires SubscriptionProvider
+//		// and then make assertions.
 //
-// 	}
+//	}
 type SubscriptionProviderMock struct {
 	// CancelFunc mocks the Cancel method.
 	CancelFunc func(ctx context.Context) error
@@ -343,7 +348,8 @@ func (mock *SubscriptionProviderMock) Cancel(ctx context.Context) error {
 
 // CancelCalls gets all the calls that were made to Cancel.
 // Check the length with:
-//     len(mockedSubscriptionProvider.CancelCalls())
+//
+//	len(mockedSubscriptionProvider.CancelCalls())
 func (mock *SubscriptionProviderMock) CancelCalls() []struct {
 	Ctx context.Context
 } {
@@ -371,7 +377,8 @@ func (mock *SubscriptionProviderMock) ID() uint32 {
 
 // IDCalls gets all the calls that were made to ID.
 // Check the length with:
-//     len(mockedSubscriptionProvider.IDCalls())
+//
+//	len(mockedSubscriptionProvider.IDCalls())
 func (mock *SubscriptionProviderMock) IDCalls() []struct {
 } {
 	var calls []struct {
@@ -404,7 +411,8 @@ func (mock *SubscriptionProviderMock) MonitorWithContext(ctx context.Context, ts
 
 // MonitorWithContextCalls gets all the calls that were made to MonitorWithContext.
 // Check the length with:
-//     len(mockedSubscriptionProvider.MonitorWithContextCalls())
+//
+//	len(mockedSubscriptionProvider.MonitorWithContextCalls())
 func (mock *SubscriptionProviderMock) MonitorWithContextCalls() []struct {
 	Ctx   context.Context
 	Ts    ua.TimestampsToReturn
@@ -427,22 +435,22 @@ var _ ChannelProvider = &ChannelProviderMock{}
 
 // ChannelProviderMock is a mock implementation of ChannelProvider.
 //
-// 	func TestSomethingThatUsesChannelProvider(t *testing.T) {
+//	func TestSomethingThatUsesChannelProvider(t *testing.T) {
 //
-// 		// make and configure a mocked ChannelProvider
-// 		mockedChannelProvider := &ChannelProviderMock{
-// 			IntervalFunc: func() time.Duration {
-// 				panic("mock out the Interval method")
-// 			},
-// 			StringFunc: func() string {
-// 				panic("mock out the String method")
-// 			},
-// 		}
+//		// make and configure a mocked ChannelProvider
+//		mockedChannelProvider := &ChannelProviderMock{
+//			IntervalFunc: func() time.Duration {
+//				panic("mock out the Interval method")
+//			},
+//			StringFunc: func() string {
+//				panic("mock out the String method")
+//			},
+//		}
 //
-// 		// use mockedChannelProvider in code that requires ChannelProvider
-// 		// and then make assertions.
+//		// use mockedChannelProvider in code that requires ChannelProvider
+//		// and then make assertions.
 //
-// 	}
+//	}
 type ChannelProviderMock struct {
 	// IntervalFunc mocks the Interval method.
 	IntervalFunc func() time.Duration
@@ -478,7 +486,8 @@ func (mock *ChannelProviderMock) Interval() time.Duration {
 
 // IntervalCalls gets all the calls that were made to Interval.
 // Check the length with:
-//     len(mockedChannelProvider.IntervalCalls())
+//
+//	len(mockedChannelProvider.IntervalCalls())
 func (mock *ChannelProviderMock) IntervalCalls() []struct {
 } {
 	var calls []struct {
@@ -504,7 +513,8 @@ func (mock *ChannelProviderMock) String() string {
 
 // StringCalls gets all the calls that were made to String.
 // Check the length with:
-//     len(mockedChannelProvider.StringCalls())
+//
+//	len(mockedChannelProvider.StringCalls())
 func (mock *ChannelProviderMock) StringCalls() []struct {
 } {
 	var calls []struct {
@@ -521,19 +531,19 @@ var _ NodeIDProvider = &NodeIDProviderMock{}
 
 // NodeIDProviderMock is a mock implementation of NodeIDProvider.
 //
-// 	func TestSomethingThatUsesNodeIDProvider(t *testing.T) {
+//	func TestSomethingThatUsesNodeIDProvider(t *testing.T) {
 //
-// 		// make and configure a mocked NodeIDProvider
-// 		mockedNodeIDProvider := &NodeIDProviderMock{
-// 			NodeIDFunc: func(ns uint16) *ua.NodeID {
-// 				panic("mock out the NodeID method")
-// 			},
-// 		}
+//		// make and configure a mocked NodeIDProvider
+//		mockedNodeIDProvider := &NodeIDProviderMock{
+//			NodeIDFunc: func(ns uint16) *ua.NodeID {
+//				panic("mock out the NodeID method")
+//			},
+//		}
 //
-// 		// use mockedNodeIDProvider in code that requires NodeIDProvider
-// 		// and then make assertions.
+//		// use mockedNodeIDProvider in code that requires NodeIDProvider
+//		// and then make assertions.
 //
-// 	}
+//	}
 type NodeIDProviderMock struct {
 	// NodeIDFunc mocks the NodeID method.
 	NodeIDFunc func(ns uint16) *ua.NodeID
@@ -567,7 +577,8 @@ func (mock *NodeIDProviderMock) NodeID(ns uint16) *ua.NodeID {
 
 // NodeIDCalls gets all the calls that were made to NodeID.
 // Check the length with:
-//     len(mockedNodeIDProvider.NodeIDCalls())
+//
+//	len(mockedNodeIDProvider.NodeIDCalls())
 func (mock *NodeIDProviderMock) NodeIDCalls() []struct {
 	Ns uint16
 } {

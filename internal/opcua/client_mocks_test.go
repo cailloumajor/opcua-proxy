@@ -16,25 +16,25 @@ var _ ClientExtDeps = &ClientExtDepsMock{}
 
 // ClientExtDepsMock is a mock implementation of ClientExtDeps.
 //
-// 	func TestSomethingThatUsesClientExtDeps(t *testing.T) {
+//	func TestSomethingThatUsesClientExtDeps(t *testing.T) {
 //
-// 		// make and configure a mocked ClientExtDeps
-// 		mockedClientExtDeps := &ClientExtDepsMock{
-// 			GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
-// 				panic("mock out the GetEndpoints method")
-// 			},
-// 			NewClientFunc: func(endpoint string, opts ...opcua.Option) RawClientProvider {
-// 				panic("mock out the NewClient method")
-// 			},
-// 			SelectEndpointFunc: func(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
-// 				panic("mock out the SelectEndpoint method")
-// 			},
-// 		}
+//		// make and configure a mocked ClientExtDeps
+//		mockedClientExtDeps := &ClientExtDepsMock{
+//			GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
+//				panic("mock out the GetEndpoints method")
+//			},
+//			NewClientFunc: func(endpoint string, opts ...opcua.Option) RawClientProvider {
+//				panic("mock out the NewClient method")
+//			},
+//			SelectEndpointFunc: func(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
+//				panic("mock out the SelectEndpoint method")
+//			},
+//		}
 //
-// 		// use mockedClientExtDeps in code that requires ClientExtDeps
-// 		// and then make assertions.
+//		// use mockedClientExtDeps in code that requires ClientExtDeps
+//		// and then make assertions.
 //
-// 	}
+//	}
 type ClientExtDepsMock struct {
 	// GetEndpointsFunc mocks the GetEndpoints method.
 	GetEndpointsFunc func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error)
@@ -100,7 +100,8 @@ func (mock *ClientExtDepsMock) GetEndpoints(ctx context.Context, endpoint string
 
 // GetEndpointsCalls gets all the calls that were made to GetEndpoints.
 // Check the length with:
-//     len(mockedClientExtDeps.GetEndpointsCalls())
+//
+//	len(mockedClientExtDeps.GetEndpointsCalls())
 func (mock *ClientExtDepsMock) GetEndpointsCalls() []struct {
 	Ctx      context.Context
 	Endpoint string
@@ -137,7 +138,8 @@ func (mock *ClientExtDepsMock) NewClient(endpoint string, opts ...opcua.Option) 
 
 // NewClientCalls gets all the calls that were made to NewClient.
 // Check the length with:
-//     len(mockedClientExtDeps.NewClientCalls())
+//
+//	len(mockedClientExtDeps.NewClientCalls())
 func (mock *ClientExtDepsMock) NewClientCalls() []struct {
 	Endpoint string
 	Opts     []opcua.Option
@@ -174,7 +176,8 @@ func (mock *ClientExtDepsMock) SelectEndpoint(endpoints []*ua.EndpointDescriptio
 
 // SelectEndpointCalls gets all the calls that were made to SelectEndpoint.
 // Check the length with:
-//     len(mockedClientExtDeps.SelectEndpointCalls())
+//
+//	len(mockedClientExtDeps.SelectEndpointCalls())
 func (mock *ClientExtDepsMock) SelectEndpointCalls() []struct {
 	Endpoints []*ua.EndpointDescription
 	Policy    string
@@ -197,37 +200,37 @@ var _ RawClientProvider = &RawClientProviderMock{}
 
 // RawClientProviderMock is a mock implementation of RawClientProvider.
 //
-// 	func TestSomethingThatUsesRawClientProvider(t *testing.T) {
+//	func TestSomethingThatUsesRawClientProvider(t *testing.T) {
 //
-// 		// make and configure a mocked RawClientProvider
-// 		mockedRawClientProvider := &RawClientProviderMock{
-// 			CallWithContextFunc: func(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error) {
-// 				panic("mock out the CallWithContext method")
-// 			},
-// 			CloseWithContextFunc: func(ctx context.Context) error {
-// 				panic("mock out the CloseWithContext method")
-// 			},
-// 			ConnectFunc: func(contextMoqParam context.Context) error {
-// 				panic("mock out the Connect method")
-// 			},
-// 			NamespaceArrayWithContextFunc: func(ctx context.Context) ([]string, error) {
-// 				panic("mock out the NamespaceArrayWithContext method")
-// 			},
-// 			ReadWithContextFunc: func(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
-// 				panic("mock out the ReadWithContext method")
-// 			},
-// 			StateFunc: func() opcua.ConnState {
-// 				panic("mock out the State method")
-// 			},
-// 			SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error) {
-// 				panic("mock out the SubscribeWithContext method")
-// 			},
-// 		}
+//		// make and configure a mocked RawClientProvider
+//		mockedRawClientProvider := &RawClientProviderMock{
+//			CallWithContextFunc: func(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error) {
+//				panic("mock out the CallWithContext method")
+//			},
+//			CloseWithContextFunc: func(ctx context.Context) error {
+//				panic("mock out the CloseWithContext method")
+//			},
+//			ConnectFunc: func(contextMoqParam context.Context) error {
+//				panic("mock out the Connect method")
+//			},
+//			NamespaceArrayWithContextFunc: func(ctx context.Context) ([]string, error) {
+//				panic("mock out the NamespaceArrayWithContext method")
+//			},
+//			ReadWithContextFunc: func(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
+//				panic("mock out the ReadWithContext method")
+//			},
+//			StateFunc: func() opcua.ConnState {
+//				panic("mock out the State method")
+//			},
+//			SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error) {
+//				panic("mock out the SubscribeWithContext method")
+//			},
+//		}
 //
-// 		// use mockedRawClientProvider in code that requires RawClientProvider
-// 		// and then make assertions.
+//		// use mockedRawClientProvider in code that requires RawClientProvider
+//		// and then make assertions.
 //
-// 	}
+//	}
 type RawClientProviderMock struct {
 	// CallWithContextFunc mocks the CallWithContext method.
 	CallWithContextFunc func(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error)
@@ -323,7 +326,8 @@ func (mock *RawClientProviderMock) CallWithContext(ctx context.Context, req *ua.
 
 // CallWithContextCalls gets all the calls that were made to CallWithContext.
 // Check the length with:
-//     len(mockedRawClientProvider.CallWithContextCalls())
+//
+//	len(mockedRawClientProvider.CallWithContextCalls())
 func (mock *RawClientProviderMock) CallWithContextCalls() []struct {
 	Ctx context.Context
 	Req *ua.CallMethodRequest
@@ -356,7 +360,8 @@ func (mock *RawClientProviderMock) CloseWithContext(ctx context.Context) error {
 
 // CloseWithContextCalls gets all the calls that were made to CloseWithContext.
 // Check the length with:
-//     len(mockedRawClientProvider.CloseWithContextCalls())
+//
+//	len(mockedRawClientProvider.CloseWithContextCalls())
 func (mock *RawClientProviderMock) CloseWithContextCalls() []struct {
 	Ctx context.Context
 } {
@@ -387,7 +392,8 @@ func (mock *RawClientProviderMock) Connect(contextMoqParam context.Context) erro
 
 // ConnectCalls gets all the calls that were made to Connect.
 // Check the length with:
-//     len(mockedRawClientProvider.ConnectCalls())
+//
+//	len(mockedRawClientProvider.ConnectCalls())
 func (mock *RawClientProviderMock) ConnectCalls() []struct {
 	ContextMoqParam context.Context
 } {
@@ -418,7 +424,8 @@ func (mock *RawClientProviderMock) NamespaceArrayWithContext(ctx context.Context
 
 // NamespaceArrayWithContextCalls gets all the calls that were made to NamespaceArrayWithContext.
 // Check the length with:
-//     len(mockedRawClientProvider.NamespaceArrayWithContextCalls())
+//
+//	len(mockedRawClientProvider.NamespaceArrayWithContextCalls())
 func (mock *RawClientProviderMock) NamespaceArrayWithContextCalls() []struct {
 	Ctx context.Context
 } {
@@ -451,7 +458,8 @@ func (mock *RawClientProviderMock) ReadWithContext(ctx context.Context, req *ua.
 
 // ReadWithContextCalls gets all the calls that were made to ReadWithContext.
 // Check the length with:
-//     len(mockedRawClientProvider.ReadWithContextCalls())
+//
+//	len(mockedRawClientProvider.ReadWithContextCalls())
 func (mock *RawClientProviderMock) ReadWithContextCalls() []struct {
 	Ctx context.Context
 	Req *ua.ReadRequest
@@ -481,7 +489,8 @@ func (mock *RawClientProviderMock) State() opcua.ConnState {
 
 // StateCalls gets all the calls that were made to State.
 // Check the length with:
-//     len(mockedRawClientProvider.StateCalls())
+//
+//	len(mockedRawClientProvider.StateCalls())
 func (mock *RawClientProviderMock) StateCalls() []struct {
 } {
 	var calls []struct {
@@ -514,7 +523,8 @@ func (mock *RawClientProviderMock) SubscribeWithContext(ctx context.Context, par
 
 // SubscribeWithContextCalls gets all the calls that were made to SubscribeWithContext.
 // Check the length with:
-//     len(mockedRawClientProvider.SubscribeWithContextCalls())
+//
+//	len(mockedRawClientProvider.SubscribeWithContextCalls())
 func (mock *RawClientProviderMock) SubscribeWithContextCalls() []struct {
 	Ctx      context.Context
 	Params   *opcua.SubscriptionParameters
@@ -537,25 +547,25 @@ var _ SecurityProvider = &SecurityProviderMock{}
 
 // SecurityProviderMock is a mock implementation of SecurityProvider.
 //
-// 	func TestSomethingThatUsesSecurityProvider(t *testing.T) {
+//	func TestSomethingThatUsesSecurityProvider(t *testing.T) {
 //
-// 		// make and configure a mocked SecurityProvider
-// 		mockedSecurityProvider := &SecurityProviderMock{
-// 			MessageSecurityModeFunc: func() ua.MessageSecurityMode {
-// 				panic("mock out the MessageSecurityMode method")
-// 			},
-// 			OptionsFunc: func(ep *ua.EndpointDescription) []opcua.Option {
-// 				panic("mock out the Options method")
-// 			},
-// 			PolicyFunc: func() string {
-// 				panic("mock out the Policy method")
-// 			},
-// 		}
+//		// make and configure a mocked SecurityProvider
+//		mockedSecurityProvider := &SecurityProviderMock{
+//			MessageSecurityModeFunc: func() ua.MessageSecurityMode {
+//				panic("mock out the MessageSecurityMode method")
+//			},
+//			OptionsFunc: func(ep *ua.EndpointDescription) []opcua.Option {
+//				panic("mock out the Options method")
+//			},
+//			PolicyFunc: func() string {
+//				panic("mock out the Policy method")
+//			},
+//		}
 //
-// 		// use mockedSecurityProvider in code that requires SecurityProvider
-// 		// and then make assertions.
+//		// use mockedSecurityProvider in code that requires SecurityProvider
+//		// and then make assertions.
 //
-// 	}
+//	}
 type SecurityProviderMock struct {
 	// MessageSecurityModeFunc mocks the MessageSecurityMode method.
 	MessageSecurityModeFunc func() ua.MessageSecurityMode
@@ -600,7 +610,8 @@ func (mock *SecurityProviderMock) MessageSecurityMode() ua.MessageSecurityMode {
 
 // MessageSecurityModeCalls gets all the calls that were made to MessageSecurityMode.
 // Check the length with:
-//     len(mockedSecurityProvider.MessageSecurityModeCalls())
+//
+//	len(mockedSecurityProvider.MessageSecurityModeCalls())
 func (mock *SecurityProviderMock) MessageSecurityModeCalls() []struct {
 } {
 	var calls []struct {
@@ -629,7 +640,8 @@ func (mock *SecurityProviderMock) Options(ep *ua.EndpointDescription) []opcua.Op
 
 // OptionsCalls gets all the calls that were made to Options.
 // Check the length with:
-//     len(mockedSecurityProvider.OptionsCalls())
+//
+//	len(mockedSecurityProvider.OptionsCalls())
 func (mock *SecurityProviderMock) OptionsCalls() []struct {
 	Ep *ua.EndpointDescription
 } {
@@ -657,7 +669,8 @@ func (mock *SecurityProviderMock) Policy() string {
 
 // PolicyCalls gets all the calls that were made to Policy.
 // Check the length with:
-//     len(mockedSecurityProvider.PolicyCalls())
+//
+//	len(mockedSecurityProvider.PolicyCalls())
 func (mock *SecurityProviderMock) PolicyCalls() []struct {
 } {
 	var calls []struct {
