@@ -184,7 +184,7 @@ func main() {
 		proxy := proxy.NewProxy(
 			proxyLogger,
 			opcMonitor,
-			proxy.DefaultCentrifugoChannelParser{},
+			centrifugo.DefaultCentrifugoChannelParser{},
 			centrifugoClient,
 			centrifugoNamespace,
 		)

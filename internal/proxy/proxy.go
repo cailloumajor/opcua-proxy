@@ -36,7 +36,7 @@ type MonitorProvider interface {
 
 // CentrifugoChannelParser is a consumer contract modelling a Centrifugo channel parser.
 type CentrifugoChannelParser interface {
-	ParseChannel(s, namespace string) (opcua.ChannelProvider, error)
+	ParseChannel(s, namespace string) (*centrifugo.Channel, error)
 }
 
 // CentrifugoInfoProvider is a consumer contract modelling a Centrifugo server informations provider.
@@ -213,12 +213,4 @@ func (p *Proxy) handleCentrifugoSubscribe(w http.ResponseWriter, r *http.Request
 	}
 
 	writeSuccessResponse(w, "subscribed to OPC-UA data change")
-}
-
-// DefaultCentrifugoChannelParser is the default implementation of CentrifugoChannelParser.
-type DefaultCentrifugoChannelParser struct{}
-
-// ParseChannel implements CentrifugoChannelParser.
-func (DefaultCentrifugoChannelParser) ParseChannel(s, namespace string) (opcua.ChannelProvider, error) {
-	return centrifugo.ParseChannel(s, namespace)
 }

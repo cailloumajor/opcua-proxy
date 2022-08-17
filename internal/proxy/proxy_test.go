@@ -285,7 +285,7 @@ func TestCentrifugoSubscribe(t *testing.T) {
 				},
 			}
 			mockedChannelParser := &CentrifugoChannelParserMock{
-				ParseChannelFunc: func(s, namespace string) (opcua.ChannelProvider, error) {
+				ParseChannelFunc: func(s, namespace string) (*centrifugo.Channel, error) {
 					if tc.channelParseError != nil {
 						return nil, tc.channelParseError
 					}

@@ -5,6 +5,7 @@ package proxy
 
 import (
 	"context"
+	"github.com/cailloumajor/opcua-proxy/internal/centrifugo"
 	"github.com/cailloumajor/opcua-proxy/internal/opcua"
 	"github.com/centrifugal/gocent/v3"
 	gopcua "github.com/gopcua/opcua"
@@ -186,7 +187,7 @@ var _ CentrifugoChannelParser = &CentrifugoChannelParserMock{}
 //
 //		// make and configure a mocked CentrifugoChannelParser
 //		mockedCentrifugoChannelParser := &CentrifugoChannelParserMock{
-//			ParseChannelFunc: func(s string, namespace string) (opcua.ChannelProvider, error) {
+//			ParseChannelFunc: func(s string, namespace string) (*centrifugo.Channel, error) {
 //				panic("mock out the ParseChannel method")
 //			},
 //		}
@@ -197,7 +198,7 @@ var _ CentrifugoChannelParser = &CentrifugoChannelParserMock{}
 //	}
 type CentrifugoChannelParserMock struct {
 	// ParseChannelFunc mocks the ParseChannel method.
-	ParseChannelFunc func(s string, namespace string) (opcua.ChannelProvider, error)
+	ParseChannelFunc func(s string, namespace string) (*centrifugo.Channel, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -213,7 +214,7 @@ type CentrifugoChannelParserMock struct {
 }
 
 // ParseChannel calls ParseChannelFunc.
-func (mock *CentrifugoChannelParserMock) ParseChannel(s string, namespace string) (opcua.ChannelProvider, error) {
+func (mock *CentrifugoChannelParserMock) ParseChannel(s string, namespace string) (*centrifugo.Channel, error) {
 	if mock.ParseChannelFunc == nil {
 		panic("CentrifugoChannelParserMock.ParseChannelFunc: method is nil but CentrifugoChannelParser.ParseChannel was just called")
 	}
