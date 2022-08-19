@@ -18,7 +18,6 @@ import (
 	"github.com/cailloumajor/opcua-proxy/internal/centrifugo"
 	"github.com/cailloumajor/opcua-proxy/internal/opcua"
 	"github.com/cailloumajor/opcua-proxy/internal/proxy"
-	"github.com/centrifugal/gocent/v3"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/joho/godotenv"
@@ -88,13 +87,14 @@ func (r *retryableInit) Do(f func(ctx context.Context) error) {
 
 func main() {
 	var (
-		opcuaConfig            opcua.Config
-		opcuaTidyInterval      time.Duration
-		proxyListen            string
-		centrifugoNamespace    string
-		centrifugoClientConfig gocent.Config
-		heartbeatInterval      time.Duration
-		readNodesURL           string
+		opcuaConfig         opcua.Config
+		opcuaTidyInterval   time.Duration
+		proxyListen         string
+		centrifugoNamespace string
+		centrifugoAddress   string
+		centrifugoKey       string
+		heartbeatInterval   time.Duration
+		readNodesURL        string
 	)
 	fs := flag.NewFlagSet("opcua-proxy", flag.ExitOnError)
 	fs.StringVar(&opcuaConfig.ServerURL, "opcua-server-url", "opc.tcp://127.0.0.1:4840", "OPC-UA server endpoint URL")
@@ -104,8 +104,8 @@ func main() {
 	fs.StringVar(&opcuaConfig.KeyFile, "opcua-key-file", "", "private key file path for OPC-UA secure channel (optional)")
 	fs.DurationVar(&opcuaTidyInterval, "opcua-tidy-interval", 30*time.Second, "interval at which to tidy-up OPC-UA subscriptions")
 	fs.StringVar(&proxyListen, "proxy-listen", ":8080", "Centrifugo proxy listen address")
-	fs.StringVar(&centrifugoClientConfig.Addr, "centrifugo-api-address", "", "Centrifugo API endpoint")
-	fs.StringVar(&centrifugoClientConfig.Key, "centrifugo-api-key", "", "Centrifugo API key")
+	fs.StringVar(&centrifugoAddress, "centrifugo-api-address", "", "Centrifugo API endpoint")
+	fs.StringVar(&centrifugoKey, "centrifugo-api-key", "", "Centrifugo API key")
 	fs.StringVar(&centrifugoNamespace, "centrifugo-namespace", "", "Centrifugo channel namespace for this instance")
 	fs.DurationVar(&heartbeatInterval, "heartbeat-interval", 5*time.Second, "Heartbeat interval")
 	fs.StringVar(&readNodesURL, "read-nodes-url", "", "URL to query for nodes to read")
@@ -124,7 +124,7 @@ func main() {
 
 	{
 		l := log.With(logger, "during", "flags validation")
-		if err := ValidateCentrifugoAddress(centrifugoClientConfig.Addr); err != nil {
+		if err := ValidateCentrifugoAddress(centrifugoAddress); err != nil {
 			errExit(log.With(l, "flag", "centrifugo-api-address"), err)
 		}
 		if centrifugoNamespace == "" {
@@ -177,7 +177,7 @@ func main() {
 		})
 	}
 
-	centrifugoClient := gocent.New(centrifugoClientConfig)
+	centrifugoClient := centrifugo.NewClient(centrifugoAddress, centrifugoKey)
 
 	var g run.Group
 
@@ -185,9 +185,9 @@ func main() {
 		proxyLogger := log.With(logger, "component", "proxy")
 		proxy := proxy.NewProxy(
 			proxyLogger,
+			centrifugoClient,
 			opcMonitor,
 			centrifugo.DefaultCentrifugoChannelParser{},
-			centrifugoClient,
 			centrifugoNamespace,
 		)
 		srv := http.Server{
@@ -251,7 +251,7 @@ func main() {
 					if !opcMonitor.HasSubscriptions() {
 						continue
 					}
-					ints, err := Channels(ctx, centrifugoClient, centrifugoNamespace)
+					ints, err := centrifugoClient.Channels(ctx, centrifugoNamespace)
 					if err != nil {
 						level.Info(tidyLogger).Log("during", "Centrifugo channels query", "err", err)
 					}

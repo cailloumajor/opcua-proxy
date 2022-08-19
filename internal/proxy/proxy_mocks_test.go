@@ -7,10 +7,74 @@ import (
 	"context"
 	"github.com/cailloumajor/opcua-proxy/internal/centrifugo"
 	"github.com/cailloumajor/opcua-proxy/internal/opcua"
-	"github.com/centrifugal/gocent/v3"
-	gopcua "github.com/gopcua/opcua"
 	"sync"
 )
+
+// Ensure, that HealtherMock does implement Healther.
+// If this is not the case, regenerate this file with moq.
+var _ Healther = &HealtherMock{}
+
+// HealtherMock is a mock implementation of Healther.
+//
+//	func TestSomethingThatUsesHealther(t *testing.T) {
+//
+//		// make and configure a mocked Healther
+//		mockedHealther := &HealtherMock{
+//			HealthFunc: func(ctx context.Context) (bool, string) {
+//				panic("mock out the Health method")
+//			},
+//		}
+//
+//		// use mockedHealther in code that requires Healther
+//		// and then make assertions.
+//
+//	}
+type HealtherMock struct {
+	// HealthFunc mocks the Health method.
+	HealthFunc func(ctx context.Context) (bool, string)
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// Health holds details about calls to the Health method.
+		Health []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
+	}
+	lockHealth sync.RWMutex
+}
+
+// Health calls HealthFunc.
+func (mock *HealtherMock) Health(ctx context.Context) (bool, string) {
+	if mock.HealthFunc == nil {
+		panic("HealtherMock.HealthFunc: method is nil but Healther.Health was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockHealth.Lock()
+	mock.calls.Health = append(mock.calls.Health, callInfo)
+	mock.lockHealth.Unlock()
+	return mock.HealthFunc(ctx)
+}
+
+// HealthCalls gets all the calls that were made to Health.
+// Check the length with:
+//
+//	len(mockedHealther.HealthCalls())
+func (mock *HealtherMock) HealthCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockHealth.RLock()
+	calls = mock.calls.Health
+	mock.lockHealth.RUnlock()
+	return calls
+}
 
 // Ensure, that MonitorProviderMock does implement MonitorProvider.
 // If this is not the case, regenerate this file with moq.
@@ -22,11 +86,11 @@ var _ MonitorProvider = &MonitorProviderMock{}
 //
 //		// make and configure a mocked MonitorProvider
 //		mockedMonitorProvider := &MonitorProviderMock{
+//			HealthFunc: func(ctx context.Context) (bool, string) {
+//				panic("mock out the Health method")
+//			},
 //			ReadFunc: func(ctx context.Context) (*opcua.ReadValues, error) {
 //				panic("mock out the Read method")
-//			},
-//			StateFunc: func() gopcua.ConnState {
-//				panic("mock out the State method")
 //			},
 //			SubscribeFunc: func(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []opcua.NodeIDProvider) error {
 //				panic("mock out the Subscribe method")
@@ -38,24 +102,26 @@ var _ MonitorProvider = &MonitorProviderMock{}
 //
 //	}
 type MonitorProviderMock struct {
+	// HealthFunc mocks the Health method.
+	HealthFunc func(ctx context.Context) (bool, string)
+
 	// ReadFunc mocks the Read method.
 	ReadFunc func(ctx context.Context) (*opcua.ReadValues, error)
-
-	// StateFunc mocks the State method.
-	StateFunc func() gopcua.ConnState
 
 	// SubscribeFunc mocks the Subscribe method.
 	SubscribeFunc func(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []opcua.NodeIDProvider) error
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// Health holds details about calls to the Health method.
+		Health []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
 		// Read holds details about calls to the Read method.
 		Read []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
-		}
-		// State holds details about calls to the State method.
-		State []struct {
 		}
 		// Subscribe holds details about calls to the Subscribe method.
 		Subscribe []struct {
@@ -69,9 +135,41 @@ type MonitorProviderMock struct {
 			Nodes []opcua.NodeIDProvider
 		}
 	}
+	lockHealth    sync.RWMutex
 	lockRead      sync.RWMutex
-	lockState     sync.RWMutex
 	lockSubscribe sync.RWMutex
+}
+
+// Health calls HealthFunc.
+func (mock *MonitorProviderMock) Health(ctx context.Context) (bool, string) {
+	if mock.HealthFunc == nil {
+		panic("MonitorProviderMock.HealthFunc: method is nil but MonitorProvider.Health was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockHealth.Lock()
+	mock.calls.Health = append(mock.calls.Health, callInfo)
+	mock.lockHealth.Unlock()
+	return mock.HealthFunc(ctx)
+}
+
+// HealthCalls gets all the calls that were made to Health.
+// Check the length with:
+//
+//	len(mockedMonitorProvider.HealthCalls())
+func (mock *MonitorProviderMock) HealthCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockHealth.RLock()
+	calls = mock.calls.Health
+	mock.lockHealth.RUnlock()
+	return calls
 }
 
 // Read calls ReadFunc.
@@ -103,33 +201,6 @@ func (mock *MonitorProviderMock) ReadCalls() []struct {
 	mock.lockRead.RLock()
 	calls = mock.calls.Read
 	mock.lockRead.RUnlock()
-	return calls
-}
-
-// State calls StateFunc.
-func (mock *MonitorProviderMock) State() gopcua.ConnState {
-	if mock.StateFunc == nil {
-		panic("MonitorProviderMock.StateFunc: method is nil but MonitorProvider.State was just called")
-	}
-	callInfo := struct {
-	}{}
-	mock.lockState.Lock()
-	mock.calls.State = append(mock.calls.State, callInfo)
-	mock.lockState.Unlock()
-	return mock.StateFunc()
-}
-
-// StateCalls gets all the calls that were made to State.
-// Check the length with:
-//
-//	len(mockedMonitorProvider.StateCalls())
-func (mock *MonitorProviderMock) StateCalls() []struct {
-} {
-	var calls []struct {
-	}
-	mock.lockState.RLock()
-	calls = mock.calls.State
-	mock.lockState.RUnlock()
 	return calls
 }
 
@@ -246,71 +317,5 @@ func (mock *CentrifugoChannelParserMock) ParseChannelCalls() []struct {
 	mock.lockParseChannel.RLock()
 	calls = mock.calls.ParseChannel
 	mock.lockParseChannel.RUnlock()
-	return calls
-}
-
-// Ensure, that CentrifugoInfoProviderMock does implement CentrifugoInfoProvider.
-// If this is not the case, regenerate this file with moq.
-var _ CentrifugoInfoProvider = &CentrifugoInfoProviderMock{}
-
-// CentrifugoInfoProviderMock is a mock implementation of CentrifugoInfoProvider.
-//
-//	func TestSomethingThatUsesCentrifugoInfoProvider(t *testing.T) {
-//
-//		// make and configure a mocked CentrifugoInfoProvider
-//		mockedCentrifugoInfoProvider := &CentrifugoInfoProviderMock{
-//			InfoFunc: func(ctx context.Context) (gocent.InfoResult, error) {
-//				panic("mock out the Info method")
-//			},
-//		}
-//
-//		// use mockedCentrifugoInfoProvider in code that requires CentrifugoInfoProvider
-//		// and then make assertions.
-//
-//	}
-type CentrifugoInfoProviderMock struct {
-	// InfoFunc mocks the Info method.
-	InfoFunc func(ctx context.Context) (gocent.InfoResult, error)
-
-	// calls tracks calls to the methods.
-	calls struct {
-		// Info holds details about calls to the Info method.
-		Info []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-		}
-	}
-	lockInfo sync.RWMutex
-}
-
-// Info calls InfoFunc.
-func (mock *CentrifugoInfoProviderMock) Info(ctx context.Context) (gocent.InfoResult, error) {
-	if mock.InfoFunc == nil {
-		panic("CentrifugoInfoProviderMock.InfoFunc: method is nil but CentrifugoInfoProvider.Info was just called")
-	}
-	callInfo := struct {
-		Ctx context.Context
-	}{
-		Ctx: ctx,
-	}
-	mock.lockInfo.Lock()
-	mock.calls.Info = append(mock.calls.Info, callInfo)
-	mock.lockInfo.Unlock()
-	return mock.InfoFunc(ctx)
-}
-
-// InfoCalls gets all the calls that were made to Info.
-// Check the length with:
-//
-//	len(mockedCentrifugoInfoProvider.InfoCalls())
-func (mock *CentrifugoInfoProviderMock) InfoCalls() []struct {
-	Ctx context.Context
-} {
-	var calls []struct {
-		Ctx context.Context
-	}
-	mock.lockInfo.RLock()
-	calls = mock.calls.Info
-	mock.lockInfo.RUnlock()
 	return calls
 }

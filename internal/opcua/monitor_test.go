@@ -685,15 +685,44 @@ func TestMonitorStop(t *testing.T) {
 	}
 }
 
-func TestState(t *testing.T) {
-	mockedClientProvider := &ClientProviderMock{
-		StateFunc: func() opcua.ConnState {
-			return opcua.ConnState(255)
+func TestMonitorHealth(t *testing.T) {
+	cases := []struct {
+		name            string
+		state           opcua.ConnState
+		expectedHealthy bool
+		expectedMessage string
+	}{
+		{
+			name:            "Unhealthy",
+			state:           opcua.Connecting,
+			expectedHealthy: false,
+			expectedMessage: opcua.Connecting.String(),
+		},
+		{
+			name:            "Healthy",
+			state:           opcua.Connected,
+			expectedHealthy: true,
+			expectedMessage: opcua.Connected.String(),
 		},
 	}
-	m := NewMonitor(mockedClientProvider, &SubscriptionManagerProviderMock{}, nil)
 
-	if got, want := m.State(), opcua.ConnState(255); got != want {
-		t.Errorf("State method: want %v, got %v", want, got)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockedClientProvider := &ClientProviderMock{
+				StateFunc: func() opcua.ConnState {
+					return tc.state
+				},
+			}
+			m := NewMonitor(mockedClientProvider, &SubscriptionManagerProviderMock{}, nil)
+
+			h, msg := m.Health(context.Background())
+
+			if got, want := h, tc.expectedHealthy; got != want {
+				t.Errorf("healthy status: want %v, got %v", want, got)
+			}
+			if got, want := msg, tc.expectedMessage; got != want {
+				t.Errorf("health message: want %q, got %q", want, got)
+			}
+		})
 	}
 }

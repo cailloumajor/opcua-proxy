@@ -13,61 +13,60 @@ import (
 	"github.com/cailloumajor/opcua-proxy/internal/opcua"
 	. "github.com/cailloumajor/opcua-proxy/internal/proxy"
 	"github.com/cailloumajor/opcua-proxy/internal/testutils"
-	"github.com/centrifugal/gocent/v3"
 	"github.com/go-kit/log"
-	gopcua "github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
 )
 
 func TestHealth(t *testing.T) {
 	cases := []struct {
-		name                string
-		gotState            gopcua.ConnState
-		centrifugoInfoError bool
-		expectStatusCode    int
+		name              string
+		monitorHealthy    bool
+		centrifugoHealthy bool
+		expectStatusCode  int
 	}{
 		{
-			name:                "OpcClientNotConnected",
-			gotState:            gopcua.Disconnected,
-			centrifugoInfoError: false,
-			expectStatusCode:    http.StatusInternalServerError,
+			name:              "MonitorUnhealthy",
+			monitorHealthy:    false,
+			centrifugoHealthy: true,
+			expectStatusCode:  http.StatusInternalServerError,
 		},
 		{
-			name:                "CentrifugoInfoError",
-			gotState:            gopcua.Connected,
-			centrifugoInfoError: true,
-			expectStatusCode:    http.StatusInternalServerError,
+			name:              "CentrifugoUnhealthy",
+			monitorHealthy:    true,
+			centrifugoHealthy: false,
+			expectStatusCode:  http.StatusInternalServerError,
 		},
 		{
-			name:                "OK",
-			gotState:            gopcua.Connected,
-			centrifugoInfoError: false,
-			expectStatusCode:    http.StatusOK,
+			name:              "OK",
+			monitorHealthy:    true,
+			centrifugoHealthy: true,
+			expectStatusCode:  http.StatusNoContent,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockedMonitorProvider := &MonitorProviderMock{
-				StateFunc: func() gopcua.ConnState {
-					return tc.gotState
+			mockedCentrifugoHealther := &HealtherMock{
+				HealthFunc: func(ctx context.Context) (bool, string) {
+					if !tc.centrifugoHealthy {
+						return false, "ill"
+					}
+					return true, "well"
 				},
 			}
-			mockedCentrifugoInfoProvider := &CentrifugoInfoProviderMock{
-				InfoFunc: func(ctx context.Context) (gocent.InfoResult, error) {
-					if tc.centrifugoInfoError {
-						return gocent.InfoResult{}, testutils.ErrTesting
+			mockedMonitorProvider := &MonitorProviderMock{
+				HealthFunc: func(ctx context.Context) (bool, string) {
+					if !tc.monitorHealthy {
+						return false, "sick"
 					}
-					return gocent.InfoResult{
-						Nodes: []gocent.NodeInfo{{}},
-					}, nil
+					return true, "good"
 				},
 			}
 			proxy := NewProxy(
 				log.NewNopLogger(),
+				mockedCentrifugoHealther,
 				mockedMonitorProvider,
 				&CentrifugoChannelParserMock{},
-				mockedCentrifugoInfoProvider,
 				"",
 			)
 			srv := httptest.NewServer(proxy)
@@ -182,7 +181,7 @@ func TestInfluxdbMetrics(t *testing.T) {
 					}, nil
 				},
 			}
-			p := NewProxy(log.NewNopLogger(), mockedMonitorProvider, &CentrifugoChannelParserMock{}, &CentrifugoInfoProviderMock{}, "")
+			p := NewProxy(log.NewNopLogger(), &HealtherMock{}, mockedMonitorProvider, &CentrifugoChannelParserMock{}, "")
 			srv := httptest.NewServer(p)
 			defer srv.Close()
 
@@ -292,13 +291,7 @@ func TestCentrifugoSubscribe(t *testing.T) {
 					return &centrifugo.Channel{}, nil
 				},
 			}
-			p := NewProxy(
-				log.NewNopLogger(),
-				mockedMonitorProvider,
-				mockedChannelParser,
-				&CentrifugoInfoProviderMock{},
-				"",
-			)
+			p := NewProxy(log.NewNopLogger(), &HealtherMock{}, mockedMonitorProvider, mockedChannelParser, "")
 			srv := httptest.NewServer(p)
 			defer srv.Close()
 

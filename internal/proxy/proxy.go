@@ -12,10 +12,8 @@ import (
 	"github.com/cailloumajor/opcua-proxy/internal/centrifugo"
 	"github.com/cailloumajor/opcua-proxy/internal/lineprotocol"
 	"github.com/cailloumajor/opcua-proxy/internal/opcua"
-	"github.com/centrifugal/gocent/v3"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
-	gopcua "github.com/gopcua/opcua"
 	"github.com/gorilla/mux"
 	lp "github.com/influxdata/line-protocol/v2/lineprotocol"
 	"golang.org/x/exp/constraints"
@@ -23,25 +21,25 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-//go:generate moq -out proxy_mocks_test.go . MonitorProvider CentrifugoChannelParser CentrifugoInfoProvider
+//go:generate moq -out proxy_mocks_test.go . Healther MonitorProvider CentrifugoChannelParser
 
 const subscribeTimeout = 5 * time.Second
 
+// Healther is a consumer contract modelling a health status provider.
+type Healther interface {
+	Health(ctx context.Context) (bool, string)
+}
+
 // MonitorProvider is a consumer contract modelling an OPC-UA monitor.
 type MonitorProvider interface {
+	Healther
 	Read(ctx context.Context) (*opcua.ReadValues, error)
-	State() gopcua.ConnState
 	Subscribe(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []opcua.NodeIDProvider) error
 }
 
 // CentrifugoChannelParser is a consumer contract modelling a Centrifugo channel parser.
 type CentrifugoChannelParser interface {
 	ParseChannel(s, namespace string) (*centrifugo.Channel, error)
-}
-
-// CentrifugoInfoProvider is a consumer contract modelling a Centrifugo server informations provider.
-type CentrifugoInfoProvider interface {
-	Info(ctx context.Context) (gocent.InfoResult, error)
 }
 
 func sortedKeys[K constraints.Ordered, V any](m map[K]V) []K {
@@ -59,23 +57,23 @@ func commonHeadersMiddleware(next http.Handler) http.Handler {
 
 // Proxy handles requests for the service.
 type Proxy struct {
-	logger log.Logger
-	m      MonitorProvider
-	cp     CentrifugoChannelParser
-	ci     CentrifugoInfoProvider
-	ns     string // expected namespace for this instance
+	logger           log.Logger
+	centrifugoHealth Healther
+	monitor          MonitorProvider
+	parser           CentrifugoChannelParser
+	namespace        string // expected namespace for this instance
 
 	http.Handler
 }
 
 // NewProxy creates and returns a ready to use proxy.
-func NewProxy(l log.Logger, m MonitorProvider, cp CentrifugoChannelParser, ci CentrifugoInfoProvider, ns string) *Proxy {
+func NewProxy(l log.Logger, ch Healther, m MonitorProvider, cp CentrifugoChannelParser, ns string) *Proxy {
 	p := &Proxy{
-		logger: l,
-		m:      m,
-		cp:     cp,
-		ci:     ci,
-		ns:     ns,
+		logger:           l,
+		centrifugoHealth: ch,
+		monitor:          m,
+		parser:           cp,
+		namespace:        ns,
 	}
 
 	r := mux.NewRouter()
@@ -89,19 +87,22 @@ func NewProxy(l log.Logger, m MonitorProvider, cp CentrifugoChannelParser, ci Ce
 }
 
 func (p *Proxy) handleHealth(w http.ResponseWriter, r *http.Request) {
-	nok := func(msg string) {
+	fail := func(module, reason string) {
+		msg := fmt.Sprintf("unhealthy %v: %v", module, reason)
 		http.Error(w, msg, http.StatusInternalServerError)
 	}
 
-	if p.m.State() != gopcua.Connected {
-		nok("OPC-UA client not connected")
+	if ok, msg := p.monitor.Health(context.Background()); !ok {
+		fail("OPC-UA monitor", msg)
 		return
 	}
 
-	if _, err := p.ci.Info(r.Context()); err != nil {
-		nok(err.Error())
+	if ok, msg := p.centrifugoHealth.Health(r.Context()); !ok {
+		fail("Centrifugo", msg)
 		return
 	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (p *Proxy) handleInfluxdbMetrics(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +135,7 @@ func (p *Proxy) handleInfluxdbMetrics(w http.ResponseWriter, r *http.Request) {
 		enc.AddTag(fk, r.Form.Get(fk))
 	}
 
-	vals, err := p.m.Read(r.Context())
+	vals, err := p.monitor.Read(r.Context())
 	if err != nil {
 		handleErr("nodes reading", err, http.StatusInternalServerError)
 		return
@@ -187,7 +188,7 @@ func (p *Proxy) handleCentrifugoSubscribe(w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("content-type", "application/json")
 
-	cch, err := p.cp.ParseChannel(sr.Channel, p.ns)
+	cch, err := p.parser.ParseChannel(sr.Channel, p.namespace)
 	if errors.Is(err, centrifugo.ErrIgnoredChannel) {
 		writeSuccessResponse(w, "ignored channel")
 		return
@@ -206,7 +207,7 @@ func (p *Proxy) handleCentrifugoSubscribe(w http.ResponseWriter, r *http.Request
 	ctx, cancel := context.WithTimeout(r.Context(), subscribeTimeout)
 	defer cancel()
 
-	if err := p.m.Subscribe(ctx, sr.Data.NamespaceURI, cch, nip); err != nil {
+	if err := p.monitor.Subscribe(ctx, sr.Data.NamespaceURI, cch, nip); err != nil {
 		msg := fmt.Sprintf("error subscribing to OPC-UA data change: %v", err)
 		writeErrorResponse(w, 1001, msg)
 		return

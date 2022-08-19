@@ -51,7 +51,7 @@ func main() {
 	}()
 
 	l = log.With(logger, "from", "health response")
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			errExit(l, err)
