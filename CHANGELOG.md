@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.1.3](https://github.com/cailloumajor/opcua-proxy/compare/v2.1.2...v2.1.3) (2022-08-19)
+
+
+### Bug Fixes
+
+* **deps:** update dependency golang to v1.19.0 ([c7ae289](https://github.com/cailloumajor/opcua-proxy/commit/c7ae2895236485ee5d5a05e37dbdba3055faed43))
+* refactor to only return concrete types ([85563d2](https://github.com/cailloumajor/opcua-proxy/commit/85563d2c5c8883c84ba399336e7ed11737ff93d2))
+* remove unneeded method ([7cff50d](https://github.com/cailloumajor/opcua-proxy/commit/7cff50d704a6ede3239c73c3fa17d45a4c87df00))
+* return concrete type in interface ([e831f6a](https://github.com/cailloumajor/opcua-proxy/commit/e831f6a1380ad7986e52006b5143e94996d6655b))
+* tidy-up top-level functions dependencies implementation ([a464082](https://github.com/cailloumajor/opcua-proxy/commit/a464082d81e604d21c921e010c7dafcb2845c8de))
+
 ## [2.1.2](https://github.com/cailloumajor/opcua-proxy/compare/v2.1.1...v2.1.2) (2022-08-01)
 
 
