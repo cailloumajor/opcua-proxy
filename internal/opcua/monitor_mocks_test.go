@@ -21,20 +21,23 @@ var _ ClientProvider = &ClientProviderMock{}
 //
 //		// make and configure a mocked ClientProvider
 //		mockedClientProvider := &ClientProviderMock{
-//			CloseFunc: func(ctx context.Context) []error {
-//				panic("mock out the Close method")
+//			CloseWithContextFunc: func(ctx context.Context) error {
+//				panic("mock out the CloseWithContext method")
 //			},
-//			NamespaceIndexFunc: func(ctx context.Context, nsURI string) (uint16, error) {
-//				panic("mock out the NamespaceIndex method")
+//			ConnectFunc: func(ctx context.Context) error {
+//				panic("mock out the Connect method")
 //			},
-//			ReadFunc: func(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
-//				panic("mock out the Read method")
+//			FindNamespaceWithContextFunc: func(ctx context.Context, name string) (uint16, error) {
+//				panic("mock out the FindNamespaceWithContext method")
+//			},
+//			ReadWithContextFunc: func(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
+//				panic("mock out the ReadWithContext method")
 //			},
 //			StateFunc: func() opcua.ConnState {
 //				panic("mock out the State method")
 //			},
-//			SubscribeFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error) {
-//				panic("mock out the Subscribe method")
+//			SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error) {
+//				panic("mock out the SubscribeWithContext method")
 //			},
 //		}
 //
@@ -43,37 +46,45 @@ var _ ClientProvider = &ClientProviderMock{}
 //
 //	}
 type ClientProviderMock struct {
-	// CloseFunc mocks the Close method.
-	CloseFunc func(ctx context.Context) []error
+	// CloseWithContextFunc mocks the CloseWithContext method.
+	CloseWithContextFunc func(ctx context.Context) error
 
-	// NamespaceIndexFunc mocks the NamespaceIndex method.
-	NamespaceIndexFunc func(ctx context.Context, nsURI string) (uint16, error)
+	// ConnectFunc mocks the Connect method.
+	ConnectFunc func(ctx context.Context) error
 
-	// ReadFunc mocks the Read method.
-	ReadFunc func(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error)
+	// FindNamespaceWithContextFunc mocks the FindNamespaceWithContext method.
+	FindNamespaceWithContextFunc func(ctx context.Context, name string) (uint16, error)
+
+	// ReadWithContextFunc mocks the ReadWithContext method.
+	ReadWithContextFunc func(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error)
 
 	// StateFunc mocks the State method.
 	StateFunc func() opcua.ConnState
 
-	// SubscribeFunc mocks the Subscribe method.
-	SubscribeFunc func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error)
+	// SubscribeWithContextFunc mocks the SubscribeWithContext method.
+	SubscribeWithContextFunc func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// Close holds details about calls to the Close method.
-		Close []struct {
+		// CloseWithContext holds details about calls to the CloseWithContext method.
+		CloseWithContext []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 		}
-		// NamespaceIndex holds details about calls to the NamespaceIndex method.
-		NamespaceIndex []struct {
+		// Connect holds details about calls to the Connect method.
+		Connect []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
-			// NsURI is the nsURI argument value.
-			NsURI string
 		}
-		// Read holds details about calls to the Read method.
-		Read []struct {
+		// FindNamespaceWithContext holds details about calls to the FindNamespaceWithContext method.
+		FindNamespaceWithContext []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Name is the name argument value.
+			Name string
+		}
+		// ReadWithContext holds details about calls to the ReadWithContext method.
+		ReadWithContext []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 			// Req is the req argument value.
@@ -82,8 +93,8 @@ type ClientProviderMock struct {
 		// State holds details about calls to the State method.
 		State []struct {
 		}
-		// Subscribe holds details about calls to the Subscribe method.
-		Subscribe []struct {
+		// SubscribeWithContext holds details about calls to the SubscribeWithContext method.
+		SubscribeWithContext []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 			// Params is the params argument value.
@@ -92,85 +103,118 @@ type ClientProviderMock struct {
 			NotifyCh chan<- *opcua.PublishNotificationData
 		}
 	}
-	lockClose          sync.RWMutex
-	lockNamespaceIndex sync.RWMutex
-	lockRead           sync.RWMutex
-	lockState          sync.RWMutex
-	lockSubscribe      sync.RWMutex
+	lockCloseWithContext         sync.RWMutex
+	lockConnect                  sync.RWMutex
+	lockFindNamespaceWithContext sync.RWMutex
+	lockReadWithContext          sync.RWMutex
+	lockState                    sync.RWMutex
+	lockSubscribeWithContext     sync.RWMutex
 }
 
-// Close calls CloseFunc.
-func (mock *ClientProviderMock) Close(ctx context.Context) []error {
-	if mock.CloseFunc == nil {
-		panic("ClientProviderMock.CloseFunc: method is nil but ClientProvider.Close was just called")
+// CloseWithContext calls CloseWithContextFunc.
+func (mock *ClientProviderMock) CloseWithContext(ctx context.Context) error {
+	if mock.CloseWithContextFunc == nil {
+		panic("ClientProviderMock.CloseWithContextFunc: method is nil but ClientProvider.CloseWithContext was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
 	}{
 		Ctx: ctx,
 	}
-	mock.lockClose.Lock()
-	mock.calls.Close = append(mock.calls.Close, callInfo)
-	mock.lockClose.Unlock()
-	return mock.CloseFunc(ctx)
+	mock.lockCloseWithContext.Lock()
+	mock.calls.CloseWithContext = append(mock.calls.CloseWithContext, callInfo)
+	mock.lockCloseWithContext.Unlock()
+	return mock.CloseWithContextFunc(ctx)
 }
 
-// CloseCalls gets all the calls that were made to Close.
+// CloseWithContextCalls gets all the calls that were made to CloseWithContext.
 // Check the length with:
 //
-//	len(mockedClientProvider.CloseCalls())
-func (mock *ClientProviderMock) CloseCalls() []struct {
+//	len(mockedClientProvider.CloseWithContextCalls())
+func (mock *ClientProviderMock) CloseWithContextCalls() []struct {
 	Ctx context.Context
 } {
 	var calls []struct {
 		Ctx context.Context
 	}
-	mock.lockClose.RLock()
-	calls = mock.calls.Close
-	mock.lockClose.RUnlock()
+	mock.lockCloseWithContext.RLock()
+	calls = mock.calls.CloseWithContext
+	mock.lockCloseWithContext.RUnlock()
 	return calls
 }
 
-// NamespaceIndex calls NamespaceIndexFunc.
-func (mock *ClientProviderMock) NamespaceIndex(ctx context.Context, nsURI string) (uint16, error) {
-	if mock.NamespaceIndexFunc == nil {
-		panic("ClientProviderMock.NamespaceIndexFunc: method is nil but ClientProvider.NamespaceIndex was just called")
+// Connect calls ConnectFunc.
+func (mock *ClientProviderMock) Connect(ctx context.Context) error {
+	if mock.ConnectFunc == nil {
+		panic("ClientProviderMock.ConnectFunc: method is nil but ClientProvider.Connect was just called")
 	}
 	callInfo := struct {
-		Ctx   context.Context
-		NsURI string
+		Ctx context.Context
 	}{
-		Ctx:   ctx,
-		NsURI: nsURI,
+		Ctx: ctx,
 	}
-	mock.lockNamespaceIndex.Lock()
-	mock.calls.NamespaceIndex = append(mock.calls.NamespaceIndex, callInfo)
-	mock.lockNamespaceIndex.Unlock()
-	return mock.NamespaceIndexFunc(ctx, nsURI)
+	mock.lockConnect.Lock()
+	mock.calls.Connect = append(mock.calls.Connect, callInfo)
+	mock.lockConnect.Unlock()
+	return mock.ConnectFunc(ctx)
 }
 
-// NamespaceIndexCalls gets all the calls that were made to NamespaceIndex.
+// ConnectCalls gets all the calls that were made to Connect.
 // Check the length with:
 //
-//	len(mockedClientProvider.NamespaceIndexCalls())
-func (mock *ClientProviderMock) NamespaceIndexCalls() []struct {
-	Ctx   context.Context
-	NsURI string
+//	len(mockedClientProvider.ConnectCalls())
+func (mock *ClientProviderMock) ConnectCalls() []struct {
+	Ctx context.Context
 } {
 	var calls []struct {
-		Ctx   context.Context
-		NsURI string
+		Ctx context.Context
 	}
-	mock.lockNamespaceIndex.RLock()
-	calls = mock.calls.NamespaceIndex
-	mock.lockNamespaceIndex.RUnlock()
+	mock.lockConnect.RLock()
+	calls = mock.calls.Connect
+	mock.lockConnect.RUnlock()
 	return calls
 }
 
-// Read calls ReadFunc.
-func (mock *ClientProviderMock) Read(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
-	if mock.ReadFunc == nil {
-		panic("ClientProviderMock.ReadFunc: method is nil but ClientProvider.Read was just called")
+// FindNamespaceWithContext calls FindNamespaceWithContextFunc.
+func (mock *ClientProviderMock) FindNamespaceWithContext(ctx context.Context, name string) (uint16, error) {
+	if mock.FindNamespaceWithContextFunc == nil {
+		panic("ClientProviderMock.FindNamespaceWithContextFunc: method is nil but ClientProvider.FindNamespaceWithContext was just called")
+	}
+	callInfo := struct {
+		Ctx  context.Context
+		Name string
+	}{
+		Ctx:  ctx,
+		Name: name,
+	}
+	mock.lockFindNamespaceWithContext.Lock()
+	mock.calls.FindNamespaceWithContext = append(mock.calls.FindNamespaceWithContext, callInfo)
+	mock.lockFindNamespaceWithContext.Unlock()
+	return mock.FindNamespaceWithContextFunc(ctx, name)
+}
+
+// FindNamespaceWithContextCalls gets all the calls that were made to FindNamespaceWithContext.
+// Check the length with:
+//
+//	len(mockedClientProvider.FindNamespaceWithContextCalls())
+func (mock *ClientProviderMock) FindNamespaceWithContextCalls() []struct {
+	Ctx  context.Context
+	Name string
+} {
+	var calls []struct {
+		Ctx  context.Context
+		Name string
+	}
+	mock.lockFindNamespaceWithContext.RLock()
+	calls = mock.calls.FindNamespaceWithContext
+	mock.lockFindNamespaceWithContext.RUnlock()
+	return calls
+}
+
+// ReadWithContext calls ReadWithContextFunc.
+func (mock *ClientProviderMock) ReadWithContext(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
+	if mock.ReadWithContextFunc == nil {
+		panic("ClientProviderMock.ReadWithContextFunc: method is nil but ClientProvider.ReadWithContext was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
@@ -179,17 +223,17 @@ func (mock *ClientProviderMock) Read(ctx context.Context, req *ua.ReadRequest) (
 		Ctx: ctx,
 		Req: req,
 	}
-	mock.lockRead.Lock()
-	mock.calls.Read = append(mock.calls.Read, callInfo)
-	mock.lockRead.Unlock()
-	return mock.ReadFunc(ctx, req)
+	mock.lockReadWithContext.Lock()
+	mock.calls.ReadWithContext = append(mock.calls.ReadWithContext, callInfo)
+	mock.lockReadWithContext.Unlock()
+	return mock.ReadWithContextFunc(ctx, req)
 }
 
-// ReadCalls gets all the calls that were made to Read.
+// ReadWithContextCalls gets all the calls that were made to ReadWithContext.
 // Check the length with:
 //
-//	len(mockedClientProvider.ReadCalls())
-func (mock *ClientProviderMock) ReadCalls() []struct {
+//	len(mockedClientProvider.ReadWithContextCalls())
+func (mock *ClientProviderMock) ReadWithContextCalls() []struct {
 	Ctx context.Context
 	Req *ua.ReadRequest
 } {
@@ -197,9 +241,9 @@ func (mock *ClientProviderMock) ReadCalls() []struct {
 		Ctx context.Context
 		Req *ua.ReadRequest
 	}
-	mock.lockRead.RLock()
-	calls = mock.calls.Read
-	mock.lockRead.RUnlock()
+	mock.lockReadWithContext.RLock()
+	calls = mock.calls.ReadWithContext
+	mock.lockReadWithContext.RUnlock()
 	return calls
 }
 
@@ -230,10 +274,10 @@ func (mock *ClientProviderMock) StateCalls() []struct {
 	return calls
 }
 
-// Subscribe calls SubscribeFunc.
-func (mock *ClientProviderMock) Subscribe(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error) {
-	if mock.SubscribeFunc == nil {
-		panic("ClientProviderMock.SubscribeFunc: method is nil but ClientProvider.Subscribe was just called")
+// SubscribeWithContext calls SubscribeWithContextFunc.
+func (mock *ClientProviderMock) SubscribeWithContext(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error) {
+	if mock.SubscribeWithContextFunc == nil {
+		panic("ClientProviderMock.SubscribeWithContextFunc: method is nil but ClientProvider.SubscribeWithContext was just called")
 	}
 	callInfo := struct {
 		Ctx      context.Context
@@ -244,17 +288,17 @@ func (mock *ClientProviderMock) Subscribe(ctx context.Context, params *opcua.Sub
 		Params:   params,
 		NotifyCh: notifyCh,
 	}
-	mock.lockSubscribe.Lock()
-	mock.calls.Subscribe = append(mock.calls.Subscribe, callInfo)
-	mock.lockSubscribe.Unlock()
-	return mock.SubscribeFunc(ctx, params, notifyCh)
+	mock.lockSubscribeWithContext.Lock()
+	mock.calls.SubscribeWithContext = append(mock.calls.SubscribeWithContext, callInfo)
+	mock.lockSubscribeWithContext.Unlock()
+	return mock.SubscribeWithContextFunc(ctx, params, notifyCh)
 }
 
-// SubscribeCalls gets all the calls that were made to Subscribe.
+// SubscribeWithContextCalls gets all the calls that were made to SubscribeWithContext.
 // Check the length with:
 //
-//	len(mockedClientProvider.SubscribeCalls())
-func (mock *ClientProviderMock) SubscribeCalls() []struct {
+//	len(mockedClientProvider.SubscribeWithContextCalls())
+func (mock *ClientProviderMock) SubscribeWithContextCalls() []struct {
 	Ctx      context.Context
 	Params   *opcua.SubscriptionParameters
 	NotifyCh chan<- *opcua.PublishNotificationData
@@ -264,168 +308,87 @@ func (mock *ClientProviderMock) SubscribeCalls() []struct {
 		Params   *opcua.SubscriptionParameters
 		NotifyCh chan<- *opcua.PublishNotificationData
 	}
-	mock.lockSubscribe.RLock()
-	calls = mock.calls.Subscribe
-	mock.lockSubscribe.RUnlock()
+	mock.lockSubscribeWithContext.RLock()
+	calls = mock.calls.SubscribeWithContext
+	mock.lockSubscribeWithContext.RUnlock()
 	return calls
 }
 
-// Ensure, that SubscriptionProviderMock does implement SubscriptionProvider.
+// Ensure, that SubscriptionManagerProviderMock does implement SubscriptionManagerProvider.
 // If this is not the case, regenerate this file with moq.
-var _ SubscriptionProvider = &SubscriptionProviderMock{}
+var _ SubscriptionManagerProvider = &SubscriptionManagerProviderMock{}
 
-// SubscriptionProviderMock is a mock implementation of SubscriptionProvider.
+// SubscriptionManagerProviderMock is a mock implementation of SubscriptionManagerProvider.
 //
-//	func TestSomethingThatUsesSubscriptionProvider(t *testing.T) {
+//	func TestSomethingThatUsesSubscriptionManagerProvider(t *testing.T) {
 //
-//		// make and configure a mocked SubscriptionProvider
-//		mockedSubscriptionProvider := &SubscriptionProviderMock{
-//			CancelFunc: func(ctx context.Context) error {
-//				panic("mock out the Cancel method")
-//			},
-//			IDFunc: func() uint32 {
-//				panic("mock out the ID method")
-//			},
-//			MonitorWithContextFunc: func(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error) {
-//				panic("mock out the MonitorWithContext method")
+//		// make and configure a mocked SubscriptionManagerProvider
+//		mockedSubscriptionManagerProvider := &SubscriptionManagerProviderMock{
+//			CreateFunc: func(ctx context.Context, i time.Duration, nc chan<- *opcua.PublishNotificationData) (*Subscription, error) {
+//				panic("mock out the Create method")
 //			},
 //		}
 //
-//		// use mockedSubscriptionProvider in code that requires SubscriptionProvider
+//		// use mockedSubscriptionManagerProvider in code that requires SubscriptionManagerProvider
 //		// and then make assertions.
 //
 //	}
-type SubscriptionProviderMock struct {
-	// CancelFunc mocks the Cancel method.
-	CancelFunc func(ctx context.Context) error
-
-	// IDFunc mocks the ID method.
-	IDFunc func() uint32
-
-	// MonitorWithContextFunc mocks the MonitorWithContext method.
-	MonitorWithContextFunc func(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error)
+type SubscriptionManagerProviderMock struct {
+	// CreateFunc mocks the Create method.
+	CreateFunc func(ctx context.Context, i time.Duration, nc chan<- *opcua.PublishNotificationData) (*Subscription, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// Cancel holds details about calls to the Cancel method.
-		Cancel []struct {
+		// Create holds details about calls to the Create method.
+		Create []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
-		}
-		// ID holds details about calls to the ID method.
-		ID []struct {
-		}
-		// MonitorWithContext holds details about calls to the MonitorWithContext method.
-		MonitorWithContext []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-			// Ts is the ts argument value.
-			Ts ua.TimestampsToReturn
-			// Items is the items argument value.
-			Items []*ua.MonitoredItemCreateRequest
+			// I is the i argument value.
+			I time.Duration
+			// Nc is the nc argument value.
+			Nc chan<- *opcua.PublishNotificationData
 		}
 	}
-	lockCancel             sync.RWMutex
-	lockID                 sync.RWMutex
-	lockMonitorWithContext sync.RWMutex
+	lockCreate sync.RWMutex
 }
 
-// Cancel calls CancelFunc.
-func (mock *SubscriptionProviderMock) Cancel(ctx context.Context) error {
-	if mock.CancelFunc == nil {
-		panic("SubscriptionProviderMock.CancelFunc: method is nil but SubscriptionProvider.Cancel was just called")
+// Create calls CreateFunc.
+func (mock *SubscriptionManagerProviderMock) Create(ctx context.Context, i time.Duration, nc chan<- *opcua.PublishNotificationData) (*Subscription, error) {
+	if mock.CreateFunc == nil {
+		panic("SubscriptionManagerProviderMock.CreateFunc: method is nil but SubscriptionManagerProvider.Create was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
+		I   time.Duration
+		Nc  chan<- *opcua.PublishNotificationData
 	}{
 		Ctx: ctx,
+		I:   i,
+		Nc:  nc,
 	}
-	mock.lockCancel.Lock()
-	mock.calls.Cancel = append(mock.calls.Cancel, callInfo)
-	mock.lockCancel.Unlock()
-	return mock.CancelFunc(ctx)
+	mock.lockCreate.Lock()
+	mock.calls.Create = append(mock.calls.Create, callInfo)
+	mock.lockCreate.Unlock()
+	return mock.CreateFunc(ctx, i, nc)
 }
 
-// CancelCalls gets all the calls that were made to Cancel.
+// CreateCalls gets all the calls that were made to Create.
 // Check the length with:
 //
-//	len(mockedSubscriptionProvider.CancelCalls())
-func (mock *SubscriptionProviderMock) CancelCalls() []struct {
+//	len(mockedSubscriptionManagerProvider.CreateCalls())
+func (mock *SubscriptionManagerProviderMock) CreateCalls() []struct {
 	Ctx context.Context
+	I   time.Duration
+	Nc  chan<- *opcua.PublishNotificationData
 } {
 	var calls []struct {
 		Ctx context.Context
+		I   time.Duration
+		Nc  chan<- *opcua.PublishNotificationData
 	}
-	mock.lockCancel.RLock()
-	calls = mock.calls.Cancel
-	mock.lockCancel.RUnlock()
-	return calls
-}
-
-// ID calls IDFunc.
-func (mock *SubscriptionProviderMock) ID() uint32 {
-	if mock.IDFunc == nil {
-		panic("SubscriptionProviderMock.IDFunc: method is nil but SubscriptionProvider.ID was just called")
-	}
-	callInfo := struct {
-	}{}
-	mock.lockID.Lock()
-	mock.calls.ID = append(mock.calls.ID, callInfo)
-	mock.lockID.Unlock()
-	return mock.IDFunc()
-}
-
-// IDCalls gets all the calls that were made to ID.
-// Check the length with:
-//
-//	len(mockedSubscriptionProvider.IDCalls())
-func (mock *SubscriptionProviderMock) IDCalls() []struct {
-} {
-	var calls []struct {
-	}
-	mock.lockID.RLock()
-	calls = mock.calls.ID
-	mock.lockID.RUnlock()
-	return calls
-}
-
-// MonitorWithContext calls MonitorWithContextFunc.
-func (mock *SubscriptionProviderMock) MonitorWithContext(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error) {
-	if mock.MonitorWithContextFunc == nil {
-		panic("SubscriptionProviderMock.MonitorWithContextFunc: method is nil but SubscriptionProvider.MonitorWithContext was just called")
-	}
-	callInfo := struct {
-		Ctx   context.Context
-		Ts    ua.TimestampsToReturn
-		Items []*ua.MonitoredItemCreateRequest
-	}{
-		Ctx:   ctx,
-		Ts:    ts,
-		Items: items,
-	}
-	mock.lockMonitorWithContext.Lock()
-	mock.calls.MonitorWithContext = append(mock.calls.MonitorWithContext, callInfo)
-	mock.lockMonitorWithContext.Unlock()
-	return mock.MonitorWithContextFunc(ctx, ts, items...)
-}
-
-// MonitorWithContextCalls gets all the calls that were made to MonitorWithContext.
-// Check the length with:
-//
-//	len(mockedSubscriptionProvider.MonitorWithContextCalls())
-func (mock *SubscriptionProviderMock) MonitorWithContextCalls() []struct {
-	Ctx   context.Context
-	Ts    ua.TimestampsToReturn
-	Items []*ua.MonitoredItemCreateRequest
-} {
-	var calls []struct {
-		Ctx   context.Context
-		Ts    ua.TimestampsToReturn
-		Items []*ua.MonitoredItemCreateRequest
-	}
-	mock.lockMonitorWithContext.RLock()
-	calls = mock.calls.MonitorWithContext
-	mock.lockMonitorWithContext.RUnlock()
+	mock.lockCreate.RLock()
+	calls = mock.calls.Create
+	mock.lockCreate.RUnlock()
 	return calls
 }
 

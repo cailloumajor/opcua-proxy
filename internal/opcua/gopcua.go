@@ -9,29 +9,6 @@ import (
 	"github.com/gopcua/opcua/ua"
 )
 
-// DefaultSecurityExtDeps represents the default SecurityExtDeps implementation.
-type DefaultSecurityExtDeps struct{}
-
-// AuthUsername implements SecurityExtDeps.
-func (d DefaultSecurityExtDeps) AuthUsername(user, pass string) opcua.Option {
-	return opcua.AuthUsername(user, pass)
-}
-
-// CertificateFile implements SecurityExtDeps.
-func (d DefaultSecurityExtDeps) CertificateFile(filename string) opcua.Option {
-	return opcua.CertificateFile(filename)
-}
-
-// PrivateKeyFile implements SecurityExtDeps.
-func (d DefaultSecurityExtDeps) PrivateKeyFile(filename string) opcua.Option {
-	return opcua.PrivateKeyFile(filename)
-}
-
-// SecurityFromEndpoint implements SecurityExtDeps.
-func (d DefaultSecurityExtDeps) SecurityFromEndpoint(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option {
-	return opcua.SecurityFromEndpoint(ep, authType)
-}
-
 // DefaultClientExtDeps represents the default ClientExtDeps implementation.
 type DefaultClientExtDeps struct{}
 
@@ -46,6 +23,26 @@ func (DefaultClientExtDeps) SelectEndpoint(endpoints []*ua.EndpointDescription, 
 }
 
 // NewClient implements ClientExtDeps.
-func (DefaultClientExtDeps) NewClient(endpoint string, opts ...opcua.Option) RawClientProvider {
+func (DefaultClientExtDeps) NewClient(endpoint string, opts ...opcua.Option) *opcua.Client {
 	return opcua.NewClient(endpoint, opts...)
+}
+
+// AuthUsername implements ClientExtDeps.
+func (d DefaultClientExtDeps) AuthUsername(user, pass string) opcua.Option {
+	return opcua.AuthUsername(user, pass)
+}
+
+// CertificateFile implements ClientExtDeps.
+func (d DefaultClientExtDeps) CertificateFile(filename string) opcua.Option {
+	return opcua.CertificateFile(filename)
+}
+
+// PrivateKeyFile implements ClientExtDeps.
+func (d DefaultClientExtDeps) PrivateKeyFile(filename string) opcua.Option {
+	return opcua.PrivateKeyFile(filename)
+}
+
+// SecurityFromEndpoint implements ClientExtDeps.
+func (d DefaultClientExtDeps) SecurityFromEndpoint(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option {
+	return opcua.SecurityFromEndpoint(ep, authType)
 }
