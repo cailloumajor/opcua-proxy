@@ -3,145 +3,71 @@ package opcua
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
 )
 
-//go:generate moq -out client_mocks_test.go . ClientExtDeps RawClientProvider SecurityProvider
+//go:generate moq -out client_mocks_test.go . ClientExtDeps
 
 // ClientExtDeps represents top-level functions of gopcua library related to OPC-UA client.
 type ClientExtDeps interface {
 	GetEndpoints(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error)
 	SelectEndpoint(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription
-	NewClient(endpoint string, opts ...opcua.Option) RawClientProvider
+	NewClient(endpoint string, opts ...opcua.Option) *opcua.Client
+	AuthUsername(user, pass string) opcua.Option
+	CertificateFile(filename string) opcua.Option
+	PrivateKeyFile(filename string) opcua.Option
+	SecurityFromEndpoint(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option
 }
 
-// RawClientProvider is a consumer contract modelling a raw OPC-UA client.
-type RawClientProvider interface {
-	CallWithContext(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error)
-	CloseWithContext(ctx context.Context) error
-	Connect(context.Context) (err error)
-	NamespaceArrayWithContext(ctx context.Context) ([]string, error)
-	ReadWithContext(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error)
-	State() opcua.ConnState
-	SubscribeWithContext(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error)
-}
-
-// SecurityProvider is a consumer contract modelling an OPC-UA security provider.
-type SecurityProvider interface {
-	MessageSecurityMode() ua.MessageSecurityMode
-	Policy() string
-	Options(ep *ua.EndpointDescription) []opcua.Option
-}
-
-// Client represents an OPC-UA client connected to a server.
+// Client wraps an OPC-UA client.
 type Client struct {
-	inner    RawClientProvider
-	dummySub *opcua.Subscription
-	stopChan chan struct{}
+	*opcua.Client
 }
 
-// NewClient creates a new client and connects it to a server.
-func NewClient(ctx context.Context, cfg *Config, deps ClientExtDeps, sec SecurityProvider) (*Client, error) {
+// NewClient creates a configured OPC-UA client.
+func NewClient(ctx context.Context, cfg *Config, deps ClientExtDeps) (*Client, error) {
 	eps, err := deps.GetEndpoints(ctx, cfg.ServerURL)
 	if err != nil {
 		return nil, fmt.Errorf("error getting endpoints: %w", err)
 	}
 
-	ep := deps.SelectEndpoint(eps, sec.Policy(), sec.MessageSecurityMode())
+	var (
+		utt  ua.UserTokenType
+		opts []opcua.Option
+		msm  ua.MessageSecurityMode
+		pol  string
+	)
+
+	if cfg.User == "" && cfg.Password == "" {
+		utt = ua.UserTokenTypeAnonymous
+	} else {
+		utt = ua.UserTokenTypeUserName
+		opts = append(opts, deps.AuthUsername(cfg.User, cfg.Password))
+	}
+
+	if cfg.CertFile == "" && cfg.KeyFile == "" {
+		msm = ua.MessageSecurityModeNone
+		pol = "None"
+	} else {
+		msm = ua.MessageSecurityModeSignAndEncrypt
+		pol = "Basic256Sha256"
+		opts = append(
+			opts,
+			deps.CertificateFile(cfg.CertFile),
+			deps.PrivateKeyFile(cfg.KeyFile),
+		)
+	}
+
+	ep := deps.SelectEndpoint(eps, pol, msm)
 	if ep == nil {
 		return nil, fmt.Errorf("failed to select an endpoint")
 	}
 
-	opts := sec.Options(ep)
+	opts = append(opts, deps.SecurityFromEndpoint(ep, utt))
+
 	c := deps.NewClient(ep.EndpointURL, opts...)
 
-	if err := c.Connect(ctx); err != nil {
-		return nil, fmt.Errorf("failed to connect: %w", err)
-	}
-
-	nc := make(chan *opcua.PublishNotificationData)
-
-	sp := &opcua.SubscriptionParameters{
-		Interval: time.Minute,
-	}
-	ds, err := c.SubscribeWithContext(ctx, sp, nc)
-	if err != nil {
-		return nil, fmt.Errorf("error creating dummy subscription: %w", err)
-	}
-
-	sc := make(chan struct{})
-
-	go func(notifyCh <-chan *opcua.PublishNotificationData, stopChan <-chan struct{}) {
-		for {
-			select {
-			case <-stopChan:
-				return
-			case <-notifyCh: // drop notifications
-			}
-		}
-	}(nc, sc)
-
-	return &Client{
-		inner:    c,
-		dummySub: ds,
-		stopChan: sc,
-	}, nil
-}
-
-// NamespaceIndex returns the index of the provided namespace URI in the server namespace array.
-func (c *Client) NamespaceIndex(ctx context.Context, nsURI string) (uint16, error) {
-	nsa, err := c.inner.NamespaceArrayWithContext(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("error getting namespace array: %w", err)
-	}
-
-	nsi := -1
-	for i, uri := range nsa {
-		if uri == nsURI {
-			nsi = i
-			break
-		}
-	}
-	if nsi == -1 {
-		return 0, fmt.Errorf("namespace URI %q not found", nsURI)
-	}
-
-	return uint16(nsi), nil
-}
-
-// Close wraps inner client close.
-func (c *Client) Close(ctx context.Context) (errs []error) {
-	if err := c.dummySub.Cancel(ctx); err != nil {
-		errs = append(errs, err)
-	}
-
-	c.stopChan <- struct{}{}
-
-	if err := c.inner.CloseWithContext(ctx); err != nil {
-		errs = append(errs, err)
-	}
-
-	return errs
-}
-
-// Read stub
-func (c *Client) Read(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
-	return c.inner.ReadWithContext(ctx, req)
-}
-
-// State stub.
-func (c *Client) State() opcua.ConnState {
-	return c.inner.State()
-}
-
-// Subscribe stub.
-func (c *Client) Subscribe(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error) {
-	s, err := c.inner.SubscribeWithContext(ctx, params, notifyCh)
-	if err != nil {
-		return nil, err
-	}
-	return &Subscription{inner: s}, nil
+	return &Client{c}, nil
 }

@@ -20,11 +20,23 @@ var _ ClientExtDeps = &ClientExtDepsMock{}
 //
 //		// make and configure a mocked ClientExtDeps
 //		mockedClientExtDeps := &ClientExtDepsMock{
+//			AuthUsernameFunc: func(user string, pass string) opcua.Option {
+//				panic("mock out the AuthUsername method")
+//			},
+//			CertificateFileFunc: func(filename string) opcua.Option {
+//				panic("mock out the CertificateFile method")
+//			},
 //			GetEndpointsFunc: func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error) {
 //				panic("mock out the GetEndpoints method")
 //			},
-//			NewClientFunc: func(endpoint string, opts ...opcua.Option) RawClientProvider {
+//			NewClientFunc: func(endpoint string, opts ...opcua.Option) *opcua.Client {
 //				panic("mock out the NewClient method")
+//			},
+//			PrivateKeyFileFunc: func(filename string) opcua.Option {
+//				panic("mock out the PrivateKeyFile method")
+//			},
+//			SecurityFromEndpointFunc: func(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option {
+//				panic("mock out the SecurityFromEndpoint method")
 //			},
 //			SelectEndpointFunc: func(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription {
 //				panic("mock out the SelectEndpoint method")
@@ -36,17 +48,41 @@ var _ ClientExtDeps = &ClientExtDepsMock{}
 //
 //	}
 type ClientExtDepsMock struct {
+	// AuthUsernameFunc mocks the AuthUsername method.
+	AuthUsernameFunc func(user string, pass string) opcua.Option
+
+	// CertificateFileFunc mocks the CertificateFile method.
+	CertificateFileFunc func(filename string) opcua.Option
+
 	// GetEndpointsFunc mocks the GetEndpoints method.
 	GetEndpointsFunc func(ctx context.Context, endpoint string, opts ...opcua.Option) ([]*ua.EndpointDescription, error)
 
 	// NewClientFunc mocks the NewClient method.
-	NewClientFunc func(endpoint string, opts ...opcua.Option) RawClientProvider
+	NewClientFunc func(endpoint string, opts ...opcua.Option) *opcua.Client
+
+	// PrivateKeyFileFunc mocks the PrivateKeyFile method.
+	PrivateKeyFileFunc func(filename string) opcua.Option
+
+	// SecurityFromEndpointFunc mocks the SecurityFromEndpoint method.
+	SecurityFromEndpointFunc func(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option
 
 	// SelectEndpointFunc mocks the SelectEndpoint method.
 	SelectEndpointFunc func(endpoints []*ua.EndpointDescription, policy string, mode ua.MessageSecurityMode) *ua.EndpointDescription
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// AuthUsername holds details about calls to the AuthUsername method.
+		AuthUsername []struct {
+			// User is the user argument value.
+			User string
+			// Pass is the pass argument value.
+			Pass string
+		}
+		// CertificateFile holds details about calls to the CertificateFile method.
+		CertificateFile []struct {
+			// Filename is the filename argument value.
+			Filename string
+		}
 		// GetEndpoints holds details about calls to the GetEndpoints method.
 		GetEndpoints []struct {
 			// Ctx is the ctx argument value.
@@ -63,6 +99,18 @@ type ClientExtDepsMock struct {
 			// Opts is the opts argument value.
 			Opts []opcua.Option
 		}
+		// PrivateKeyFile holds details about calls to the PrivateKeyFile method.
+		PrivateKeyFile []struct {
+			// Filename is the filename argument value.
+			Filename string
+		}
+		// SecurityFromEndpoint holds details about calls to the SecurityFromEndpoint method.
+		SecurityFromEndpoint []struct {
+			// Ep is the ep argument value.
+			Ep *ua.EndpointDescription
+			// AuthType is the authType argument value.
+			AuthType ua.UserTokenType
+		}
 		// SelectEndpoint holds details about calls to the SelectEndpoint method.
 		SelectEndpoint []struct {
 			// Endpoints is the endpoints argument value.
@@ -73,9 +121,81 @@ type ClientExtDepsMock struct {
 			Mode ua.MessageSecurityMode
 		}
 	}
-	lockGetEndpoints   sync.RWMutex
-	lockNewClient      sync.RWMutex
-	lockSelectEndpoint sync.RWMutex
+	lockAuthUsername         sync.RWMutex
+	lockCertificateFile      sync.RWMutex
+	lockGetEndpoints         sync.RWMutex
+	lockNewClient            sync.RWMutex
+	lockPrivateKeyFile       sync.RWMutex
+	lockSecurityFromEndpoint sync.RWMutex
+	lockSelectEndpoint       sync.RWMutex
+}
+
+// AuthUsername calls AuthUsernameFunc.
+func (mock *ClientExtDepsMock) AuthUsername(user string, pass string) opcua.Option {
+	if mock.AuthUsernameFunc == nil {
+		panic("ClientExtDepsMock.AuthUsernameFunc: method is nil but ClientExtDeps.AuthUsername was just called")
+	}
+	callInfo := struct {
+		User string
+		Pass string
+	}{
+		User: user,
+		Pass: pass,
+	}
+	mock.lockAuthUsername.Lock()
+	mock.calls.AuthUsername = append(mock.calls.AuthUsername, callInfo)
+	mock.lockAuthUsername.Unlock()
+	return mock.AuthUsernameFunc(user, pass)
+}
+
+// AuthUsernameCalls gets all the calls that were made to AuthUsername.
+// Check the length with:
+//
+//	len(mockedClientExtDeps.AuthUsernameCalls())
+func (mock *ClientExtDepsMock) AuthUsernameCalls() []struct {
+	User string
+	Pass string
+} {
+	var calls []struct {
+		User string
+		Pass string
+	}
+	mock.lockAuthUsername.RLock()
+	calls = mock.calls.AuthUsername
+	mock.lockAuthUsername.RUnlock()
+	return calls
+}
+
+// CertificateFile calls CertificateFileFunc.
+func (mock *ClientExtDepsMock) CertificateFile(filename string) opcua.Option {
+	if mock.CertificateFileFunc == nil {
+		panic("ClientExtDepsMock.CertificateFileFunc: method is nil but ClientExtDeps.CertificateFile was just called")
+	}
+	callInfo := struct {
+		Filename string
+	}{
+		Filename: filename,
+	}
+	mock.lockCertificateFile.Lock()
+	mock.calls.CertificateFile = append(mock.calls.CertificateFile, callInfo)
+	mock.lockCertificateFile.Unlock()
+	return mock.CertificateFileFunc(filename)
+}
+
+// CertificateFileCalls gets all the calls that were made to CertificateFile.
+// Check the length with:
+//
+//	len(mockedClientExtDeps.CertificateFileCalls())
+func (mock *ClientExtDepsMock) CertificateFileCalls() []struct {
+	Filename string
+} {
+	var calls []struct {
+		Filename string
+	}
+	mock.lockCertificateFile.RLock()
+	calls = mock.calls.CertificateFile
+	mock.lockCertificateFile.RUnlock()
+	return calls
 }
 
 // GetEndpoints calls GetEndpointsFunc.
@@ -119,7 +239,7 @@ func (mock *ClientExtDepsMock) GetEndpointsCalls() []struct {
 }
 
 // NewClient calls NewClientFunc.
-func (mock *ClientExtDepsMock) NewClient(endpoint string, opts ...opcua.Option) RawClientProvider {
+func (mock *ClientExtDepsMock) NewClient(endpoint string, opts ...opcua.Option) *opcua.Client {
 	if mock.NewClientFunc == nil {
 		panic("ClientExtDepsMock.NewClientFunc: method is nil but ClientExtDeps.NewClient was just called")
 	}
@@ -151,6 +271,74 @@ func (mock *ClientExtDepsMock) NewClientCalls() []struct {
 	mock.lockNewClient.RLock()
 	calls = mock.calls.NewClient
 	mock.lockNewClient.RUnlock()
+	return calls
+}
+
+// PrivateKeyFile calls PrivateKeyFileFunc.
+func (mock *ClientExtDepsMock) PrivateKeyFile(filename string) opcua.Option {
+	if mock.PrivateKeyFileFunc == nil {
+		panic("ClientExtDepsMock.PrivateKeyFileFunc: method is nil but ClientExtDeps.PrivateKeyFile was just called")
+	}
+	callInfo := struct {
+		Filename string
+	}{
+		Filename: filename,
+	}
+	mock.lockPrivateKeyFile.Lock()
+	mock.calls.PrivateKeyFile = append(mock.calls.PrivateKeyFile, callInfo)
+	mock.lockPrivateKeyFile.Unlock()
+	return mock.PrivateKeyFileFunc(filename)
+}
+
+// PrivateKeyFileCalls gets all the calls that were made to PrivateKeyFile.
+// Check the length with:
+//
+//	len(mockedClientExtDeps.PrivateKeyFileCalls())
+func (mock *ClientExtDepsMock) PrivateKeyFileCalls() []struct {
+	Filename string
+} {
+	var calls []struct {
+		Filename string
+	}
+	mock.lockPrivateKeyFile.RLock()
+	calls = mock.calls.PrivateKeyFile
+	mock.lockPrivateKeyFile.RUnlock()
+	return calls
+}
+
+// SecurityFromEndpoint calls SecurityFromEndpointFunc.
+func (mock *ClientExtDepsMock) SecurityFromEndpoint(ep *ua.EndpointDescription, authType ua.UserTokenType) opcua.Option {
+	if mock.SecurityFromEndpointFunc == nil {
+		panic("ClientExtDepsMock.SecurityFromEndpointFunc: method is nil but ClientExtDeps.SecurityFromEndpoint was just called")
+	}
+	callInfo := struct {
+		Ep       *ua.EndpointDescription
+		AuthType ua.UserTokenType
+	}{
+		Ep:       ep,
+		AuthType: authType,
+	}
+	mock.lockSecurityFromEndpoint.Lock()
+	mock.calls.SecurityFromEndpoint = append(mock.calls.SecurityFromEndpoint, callInfo)
+	mock.lockSecurityFromEndpoint.Unlock()
+	return mock.SecurityFromEndpointFunc(ep, authType)
+}
+
+// SecurityFromEndpointCalls gets all the calls that were made to SecurityFromEndpoint.
+// Check the length with:
+//
+//	len(mockedClientExtDeps.SecurityFromEndpointCalls())
+func (mock *ClientExtDepsMock) SecurityFromEndpointCalls() []struct {
+	Ep       *ua.EndpointDescription
+	AuthType ua.UserTokenType
+} {
+	var calls []struct {
+		Ep       *ua.EndpointDescription
+		AuthType ua.UserTokenType
+	}
+	mock.lockSecurityFromEndpoint.RLock()
+	calls = mock.calls.SecurityFromEndpoint
+	mock.lockSecurityFromEndpoint.RUnlock()
 	return calls
 }
 
@@ -191,492 +379,5 @@ func (mock *ClientExtDepsMock) SelectEndpointCalls() []struct {
 	mock.lockSelectEndpoint.RLock()
 	calls = mock.calls.SelectEndpoint
 	mock.lockSelectEndpoint.RUnlock()
-	return calls
-}
-
-// Ensure, that RawClientProviderMock does implement RawClientProvider.
-// If this is not the case, regenerate this file with moq.
-var _ RawClientProvider = &RawClientProviderMock{}
-
-// RawClientProviderMock is a mock implementation of RawClientProvider.
-//
-//	func TestSomethingThatUsesRawClientProvider(t *testing.T) {
-//
-//		// make and configure a mocked RawClientProvider
-//		mockedRawClientProvider := &RawClientProviderMock{
-//			CallWithContextFunc: func(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error) {
-//				panic("mock out the CallWithContext method")
-//			},
-//			CloseWithContextFunc: func(ctx context.Context) error {
-//				panic("mock out the CloseWithContext method")
-//			},
-//			ConnectFunc: func(contextMoqParam context.Context) error {
-//				panic("mock out the Connect method")
-//			},
-//			NamespaceArrayWithContextFunc: func(ctx context.Context) ([]string, error) {
-//				panic("mock out the NamespaceArrayWithContext method")
-//			},
-//			ReadWithContextFunc: func(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
-//				panic("mock out the ReadWithContext method")
-//			},
-//			StateFunc: func() opcua.ConnState {
-//				panic("mock out the State method")
-//			},
-//			SubscribeWithContextFunc: func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error) {
-//				panic("mock out the SubscribeWithContext method")
-//			},
-//		}
-//
-//		// use mockedRawClientProvider in code that requires RawClientProvider
-//		// and then make assertions.
-//
-//	}
-type RawClientProviderMock struct {
-	// CallWithContextFunc mocks the CallWithContext method.
-	CallWithContextFunc func(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error)
-
-	// CloseWithContextFunc mocks the CloseWithContext method.
-	CloseWithContextFunc func(ctx context.Context) error
-
-	// ConnectFunc mocks the Connect method.
-	ConnectFunc func(contextMoqParam context.Context) error
-
-	// NamespaceArrayWithContextFunc mocks the NamespaceArrayWithContext method.
-	NamespaceArrayWithContextFunc func(ctx context.Context) ([]string, error)
-
-	// ReadWithContextFunc mocks the ReadWithContext method.
-	ReadWithContextFunc func(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error)
-
-	// StateFunc mocks the State method.
-	StateFunc func() opcua.ConnState
-
-	// SubscribeWithContextFunc mocks the SubscribeWithContext method.
-	SubscribeWithContextFunc func(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error)
-
-	// calls tracks calls to the methods.
-	calls struct {
-		// CallWithContext holds details about calls to the CallWithContext method.
-		CallWithContext []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-			// Req is the req argument value.
-			Req *ua.CallMethodRequest
-		}
-		// CloseWithContext holds details about calls to the CloseWithContext method.
-		CloseWithContext []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-		}
-		// Connect holds details about calls to the Connect method.
-		Connect []struct {
-			// ContextMoqParam is the contextMoqParam argument value.
-			ContextMoqParam context.Context
-		}
-		// NamespaceArrayWithContext holds details about calls to the NamespaceArrayWithContext method.
-		NamespaceArrayWithContext []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-		}
-		// ReadWithContext holds details about calls to the ReadWithContext method.
-		ReadWithContext []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-			// Req is the req argument value.
-			Req *ua.ReadRequest
-		}
-		// State holds details about calls to the State method.
-		State []struct {
-		}
-		// SubscribeWithContext holds details about calls to the SubscribeWithContext method.
-		SubscribeWithContext []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-			// Params is the params argument value.
-			Params *opcua.SubscriptionParameters
-			// NotifyCh is the notifyCh argument value.
-			NotifyCh chan<- *opcua.PublishNotificationData
-		}
-	}
-	lockCallWithContext           sync.RWMutex
-	lockCloseWithContext          sync.RWMutex
-	lockConnect                   sync.RWMutex
-	lockNamespaceArrayWithContext sync.RWMutex
-	lockReadWithContext           sync.RWMutex
-	lockState                     sync.RWMutex
-	lockSubscribeWithContext      sync.RWMutex
-}
-
-// CallWithContext calls CallWithContextFunc.
-func (mock *RawClientProviderMock) CallWithContext(ctx context.Context, req *ua.CallMethodRequest) (*ua.CallMethodResult, error) {
-	if mock.CallWithContextFunc == nil {
-		panic("RawClientProviderMock.CallWithContextFunc: method is nil but RawClientProvider.CallWithContext was just called")
-	}
-	callInfo := struct {
-		Ctx context.Context
-		Req *ua.CallMethodRequest
-	}{
-		Ctx: ctx,
-		Req: req,
-	}
-	mock.lockCallWithContext.Lock()
-	mock.calls.CallWithContext = append(mock.calls.CallWithContext, callInfo)
-	mock.lockCallWithContext.Unlock()
-	return mock.CallWithContextFunc(ctx, req)
-}
-
-// CallWithContextCalls gets all the calls that were made to CallWithContext.
-// Check the length with:
-//
-//	len(mockedRawClientProvider.CallWithContextCalls())
-func (mock *RawClientProviderMock) CallWithContextCalls() []struct {
-	Ctx context.Context
-	Req *ua.CallMethodRequest
-} {
-	var calls []struct {
-		Ctx context.Context
-		Req *ua.CallMethodRequest
-	}
-	mock.lockCallWithContext.RLock()
-	calls = mock.calls.CallWithContext
-	mock.lockCallWithContext.RUnlock()
-	return calls
-}
-
-// CloseWithContext calls CloseWithContextFunc.
-func (mock *RawClientProviderMock) CloseWithContext(ctx context.Context) error {
-	if mock.CloseWithContextFunc == nil {
-		panic("RawClientProviderMock.CloseWithContextFunc: method is nil but RawClientProvider.CloseWithContext was just called")
-	}
-	callInfo := struct {
-		Ctx context.Context
-	}{
-		Ctx: ctx,
-	}
-	mock.lockCloseWithContext.Lock()
-	mock.calls.CloseWithContext = append(mock.calls.CloseWithContext, callInfo)
-	mock.lockCloseWithContext.Unlock()
-	return mock.CloseWithContextFunc(ctx)
-}
-
-// CloseWithContextCalls gets all the calls that were made to CloseWithContext.
-// Check the length with:
-//
-//	len(mockedRawClientProvider.CloseWithContextCalls())
-func (mock *RawClientProviderMock) CloseWithContextCalls() []struct {
-	Ctx context.Context
-} {
-	var calls []struct {
-		Ctx context.Context
-	}
-	mock.lockCloseWithContext.RLock()
-	calls = mock.calls.CloseWithContext
-	mock.lockCloseWithContext.RUnlock()
-	return calls
-}
-
-// Connect calls ConnectFunc.
-func (mock *RawClientProviderMock) Connect(contextMoqParam context.Context) error {
-	if mock.ConnectFunc == nil {
-		panic("RawClientProviderMock.ConnectFunc: method is nil but RawClientProvider.Connect was just called")
-	}
-	callInfo := struct {
-		ContextMoqParam context.Context
-	}{
-		ContextMoqParam: contextMoqParam,
-	}
-	mock.lockConnect.Lock()
-	mock.calls.Connect = append(mock.calls.Connect, callInfo)
-	mock.lockConnect.Unlock()
-	return mock.ConnectFunc(contextMoqParam)
-}
-
-// ConnectCalls gets all the calls that were made to Connect.
-// Check the length with:
-//
-//	len(mockedRawClientProvider.ConnectCalls())
-func (mock *RawClientProviderMock) ConnectCalls() []struct {
-	ContextMoqParam context.Context
-} {
-	var calls []struct {
-		ContextMoqParam context.Context
-	}
-	mock.lockConnect.RLock()
-	calls = mock.calls.Connect
-	mock.lockConnect.RUnlock()
-	return calls
-}
-
-// NamespaceArrayWithContext calls NamespaceArrayWithContextFunc.
-func (mock *RawClientProviderMock) NamespaceArrayWithContext(ctx context.Context) ([]string, error) {
-	if mock.NamespaceArrayWithContextFunc == nil {
-		panic("RawClientProviderMock.NamespaceArrayWithContextFunc: method is nil but RawClientProvider.NamespaceArrayWithContext was just called")
-	}
-	callInfo := struct {
-		Ctx context.Context
-	}{
-		Ctx: ctx,
-	}
-	mock.lockNamespaceArrayWithContext.Lock()
-	mock.calls.NamespaceArrayWithContext = append(mock.calls.NamespaceArrayWithContext, callInfo)
-	mock.lockNamespaceArrayWithContext.Unlock()
-	return mock.NamespaceArrayWithContextFunc(ctx)
-}
-
-// NamespaceArrayWithContextCalls gets all the calls that were made to NamespaceArrayWithContext.
-// Check the length with:
-//
-//	len(mockedRawClientProvider.NamespaceArrayWithContextCalls())
-func (mock *RawClientProviderMock) NamespaceArrayWithContextCalls() []struct {
-	Ctx context.Context
-} {
-	var calls []struct {
-		Ctx context.Context
-	}
-	mock.lockNamespaceArrayWithContext.RLock()
-	calls = mock.calls.NamespaceArrayWithContext
-	mock.lockNamespaceArrayWithContext.RUnlock()
-	return calls
-}
-
-// ReadWithContext calls ReadWithContextFunc.
-func (mock *RawClientProviderMock) ReadWithContext(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error) {
-	if mock.ReadWithContextFunc == nil {
-		panic("RawClientProviderMock.ReadWithContextFunc: method is nil but RawClientProvider.ReadWithContext was just called")
-	}
-	callInfo := struct {
-		Ctx context.Context
-		Req *ua.ReadRequest
-	}{
-		Ctx: ctx,
-		Req: req,
-	}
-	mock.lockReadWithContext.Lock()
-	mock.calls.ReadWithContext = append(mock.calls.ReadWithContext, callInfo)
-	mock.lockReadWithContext.Unlock()
-	return mock.ReadWithContextFunc(ctx, req)
-}
-
-// ReadWithContextCalls gets all the calls that were made to ReadWithContext.
-// Check the length with:
-//
-//	len(mockedRawClientProvider.ReadWithContextCalls())
-func (mock *RawClientProviderMock) ReadWithContextCalls() []struct {
-	Ctx context.Context
-	Req *ua.ReadRequest
-} {
-	var calls []struct {
-		Ctx context.Context
-		Req *ua.ReadRequest
-	}
-	mock.lockReadWithContext.RLock()
-	calls = mock.calls.ReadWithContext
-	mock.lockReadWithContext.RUnlock()
-	return calls
-}
-
-// State calls StateFunc.
-func (mock *RawClientProviderMock) State() opcua.ConnState {
-	if mock.StateFunc == nil {
-		panic("RawClientProviderMock.StateFunc: method is nil but RawClientProvider.State was just called")
-	}
-	callInfo := struct {
-	}{}
-	mock.lockState.Lock()
-	mock.calls.State = append(mock.calls.State, callInfo)
-	mock.lockState.Unlock()
-	return mock.StateFunc()
-}
-
-// StateCalls gets all the calls that were made to State.
-// Check the length with:
-//
-//	len(mockedRawClientProvider.StateCalls())
-func (mock *RawClientProviderMock) StateCalls() []struct {
-} {
-	var calls []struct {
-	}
-	mock.lockState.RLock()
-	calls = mock.calls.State
-	mock.lockState.RUnlock()
-	return calls
-}
-
-// SubscribeWithContext calls SubscribeWithContextFunc.
-func (mock *RawClientProviderMock) SubscribeWithContext(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (*opcua.Subscription, error) {
-	if mock.SubscribeWithContextFunc == nil {
-		panic("RawClientProviderMock.SubscribeWithContextFunc: method is nil but RawClientProvider.SubscribeWithContext was just called")
-	}
-	callInfo := struct {
-		Ctx      context.Context
-		Params   *opcua.SubscriptionParameters
-		NotifyCh chan<- *opcua.PublishNotificationData
-	}{
-		Ctx:      ctx,
-		Params:   params,
-		NotifyCh: notifyCh,
-	}
-	mock.lockSubscribeWithContext.Lock()
-	mock.calls.SubscribeWithContext = append(mock.calls.SubscribeWithContext, callInfo)
-	mock.lockSubscribeWithContext.Unlock()
-	return mock.SubscribeWithContextFunc(ctx, params, notifyCh)
-}
-
-// SubscribeWithContextCalls gets all the calls that were made to SubscribeWithContext.
-// Check the length with:
-//
-//	len(mockedRawClientProvider.SubscribeWithContextCalls())
-func (mock *RawClientProviderMock) SubscribeWithContextCalls() []struct {
-	Ctx      context.Context
-	Params   *opcua.SubscriptionParameters
-	NotifyCh chan<- *opcua.PublishNotificationData
-} {
-	var calls []struct {
-		Ctx      context.Context
-		Params   *opcua.SubscriptionParameters
-		NotifyCh chan<- *opcua.PublishNotificationData
-	}
-	mock.lockSubscribeWithContext.RLock()
-	calls = mock.calls.SubscribeWithContext
-	mock.lockSubscribeWithContext.RUnlock()
-	return calls
-}
-
-// Ensure, that SecurityProviderMock does implement SecurityProvider.
-// If this is not the case, regenerate this file with moq.
-var _ SecurityProvider = &SecurityProviderMock{}
-
-// SecurityProviderMock is a mock implementation of SecurityProvider.
-//
-//	func TestSomethingThatUsesSecurityProvider(t *testing.T) {
-//
-//		// make and configure a mocked SecurityProvider
-//		mockedSecurityProvider := &SecurityProviderMock{
-//			MessageSecurityModeFunc: func() ua.MessageSecurityMode {
-//				panic("mock out the MessageSecurityMode method")
-//			},
-//			OptionsFunc: func(ep *ua.EndpointDescription) []opcua.Option {
-//				panic("mock out the Options method")
-//			},
-//			PolicyFunc: func() string {
-//				panic("mock out the Policy method")
-//			},
-//		}
-//
-//		// use mockedSecurityProvider in code that requires SecurityProvider
-//		// and then make assertions.
-//
-//	}
-type SecurityProviderMock struct {
-	// MessageSecurityModeFunc mocks the MessageSecurityMode method.
-	MessageSecurityModeFunc func() ua.MessageSecurityMode
-
-	// OptionsFunc mocks the Options method.
-	OptionsFunc func(ep *ua.EndpointDescription) []opcua.Option
-
-	// PolicyFunc mocks the Policy method.
-	PolicyFunc func() string
-
-	// calls tracks calls to the methods.
-	calls struct {
-		// MessageSecurityMode holds details about calls to the MessageSecurityMode method.
-		MessageSecurityMode []struct {
-		}
-		// Options holds details about calls to the Options method.
-		Options []struct {
-			// Ep is the ep argument value.
-			Ep *ua.EndpointDescription
-		}
-		// Policy holds details about calls to the Policy method.
-		Policy []struct {
-		}
-	}
-	lockMessageSecurityMode sync.RWMutex
-	lockOptions             sync.RWMutex
-	lockPolicy              sync.RWMutex
-}
-
-// MessageSecurityMode calls MessageSecurityModeFunc.
-func (mock *SecurityProviderMock) MessageSecurityMode() ua.MessageSecurityMode {
-	if mock.MessageSecurityModeFunc == nil {
-		panic("SecurityProviderMock.MessageSecurityModeFunc: method is nil but SecurityProvider.MessageSecurityMode was just called")
-	}
-	callInfo := struct {
-	}{}
-	mock.lockMessageSecurityMode.Lock()
-	mock.calls.MessageSecurityMode = append(mock.calls.MessageSecurityMode, callInfo)
-	mock.lockMessageSecurityMode.Unlock()
-	return mock.MessageSecurityModeFunc()
-}
-
-// MessageSecurityModeCalls gets all the calls that were made to MessageSecurityMode.
-// Check the length with:
-//
-//	len(mockedSecurityProvider.MessageSecurityModeCalls())
-func (mock *SecurityProviderMock) MessageSecurityModeCalls() []struct {
-} {
-	var calls []struct {
-	}
-	mock.lockMessageSecurityMode.RLock()
-	calls = mock.calls.MessageSecurityMode
-	mock.lockMessageSecurityMode.RUnlock()
-	return calls
-}
-
-// Options calls OptionsFunc.
-func (mock *SecurityProviderMock) Options(ep *ua.EndpointDescription) []opcua.Option {
-	if mock.OptionsFunc == nil {
-		panic("SecurityProviderMock.OptionsFunc: method is nil but SecurityProvider.Options was just called")
-	}
-	callInfo := struct {
-		Ep *ua.EndpointDescription
-	}{
-		Ep: ep,
-	}
-	mock.lockOptions.Lock()
-	mock.calls.Options = append(mock.calls.Options, callInfo)
-	mock.lockOptions.Unlock()
-	return mock.OptionsFunc(ep)
-}
-
-// OptionsCalls gets all the calls that were made to Options.
-// Check the length with:
-//
-//	len(mockedSecurityProvider.OptionsCalls())
-func (mock *SecurityProviderMock) OptionsCalls() []struct {
-	Ep *ua.EndpointDescription
-} {
-	var calls []struct {
-		Ep *ua.EndpointDescription
-	}
-	mock.lockOptions.RLock()
-	calls = mock.calls.Options
-	mock.lockOptions.RUnlock()
-	return calls
-}
-
-// Policy calls PolicyFunc.
-func (mock *SecurityProviderMock) Policy() string {
-	if mock.PolicyFunc == nil {
-		panic("SecurityProviderMock.PolicyFunc: method is nil but SecurityProvider.Policy was just called")
-	}
-	callInfo := struct {
-	}{}
-	mock.lockPolicy.Lock()
-	mock.calls.Policy = append(mock.calls.Policy, callInfo)
-	mock.lockPolicy.Unlock()
-	return mock.PolicyFunc()
-}
-
-// PolicyCalls gets all the calls that were made to Policy.
-// Check the length with:
-//
-//	len(mockedSecurityProvider.PolicyCalls())
-func (mock *SecurityProviderMock) PolicyCalls() []struct {
-} {
-	var calls []struct {
-	}
-	mock.lockPolicy.RLock()
-	calls = mock.calls.Policy
-	mock.lockPolicy.RUnlock()
 	return calls
 }

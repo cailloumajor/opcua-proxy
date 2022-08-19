@@ -11,25 +11,24 @@ import (
 	"github.com/gopcua/opcua/ua"
 )
 
-//go:generate moq -out monitor_mocks_test.go . ClientProvider SubscriptionProvider ChannelProvider NodeIDProvider
+//go:generate moq -out monitor_mocks_test.go . ClientProvider SubscriptionManagerProvider ChannelProvider NodeIDProvider
 
 // QueueSize represents the size of the buffered channel for data change notifications.
 const QueueSize = 8
 
 // ClientProvider is a consumer contract modelling an OPC-UA client provider.
 type ClientProvider interface {
-	Close(ctx context.Context) (errs []error)
-	NamespaceIndex(ctx context.Context, nsURI string) (uint16, error)
-	Read(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error)
-	Subscribe(ctx context.Context, params *opcua.SubscriptionParameters, notifyCh chan<- *opcua.PublishNotificationData) (SubscriptionProvider, error)
+	Connect(ctx context.Context) error
+	CloseWithContext(ctx context.Context) error
+	FindNamespaceWithContext(ctx context.Context, name string) (uint16, error)
+	ReadWithContext(ctx context.Context, req *ua.ReadRequest) (*ua.ReadResponse, error)
 	State() opcua.ConnState
+	Subscriber
 }
 
-// SubscriptionProvider is a consumer contract modelling an OPC-UA subscription.
-type SubscriptionProvider interface {
-	Cancel(ctx context.Context) error
-	ID() uint32
-	MonitorWithContext(ctx context.Context, ts ua.TimestampsToReturn, items ...*ua.MonitoredItemCreateRequest) (*ua.CreateMonitoredItemsResponse, error)
+// SubscriptionManagerProvider is a consumer contract modelling a manager for OPC-UA subscriptions.
+type SubscriptionManagerProvider interface {
+	Create(ctx context.Context, i time.Duration, nc chan<- *opcua.PublishNotificationData) (*Subscription, error)
 }
 
 // ChannelProvider is a consumer contract modelling a Centrifugo channel.
@@ -51,23 +50,50 @@ type ReadValues struct {
 
 // Monitor represents an OPC-UA monitor.
 type Monitor struct {
-	client    ClientProvider
-	readNodes []NodesObject
+	client     ClientProvider
+	subManager SubscriptionManagerProvider
+	readNodes  []NodesObject
+
+	dummyNotifCh chan *opcua.PublishNotificationData
+	dummySub     *Subscription
 
 	notifyCh chan *opcua.PublishNotificationData
 
 	mu   sync.RWMutex
-	subs map[string]SubscriptionProvider // map of subscription by Centrifugo channel name
+	subs map[string]*Subscription // map of subscription by Centrifugo channel name
 }
 
 // NewMonitor creates an OPC-UA node monitor.
-func NewMonitor(c ClientProvider, n []NodesObject) *Monitor {
+func NewMonitor(c ClientProvider, m SubscriptionManagerProvider, n []NodesObject) *Monitor {
 	return &Monitor{
-		client:    c,
-		readNodes: n,
-		notifyCh:  make(chan *opcua.PublishNotificationData, QueueSize),
-		subs:      make(map[string]SubscriptionProvider),
+		client:     c,
+		subManager: m,
+		readNodes:  n,
+		notifyCh:   make(chan *opcua.PublishNotificationData, QueueSize),
+		subs:       make(map[string]*Subscription),
 	}
+}
+
+// Connect connects the underlying OPC-UA client.
+func (m *Monitor) Connect(ctx context.Context) error {
+	if err := m.client.Connect(ctx); err != nil {
+		return fmt.Errorf("failed to connect: %w", err)
+	}
+
+	m.dummyNotifCh = make(chan *opcua.PublishNotificationData)
+
+	go func(nc <-chan *opcua.PublishNotificationData) {
+		for range nc {
+		}
+	}(m.dummyNotifCh)
+
+	s, err := m.subManager.Create(ctx, time.Minute, m.dummyNotifCh)
+	if err != nil {
+		return fmt.Errorf("connect error: %w", err)
+	}
+	m.dummySub = s
+
+	return nil
 }
 
 // Read reads configured nodes data values and returns a map of fields.
@@ -81,7 +107,7 @@ func (m *Monitor) Read(ctx context.Context) (*ReadValues, error) {
 	var nid []string
 
 	for _, no := range m.readNodes {
-		nsi, err := m.client.NamespaceIndex(ctx, no.NamespaceURI)
+		nsi, err := m.client.FindNamespaceWithContext(ctx, no.NamespaceURI)
 		if err != nil {
 			return nil, err
 		}
@@ -97,7 +123,7 @@ func (m *Monitor) Read(ctx context.Context) (*ReadValues, error) {
 		}
 	}
 
-	resp, err := m.client.Read(ctx, req)
+	resp, err := m.client.ReadWithContext(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("error reading OPC-UA nodes: %w", err)
 	}
@@ -119,7 +145,7 @@ func (m *Monitor) Read(ctx context.Context) (*ReadValues, error) {
 
 // Subscribe subscribes for nodes data changes on the server.
 func (m *Monitor) Subscribe(ctx context.Context, nsURI string, ch ChannelProvider, nodes []NodeIDProvider) error {
-	nsi, err := m.client.NamespaceIndex(ctx, nsURI)
+	nsi, err := m.client.FindNamespaceWithContext(ctx, nsURI)
 	if err != nil {
 		return err
 	}
@@ -127,7 +153,6 @@ func (m *Monitor) Subscribe(ctx context.Context, nsURI string, ch ChannelProvide
 	m.mu.RLock()
 	_, exists := m.subs[ch.String()]
 	m.mu.RUnlock()
-
 	if exists {
 		return nil
 	}
@@ -135,12 +160,9 @@ func (m *Monitor) Subscribe(ctx context.Context, nsURI string, ch ChannelProvide
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	p := &opcua.SubscriptionParameters{
-		Interval: ch.Interval(),
-	}
-	sub, err := m.client.Subscribe(ctx, p, m.notifyCh)
+	sub, err := m.subManager.Create(ctx, ch.Interval(), m.notifyCh)
 	if err != nil {
-		return fmt.Errorf("error creating subscription: %w", err)
+		return fmt.Errorf("error subscribing: %w", err)
 	}
 
 	reqs := make([]*ua.MonitoredItemCreateRequest, len(nodes))
@@ -254,17 +276,24 @@ func (m *Monitor) HasSubscriptions() bool {
 //
 // Monitor must not be used after calling Stop().
 func (m *Monitor) Stop(ctx context.Context) (errs []error) {
+	if err := m.dummySub.Cancel(ctx); err != nil {
+		errs = append(errs, err)
+	}
+
+	close(m.dummyNotifCh)
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	for _, v := range m.subs {
-		if err := v.Cancel(ctx); err != nil {
+	for _, s := range m.subs {
+		if err := s.Cancel(ctx); err != nil {
 			errs = append(errs, err)
 		}
 	}
 
-	closeErrs := m.client.Close(ctx)
-	errs = append(errs, closeErrs...)
+	if err := m.client.CloseWithContext(ctx); err != nil {
+		errs = append(errs, err)
+	}
 
 	return
 }

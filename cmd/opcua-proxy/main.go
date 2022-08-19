@@ -26,6 +26,7 @@ import (
 	"github.com/peterbourgon/ff"
 )
 
+const opcConnectTimeout = 5 * time.Second
 const stopTimeout = 2 * time.Second
 
 func usageFor(fs *flag.FlagSet, out io.Writer) func() {
@@ -151,29 +152,30 @@ func main() {
 		})
 	}
 
-	var opcClient *opcua.Client
+	var (
+		opcClient  *opcua.Client
+		opcMonitor *opcua.Monitor
+	)
 	{
-		sec, err := opcua.NewSecurity(&opcuaConfig, opcua.DefaultSecurityExtDeps{})
-		if err != nil {
-			errExit(log.With(logger, "during", "OPC-UA security configuration"), err)
-		}
-
 		r := &retryableInit{
 			logger:   log.With(logger, "during", "OPC-UA client creation"),
 			attempts: 30,
 			maxDelay: 10 * time.Second,
 		}
 		r.Do(func(ctx context.Context) error {
-			tCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+			tCtx, cancel := context.WithTimeout(ctx, opcConnectTimeout)
 			defer cancel()
 
 			var err error
-			opcClient, err = opcua.NewClient(tCtx, &opcuaConfig, opcua.DefaultClientExtDeps{}, sec)
-			return err
+			opcClient, err = opcua.NewClient(tCtx, &opcuaConfig, opcua.DefaultClientExtDeps{})
+			if err != nil {
+				return err
+			}
+			m := opcua.NewSubscriptionManager(opcClient)
+			opcMonitor = opcua.NewMonitor(opcClient, m, nodesToRead)
+			return opcMonitor.Connect(tCtx)
 		})
 	}
-
-	opcMonitor := opcua.NewMonitor(opcClient, nodesToRead)
 
 	centrifugoClient := gocent.New(centrifugoClientConfig)
 
