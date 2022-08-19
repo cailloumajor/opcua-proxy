@@ -298,7 +298,9 @@ func (m *Monitor) Stop(ctx context.Context) (errs []error) {
 	return
 }
 
-// State returns the wrapped client connection state.
-func (m *Monitor) State() opcua.ConnState {
-	return m.client.State()
+// Health checks the monitor health.
+func (m *Monitor) Health(_ context.Context) (bool, string) {
+	s := m.client.State()
+
+	return s == opcua.Connected, s.String()
 }
