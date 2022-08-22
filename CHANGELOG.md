@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.4](https://github.com/cailloumajor/opcua-proxy/compare/v2.1.3...v2.1.4) (2022-08-22)
+
+
+### Bug Fixes
+
+* generalize health checking and isolate gocent ([2537487](https://github.com/cailloumajor/opcua-proxy/commit/25374871dbb8e8dc656776c62c1e0b4f127c61d9))
+* refactor lineprotocol package ([50a003d](https://github.com/cailloumajor/opcua-proxy/commit/50a003dea4dd16f88923095126b7b2b0b561a6f9))
+
 ## [2.1.3](https://github.com/cailloumajor/opcua-proxy/compare/v2.1.2...v2.1.3) (2022-08-19)
 
 
