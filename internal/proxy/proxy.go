@@ -15,13 +15,9 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/gorilla/mux"
-	lp "github.com/influxdata/line-protocol/v2/lineprotocol"
-	"golang.org/x/exp/constraints"
-	"golang.org/x/exp/maps"
-	"golang.org/x/exp/slices"
 )
 
-//go:generate moq -out proxy_mocks_test.go . Healther MonitorProvider CentrifugoChannelParser
+//go:generate moq -out proxy_mocks_test.go . Healther MonitorProvider LineProtocolBuilder CentrifugoChannelParser
 
 const subscribeTimeout = 5 * time.Second
 
@@ -37,15 +33,14 @@ type MonitorProvider interface {
 	Subscribe(ctx context.Context, nsURI string, ch opcua.ChannelProvider, nodes []opcua.NodeIDProvider) error
 }
 
+// LineProtocolBuilder is a consumer contract modelling an InfluxDB line protocol builder.
+type LineProtocolBuilder interface {
+	Build(w io.Writer, measurement string, tags map[string]string, fields map[string]lineprotocol.VariantProvider, ts time.Time) error
+}
+
 // CentrifugoChannelParser is a consumer contract modelling a Centrifugo channel parser.
 type CentrifugoChannelParser interface {
 	ParseChannel(s, namespace string) (*centrifugo.Channel, error)
-}
-
-func sortedKeys[K constraints.Ordered, V any](m map[K]V) []K {
-	sk := maps.Keys(m)
-	slices.Sort(sk)
-	return sk
 }
 
 func commonHeadersMiddleware(next http.Handler) http.Handler {
@@ -60,6 +55,7 @@ type Proxy struct {
 	logger           log.Logger
 	centrifugoHealth Healther
 	monitor          MonitorProvider
+	lpBuilder        LineProtocolBuilder
 	parser           CentrifugoChannelParser
 	namespace        string // expected namespace for this instance
 
@@ -67,11 +63,12 @@ type Proxy struct {
 }
 
 // NewProxy creates and returns a ready to use proxy.
-func NewProxy(l log.Logger, ch Healther, m MonitorProvider, cp CentrifugoChannelParser, ns string) *Proxy {
+func NewProxy(l log.Logger, ch Healther, m MonitorProvider, lp LineProtocolBuilder, cp CentrifugoChannelParser, ns string) *Proxy {
 	p := &Proxy{
 		logger:           l,
 		centrifugoHealth: ch,
 		monitor:          m,
+		lpBuilder:        lp,
 		parser:           cp,
 		namespace:        ns,
 	}
@@ -128,11 +125,9 @@ func (p *Proxy) handleInfluxdbMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Form.Del(measurementKey)
 
-	var enc lp.Encoder
-	enc.StartLine(m)
-
-	for _, fk := range sortedKeys(r.Form) {
-		enc.AddTag(fk, r.Form.Get(fk))
+	t := make(map[string]string)
+	for k := range r.Form {
+		t[k] = r.Form.Get(k)
 	}
 
 	vals, err := p.monitor.Read(r.Context())
@@ -141,26 +136,15 @@ func (p *Proxy) handleInfluxdbMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, vk := range sortedKeys(vals.Values) {
-		val, err := lineprotocol.NewValueFromVariant(vals.Values[vk])
-		if err != nil {
-			handleErr("converting variant to value", err, http.StatusInternalServerError)
-			return
-		}
-		enc.AddField(vk, val)
-	}
-
-	enc.EndLine(vals.Timestamp.UTC())
-
-	if err := enc.Err(); err != nil {
-		handleErr("encoding line protocol", err, http.StatusInternalServerError)
-		return
+	f := make(map[string]lineprotocol.VariantProvider)
+	for k, v := range vals.Values {
+		f[k] = v
 	}
 
 	w.Header().Set("content-type", "text/plain; charset=utf-8")
 
-	if _, err := w.Write(enc.Bytes()); err != nil {
-		handleErr("response data writing", err, http.StatusInternalServerError)
+	if err := p.lpBuilder.Build(w, m, t, f, vals.Timestamp); err != nil {
+		handleErr("line protocol builing", err, http.StatusInternalServerError)
 		return
 	}
 }

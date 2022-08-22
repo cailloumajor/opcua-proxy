@@ -6,8 +6,11 @@ package proxy
 import (
 	"context"
 	"github.com/cailloumajor/opcua-proxy/internal/centrifugo"
+	"github.com/cailloumajor/opcua-proxy/internal/lineprotocol"
 	"github.com/cailloumajor/opcua-proxy/internal/opcua"
+	"io"
 	"sync"
+	"time"
 )
 
 // Ensure, that HealtherMock does implement Healther.
@@ -245,6 +248,96 @@ func (mock *MonitorProviderMock) SubscribeCalls() []struct {
 	mock.lockSubscribe.RLock()
 	calls = mock.calls.Subscribe
 	mock.lockSubscribe.RUnlock()
+	return calls
+}
+
+// Ensure, that LineProtocolBuilderMock does implement LineProtocolBuilder.
+// If this is not the case, regenerate this file with moq.
+var _ LineProtocolBuilder = &LineProtocolBuilderMock{}
+
+// LineProtocolBuilderMock is a mock implementation of LineProtocolBuilder.
+//
+//	func TestSomethingThatUsesLineProtocolBuilder(t *testing.T) {
+//
+//		// make and configure a mocked LineProtocolBuilder
+//		mockedLineProtocolBuilder := &LineProtocolBuilderMock{
+//			BuildFunc: func(w io.Writer, measurement string, tags map[string]string, fields map[string]lineprotocol.VariantProvider, ts time.Time) error {
+//				panic("mock out the Build method")
+//			},
+//		}
+//
+//		// use mockedLineProtocolBuilder in code that requires LineProtocolBuilder
+//		// and then make assertions.
+//
+//	}
+type LineProtocolBuilderMock struct {
+	// BuildFunc mocks the Build method.
+	BuildFunc func(w io.Writer, measurement string, tags map[string]string, fields map[string]lineprotocol.VariantProvider, ts time.Time) error
+
+	// calls tracks calls to the methods.
+	calls struct {
+		// Build holds details about calls to the Build method.
+		Build []struct {
+			// W is the w argument value.
+			W io.Writer
+			// Measurement is the measurement argument value.
+			Measurement string
+			// Tags is the tags argument value.
+			Tags map[string]string
+			// Fields is the fields argument value.
+			Fields map[string]lineprotocol.VariantProvider
+			// Ts is the ts argument value.
+			Ts time.Time
+		}
+	}
+	lockBuild sync.RWMutex
+}
+
+// Build calls BuildFunc.
+func (mock *LineProtocolBuilderMock) Build(w io.Writer, measurement string, tags map[string]string, fields map[string]lineprotocol.VariantProvider, ts time.Time) error {
+	if mock.BuildFunc == nil {
+		panic("LineProtocolBuilderMock.BuildFunc: method is nil but LineProtocolBuilder.Build was just called")
+	}
+	callInfo := struct {
+		W           io.Writer
+		Measurement string
+		Tags        map[string]string
+		Fields      map[string]lineprotocol.VariantProvider
+		Ts          time.Time
+	}{
+		W:           w,
+		Measurement: measurement,
+		Tags:        tags,
+		Fields:      fields,
+		Ts:          ts,
+	}
+	mock.lockBuild.Lock()
+	mock.calls.Build = append(mock.calls.Build, callInfo)
+	mock.lockBuild.Unlock()
+	return mock.BuildFunc(w, measurement, tags, fields, ts)
+}
+
+// BuildCalls gets all the calls that were made to Build.
+// Check the length with:
+//
+//	len(mockedLineProtocolBuilder.BuildCalls())
+func (mock *LineProtocolBuilderMock) BuildCalls() []struct {
+	W           io.Writer
+	Measurement string
+	Tags        map[string]string
+	Fields      map[string]lineprotocol.VariantProvider
+	Ts          time.Time
+} {
+	var calls []struct {
+		W           io.Writer
+		Measurement string
+		Tags        map[string]string
+		Fields      map[string]lineprotocol.VariantProvider
+		Ts          time.Time
+	}
+	mock.lockBuild.RLock()
+	calls = mock.calls.Build
+	mock.lockBuild.RUnlock()
 	return calls
 }
 

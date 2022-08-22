@@ -8,7 +8,7 @@ import (
 )
 
 // NewValueFromVariant creates a line protocol field value from an OPC-UA variant.
-func NewValueFromVariant(variant *ua.Variant) (lp.Value, error) {
+func NewValueFromVariant(variant VariantProvider) (lp.Value, error) {
 	var v lp.Value
 	var err error
 

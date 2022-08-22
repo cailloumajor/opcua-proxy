@@ -16,6 +16,7 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/cailloumajor/opcua-proxy/internal/centrifugo"
+	"github.com/cailloumajor/opcua-proxy/internal/lineprotocol"
 	"github.com/cailloumajor/opcua-proxy/internal/opcua"
 	"github.com/cailloumajor/opcua-proxy/internal/proxy"
 	"github.com/go-kit/log"
@@ -187,6 +188,7 @@ func main() {
 			proxyLogger,
 			centrifugoClient,
 			opcMonitor,
+			lineprotocol.NewBuilder(),
 			centrifugo.DefaultCentrifugoChannelParser{},
 			centrifugoNamespace,
 		)
