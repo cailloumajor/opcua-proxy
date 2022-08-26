@@ -1,3 +1,4 @@
+// Binary opcua-proxy.
 package main
 
 import (

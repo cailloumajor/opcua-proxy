@@ -1,3 +1,4 @@
+// Binary healthcheck.
 package main
 
 import (
