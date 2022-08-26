@@ -79,10 +79,10 @@ func (c *Channel) String() string {
 	return fmt.Sprint(c.ns, NsSeparator, c.name, nameIntervalSeparator, c.interval.Milliseconds())
 }
 
-// DefaultCentrifugoChannelParser is the default implementation of CentrifugoChannelParser.
-type DefaultCentrifugoChannelParser struct{}
+// DefaultChannelParser is the default implementation of CentrifugoChannelParser.
+type DefaultChannelParser struct{}
 
 // ParseChannel implements CentrifugoChannelParser.
-func (DefaultCentrifugoChannelParser) ParseChannel(s, namespace string) (*Channel, error) {
+func (DefaultChannelParser) ParseChannel(s, namespace string) (*Channel, error) {
 	return ParseChannel(s, namespace)
 }

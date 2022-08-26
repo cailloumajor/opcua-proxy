@@ -117,6 +117,7 @@ USAGE
 
 OPTIONS
   Flag                     Env Var                 Description
+  -api-listen              API_LISTEN              API listen address (default: :8080)
   -centrifugo-api-address  CENTRIFUGO_API_ADDRESS  Centrifugo API endpoint
   -centrifugo-api-key      CENTRIFUGO_API_KEY      Centrifugo API key
   -centrifugo-namespace    CENTRIFUGO_NAMESPACE    Centrifugo channel namespace for this instance
@@ -128,6 +129,5 @@ OPTIONS
   -opcua-server-url        OPCUA_SERVER_URL        OPC-UA server endpoint URL (default: opc.tcp://127.0.0.1:4840)
   -opcua-tidy-interval     OPCUA_TIDY_INTERVAL     interval at which to tidy-up OPC-UA subscriptions (default: 30s)
   -opcua-user              OPCUA_USER              user name for OPC-UA authentication (optional)
-  -proxy-listen            PROXY_LISTEN            Centrifugo proxy listen address (default: :8080)
   -read-nodes-url          READ_NODES_URL          URL to query for nodes to read
 ```

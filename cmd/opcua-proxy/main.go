@@ -16,12 +16,13 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/cailloumajor/opcua-proxy/internal/api"
 	"github.com/cailloumajor/opcua-proxy/internal/centrifugo"
 	"github.com/cailloumajor/opcua-proxy/internal/lineprotocol"
 	"github.com/cailloumajor/opcua-proxy/internal/opcua"
-	"github.com/cailloumajor/opcua-proxy/internal/proxy"
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
+	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/oklog/run"
 	"github.com/peterbourgon/ff"
@@ -91,7 +92,7 @@ func main() {
 	var (
 		opcuaConfig         opcua.Config
 		opcuaTidyInterval   time.Duration
-		proxyListen         string
+		apiListen           string
 		centrifugoNamespace string
 		centrifugoAddress   string
 		centrifugoKey       string
@@ -105,7 +106,7 @@ func main() {
 	fs.StringVar(&opcuaConfig.CertFile, "opcua-cert-file", "", "certificate file path for OPC-UA secure channel (optional)")
 	fs.StringVar(&opcuaConfig.KeyFile, "opcua-key-file", "", "private key file path for OPC-UA secure channel (optional)")
 	fs.DurationVar(&opcuaTidyInterval, "opcua-tidy-interval", 30*time.Second, "interval at which to tidy-up OPC-UA subscriptions")
-	fs.StringVar(&proxyListen, "proxy-listen", ":8080", "Centrifugo proxy listen address")
+	fs.StringVar(&apiListen, "api-listen", ":8080", "API listen address")
 	fs.StringVar(&centrifugoAddress, "centrifugo-api-address", "", "Centrifugo API endpoint")
 	fs.StringVar(&centrifugoKey, "centrifugo-api-key", "", "Centrifugo API key")
 	fs.StringVar(&centrifugoNamespace, "centrifugo-namespace", "", "Centrifugo channel namespace for this instance")
@@ -184,29 +185,39 @@ func main() {
 	var g run.Group
 
 	{
-		proxyLogger := log.With(logger, "component", "proxy")
-		proxy := proxy.NewProxy(
-			proxyLogger,
-			centrifugoClient,
+		hs := &api.HealthService{}
+		hs.Register("OPC-UA monitor", opcMonitor)
+		hs.Register("Centrifugo", centrifugoClient)
+
+		is := api.NewInfluxDbMetricsService(opcMonitor, lineprotocol.NewBuilder())
+
+		cs := api.NewCentrifugoSubscribeService(
+			centrifugo.DefaultChannelParser{},
 			opcMonitor,
-			lineprotocol.NewBuilder(),
-			centrifugo.DefaultCentrifugoChannelParser{},
 			centrifugoNamespace,
 		)
+
+		r := mux.NewRouter()
+		r.Methods(http.MethodGet).Path("/health").Handler(hs)
+		r.Methods(http.MethodGet).Path("/influxdb-metrics").Handler(is)
+		r.Methods(http.MethodPost).Path("/centrifugo/subscribe").Handler(cs)
+
 		srv := http.Server{
-			Addr:    proxyListen,
-			Handler: proxy,
+			Addr:    apiListen,
+			Handler: r,
 		}
+
+		apiLogger := log.With(logger, "component", "API")
 		g.Add(func() error {
-			defer level.Debug(proxyLogger).Log("msg", "shutting down")
-			level.Debug(proxyLogger).Log("msg", "starting")
-			level.Info(proxyLogger).Log("listen", proxyListen)
+			defer level.Debug(apiLogger).Log("msg", "shutting down")
+			level.Debug(apiLogger).Log("msg", "starting")
+			level.Info(apiLogger).Log("listen", srv.Addr)
 			return srv.ListenAndServe()
 		}, func(error) {
 			ctx, cancel := context.WithTimeout(context.Background(), stopTimeout)
 			defer cancel()
 			if err := srv.Shutdown(ctx); err != nil {
-				level.Info(proxyLogger).Log("during", "Shutdown", "err", err)
+				level.Info(apiLogger).Log("during", "Shutdown", "err", err)
 			}
 		})
 	}
