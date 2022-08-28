@@ -12,7 +12,7 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/oklog/run v1.1.0
 	github.com/peterbourgon/ff v1.7.1
-	golang.org/x/exp v0.0.0-20220826205824-bd9bcdd0b820
+	golang.org/x/exp v0.0.0-20220827204233-334a2380cb91
 )
 
 require (
