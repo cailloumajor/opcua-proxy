@@ -170,7 +170,7 @@ func main() {
 			defer cancel()
 
 			var err error
-			opcClient, err = opcua.NewClient(tCtx, &opcuaConfig, opcua.DefaultClientExtDeps{})
+			opcClient, err = opcua.NewClient(tCtx, &opcuaConfig, nil)
 			if err != nil {
 				return err
 			}

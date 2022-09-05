@@ -28,6 +28,10 @@ type Client struct {
 
 // NewClient creates a configured OPC-UA client.
 func NewClient(ctx context.Context, cfg *Config, deps ClientExtDeps) (*Client, error) {
+	if deps == nil {
+		deps = &defaultClientExtDeps{}
+	}
+
 	eps, err := deps.GetEndpoints(ctx, cfg.ServerURL)
 	if err != nil {
 		return nil, fmt.Errorf("error getting endpoints: %w", err)
