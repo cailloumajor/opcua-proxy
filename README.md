@@ -1,47 +1,73 @@
-<!-- markdownlint-configure-file { "MD033": { "allowed_elements": [ "br" ] } } -->
 # OPC-UA proxy
 
 [![Tests and code quality](https://github.com/cailloumajor/opcua-proxy/actions/workflows/tests.yml/badge.svg)](https://github.com/cailloumajor/opcua-proxy/actions/workflows/tests.yml)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 
-A proxy microservice connecting to an OPC-UA server and offering:
+A proxy microservice connecting to OPC-UA servers and offering:
 
-- Data change subscriptions through Centrifugo;
+- Data change and heartbeat publications to Centrifugo;
+- Centrifugo subscribe proxy providing current tags values;
 - InfluxDB metrics.
+
+## Design
+
+See [DESIGN.md](DESIGN.md).
 
 ## Specifications
 
-### Nodes object
+### Tag set
 
-OPC-UA nodes are represented as a JSON object with following fields:
+The tags to read from each partner (OPC-UA server) are grouped into a tag set, which is provided in JSON format as an array of objects.
 
-- *namespaceURI*: namespace URI for nodes to monitor (string)
-- *nodes*: array of node identifiers, with mapping below:
+```jsonc
+[
+  { "name": "firstTag",  "nsu": "urn:namespace", "nid": "node1" },
+  { "name": "secondTag", "nsu": "urn:namespace", "nid": 2 },
+  // ...
+]
+```
 
-| JSON type                       | [NodeID type][3] |
-|---------------------------------|------------------|
-| Integer (positive whole number) | Numeric          |
-| String                          | String           |
+Each object in the array consists of key/value pairs described below.
 
-### Centrifugo subscriptions
+| Key    | Value type                          | Description                         |
+| ------ | ----------------------------------- | ----------------------------------- |
+| `name` | string                              | Tag name                            |
+| `nsu`  | string                              | OPC-UA namespace URI                |
+| `nid`  | string \| number (positive integer) | OPC-UA [NodeId][nodeid] identifier* |
 
-[1]: https://centrifugal.dev/docs/server/proxy#subscribe-proxy
-[2]: https://centrifugal.dev/docs/server/channels#channel-namespaces
-[3]: https://reference.opcfoundation.org/v105/Core/docs/Part3/8.2.3/
+_\*[NodeId][nodeid] identifier type will be inferred from JSON type._
 
-- A Centrifugo server (at least v3.1.1) is configured to [proxy subscriptions][1] to this service (`/centrifugo/subscribe` endpoint).
-- Clients interested in OPC-UA values changes subscribe to Centrifugo with following characteristics:
-  - *Channel*: name and interval, separated by `@`, e.g. `my_nodes@2000`, with:
-    - *name*: unique identifier for each nodes set.
-    - *interval*: publishing interval in milliseconds.
-    - **Note**: channel [namespace][2] is reserved for configuring the proxy endpoint.
-  - *Data*: Nodes object (see [above](#nodes-object)).
+[nodeid]: https://reference.opcfoundation.org/v104/Core/docs/Part3/8.2.1/
+
+### Data change publications
+
+For each data change notification received from an OPC-UA server, a publication is emitted to Centrifugo server, with following parameters:
+
+- `channel`: `opcua:data;<ID>`, with _ID_ being the identifier of the partner device;
+- `data`: JSON object with tag name and value pairs.
+
+### Heartbeat publications
+
+Every heartbeat interval (see [configuration](#configuration)), a publication is emitted to Centrifugo server, with following parameters:
+
+- `channel`: `opcua:heartbeat;<ID>`, with _ID_ being the identifier of the partner device;
+- `data`: status of the OPC-UA connection to the partner device.
+
+### Centrifugo subscribe proxy
+
+If the Centrifugo server is configured to [proxy subscriptions][sub-proxy] on `opcua` channel to this service (on `/centrifugo/subscribe` endpoint), last known values for the tag set will be sent to the client in `subscribed` event context.
+
+[sub-proxy]: https://centrifugal.dev/docs/server/proxy#subscribe-proxy
 
 ### InfluxDB metrics endpoint
 
-A `GET` request on `/influxdb-metrics` endpoint returns the configured nodes data values, in InfluxDB line protocol format. Measurement name must be given as the value of `measurement` URL parameter. Other query parameters are expected to each have one value and will be emitted as tags.
+A `GET` request on `/influxdb-metrics` endpoint returns last known values for the tag set of each partner device, in InfluxDB line protocol format (one line for each partner).
 
-The nodes to be read are defined in a JSON file, located in configured path, and containing an array of Nodes objects (see [above](#nodes-object)).
+Measurement name must be given as the value of `measurement` URL parameter.
+
+`id` tag will be set to the identifier of the partner device.
+
+Other query parameters are expected to each have one value and will be emitted as tags.
 
 ## Data flow
 
@@ -53,33 +79,33 @@ Connection to OPC-UA server and session establishment are considered to have bee
 sequenceDiagram
     participant Client
     participant Centrifugo as Centrifugo server
-    participant Proxy as Centrifugo / OPC-UA<br>proxy
+    participant Proxy as OPC-UA proxy
     participant OPCServer as OPC-UA server
-    alt unrecognized channel
-        Client->>+Centrifugo: Subscribes to a channel
-        Centrifugo->>+Proxy: Proxies the subscription request
-        Proxy-->>-Centrifugo: Subscription allowed
-        Centrifugo-->>-Client: Success
-    else Heartbeat channel
-        Client->>+Centrifugo: Subscribes to heartbeat channel
-        Centrifugo->>+Proxy: Proxies the subscription request
-        Proxy-->>-Centrifugo: Subscription allowed
-        Centrifugo-->>-Client: Success
-        loop Each heartbeat interval
-            Proxy-)Centrifugo: Publishes status
-            Centrifugo-)Client: Notifies status
-        end
-    else OPC-UA related channel
-        Client->>+Centrifugo: Subscribes to a channel
-        Centrifugo->>+Proxy: Proxies the subscription request
-        opt No subscription for this refresh interval
-            Proxy->>+OPCServer: Create subscription
-            OPCServer-->>-Proxy: Subscription created
-        end
-        Proxy->>+OPCServer: Create monitored item
+    critical retry unless success for each partner device
+        Proxy->>+OPCServer: Connects
+        OPCServer-->>-Proxy: Connection success
+        Proxy->>+OPCServer: Create subscription
+        OPCServer-->>-Proxy: Subscription created
+        Proxy->>+OPCServer: Create monitored items
         OPCServer-->>-Proxy: Monitored item created
-        Proxy-->>-Centrifugo: Subscription allowed
-        Centrifugo-->>-Client: Success
+    end
+    alt subscription to proxied channel
+        Client->>+Centrifugo: Subscribes to channel
+        Centrifugo->>+Proxy: Proxies the subscription request
+        alt unrecognized channel or unknown partner device ID
+            Proxy-->>Centrifugo: Error message
+            Centrifugo-->>Client: Subscription disallowed
+        else heartbeat or data channel
+            Proxy-->>-Centrifugo: Success message
+            Centrifugo-->>-Client: Subscription allowed
+        end
+    else publication
+        loop Each heartbeat interval
+            loop For each partner device
+                Proxy-)+Centrifugo: Publishes status
+                Centrifugo-)-Client: Notifies status
+            end
+        end
         loop Each publishing interval with data change
             OPCServer-)Proxy: Data change notification
             activate Proxy
@@ -90,19 +116,6 @@ sequenceDiagram
             deactivate Centrifugo
         end
     end
-```
-
-### InfluxDB metrics
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Proxy as Centrifugo / OPC-UA<br>proxy
-    participant OPCServer as OPC-UA server
-    Client->>+Proxy: Requests InfluxDB metrics
-    Proxy->>+OPCServer: Reads nodes data values
-    OPCServer-->>-Proxy: Sends data values
-    Proxy-->>-Client: Sends values in line protocol format
 ```
 
 ## Configuration
