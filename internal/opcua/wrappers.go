@@ -1,4 +1,4 @@
-// This file contains implementations wrapping to top-level functions of gocpua library.
+// This file contains implementations wrapping to top-level functions.
 
 package opcua
 
