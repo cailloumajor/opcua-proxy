@@ -1,4 +1,6 @@
 {
+    "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
+
     "build": {
         "args": {
             "http_proxy": "${localEnv:http_proxy}",
