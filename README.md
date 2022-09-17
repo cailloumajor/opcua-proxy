@@ -1,108 +1,84 @@
-<!-- markdownlint-configure-file { "MD033": { "allowed_elements": [ "br" ] } } -->
 # OPC-UA proxy
 
 [![Tests and code quality](https://github.com/cailloumajor/opcua-proxy/actions/workflows/tests.yml/badge.svg)](https://github.com/cailloumajor/opcua-proxy/actions/workflows/tests.yml)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 
-A proxy microservice connecting to an OPC-UA server and offering:
+A proxy microservice writing OPC-UA data changes to MongoDB.
 
-- Data change subscriptions through Centrifugo;
-- InfluxDB metrics.
+## Design
+
+See [DESIGN.md](DESIGN.md).
 
 ## Specifications
 
-### Nodes object
+### Tag set
 
-OPC-UA nodes are represented as a JSON object with following fields:
+The tags to read from OPC-UA server are grouped into a tag set, which is represented in JSON format as an array of objects.
 
-- *namespaceURI*: namespace URI for nodes to monitor (string)
-- *nodes*: array of node identifiers, with mapping below:
+```jsonc
+[
+  { "name": "firstTag",  "nsu": "urn:namespace", "nid": "node1" },
+  { "name": "secondTag", "nsu": "urn:namespace", "nid": 2 },
+  // ...
+]
+```
 
-| JSON type                       | [NodeID type][3] |
-| ------------------------------- | ---------------- |
-| Integer (positive whole number) | Numeric          |
-| String                          | String           |
+Each object in the array consists of key/value pairs described below.
 
-### Centrifugo subscriptions
+| Key    | Value type                          | Description                         |
+| ------ | ----------------------------------- | ----------------------------------- |
+| `name` | string                              | Tag name                            |
+| `nsu`  | string                              | OPC-UA namespace URI                |
+| `nid`  | string \| number (positive integer) | OPC-UA [NodeId][nodeid] identifier* |
 
-[1]: https://centrifugal.dev/docs/server/proxy#subscribe-proxy
-[2]: https://centrifugal.dev/docs/server/channels#channel-namespaces
-[3]: https://reference.opcfoundation.org/v105/Core/docs/Part3/8.2.3/
+_\*[NodeId][nodeid] identifier type will be inferred from JSON type._
 
-- A Centrifugo server (at least v3.1.1) is configured to [proxy subscriptions][1] to this service (`/centrifugo/subscribe` endpoint).
-- Clients interested in OPC-UA values changes subscribe to Centrifugo with following characteristics:
-  - *Channel*: name and interval, separated by `@`, e.g. `my_nodes@2000`, with:
-    - *name*: unique identifier for each nodes set.
-    - *interval*: publishing interval in milliseconds.
-    - **Note**: channel [namespace][2] is reserved for configuring the proxy endpoint.
-  - *Data*: Nodes object (see [above](#nodes-object)).
+[nodeid]: https://reference.opcfoundation.org/v104/Core/docs/Part3/8.2.1/
 
-### InfluxDB metrics endpoint
+### MongoDB
 
-A `GET` request on `/influxdb-metrics` endpoint returns the configured nodes data values, in InfluxDB line protocol format. Measurement name must be given as the value of `measurement` URL parameter. Other query parameters are expected to each have one value and will be emitted as tags.
+Queries to MongoDB will use following parameters:
 
-The nodes to be read are defined in a JSON file, located in configured path, and containing an array of Nodes objects (see [above](#nodes-object)).
+- database: `opcua`;
+- document primary key (`_id`): partner ID, from configuration flag.
+
+### OPC-UA data change
+
+For each data change notification received from the OPC-UA server, an update query will be issued to MongoDB on collection `data`, as a document comprising following fields:
+
+- `data`: mapping of tag names to their values;
+- `updatedAt`: MongoDB current date and time.
+
+### Health
+
+This service subscribes to OPC-UA server current time. Each time a data change notification is received, it sends an update query on `health` collection to MongoDB, with following document fields:
+
+- `serverDateTime`: OPC-UA server timestamp as BSON DateTime;
+- `updatedAt`: MongoDB current date and time.
 
 ## Data flow
 
-Connection to OPC-UA server and session establishment are considered to have been done successfully.
-
-### Subscriptions
-
 ```mermaid
 sequenceDiagram
-    participant Client
-    participant Centrifugo as Centrifugo server
-    participant Proxy as Centrifugo / OPC-UA<br>proxy
     participant OPCServer as OPC-UA server
-    alt unrecognized channel
-        Client->>+Centrifugo: Subscribes to a channel
-        Centrifugo->>+Proxy: Proxies the subscription request
-        Proxy-->>-Centrifugo: Subscription allowed
-        Centrifugo-->>-Client: Success
-    else Heartbeat channel
-        Client->>+Centrifugo: Subscribes to heartbeat channel
-        Centrifugo->>+Proxy: Proxies the subscription request
-        Proxy-->>-Centrifugo: Subscription allowed
-        Centrifugo-->>-Client: Success
-        loop Each heartbeat interval
-            Proxy-)Centrifugo: Publishes status
-            Centrifugo-)Client: Notifies status
-        end
-    else OPC-UA related channel
-        Client->>+Centrifugo: Subscribes to a channel
-        Centrifugo->>+Proxy: Proxies the subscription request
-        opt No subscription for this refresh interval
-            Proxy->>+OPCServer: Create subscription
-            OPCServer-->>-Proxy: Subscription created
-        end
-        Proxy->>+OPCServer: Create monitored item
-        OPCServer-->>-Proxy: Monitored item created
-        Proxy-->>-Centrifugo: Subscription allowed
-        Centrifugo-->>-Client: Success
-        loop Each publishing interval with data change
-            OPCServer-)Proxy: Data change notification
-            activate Proxy
-            Proxy-)Centrifugo: Publish
-            deactivate Proxy
-            activate Centrifugo
-            Centrifugo-)Client: Notifies data change
-            deactivate Centrifugo
-        end
+    participant Proxy as OPC-UA proxy
+    participant MongoDB
+    critical
+        Proxy->>+OPCServer: Connects
+        OPCServer-->>-Proxy: Connection success
+        Proxy->>+OPCServer: Creates subscription
+        OPCServer-->>-Proxy: Subscription created
+        Proxy->>+OPCServer: Creates monitored items
+        OPCServer-->>-Proxy: Monitored items created
     end
-```
-
-### InfluxDB metrics
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Proxy as Centrifugo / OPC-UA<br>proxy
-    participant OPCServer as OPC-UA server
-    Client->>+Proxy: Requests InfluxDB metrics
-    Proxy->>+OPCServer: Reads nodes data values
-    OPCServer-->>-Proxy: Sends data values
-    Proxy-->>-Client: Sends values in line protocol format
+    loop Current time changes
+        OPCServer-)+Proxy: Data change notification
+        Proxy-)-MongoDB: Updates health document
+    end
+    loop Tags values changes
+        OPCServer-)+Proxy: Data change notification
+        Proxy-)-MongoDB: Updates data document
+    end
 ```
 
 ## Configuration
