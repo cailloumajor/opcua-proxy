@@ -19,7 +19,7 @@ OPC-UA nodes are represented as a JSON object with following fields:
 - *nodes*: array of node identifiers, with mapping below:
 
 | JSON type                       | [NodeID type][3] |
-|---------------------------------|------------------|
+| ------------------------------- | ---------------- |
 | Integer (positive whole number) | Numeric          |
 | String                          | String           |
 
@@ -107,27 +107,7 @@ sequenceDiagram
 
 ## Configuration
 
-This project uses standard library's [flag](https://pkg.go.dev/flag) and <https://github.com/peterbourgon/ff>
-packages, configuration can be provided by flags or environment variables.
+:construction: WIP :construction:
 
 ```ShellSession
-$ opcua-proxy -help
-USAGE
-  opcua-proxy [options]
-
-OPTIONS
-  Flag                     Env Var                 Description
-  -api-listen              API_LISTEN              API listen address (default: :8080)
-  -centrifugo-api-address  CENTRIFUGO_API_ADDRESS  Centrifugo API endpoint
-  -centrifugo-api-key      CENTRIFUGO_API_KEY      Centrifugo API key
-  -centrifugo-namespace    CENTRIFUGO_NAMESPACE    Centrifugo channel namespace for this instance
-  -debug                                           log debug information (default: false)
-  -heartbeat-interval      HEARTBEAT_INTERVAL      Heartbeat interval (default: 5s)
-  -opcua-cert-file         OPCUA_CERT_FILE         certificate file path for OPC-UA secure channel (optional)
-  -opcua-key-file          OPCUA_KEY_FILE          private key file path for OPC-UA secure channel (optional)
-  -opcua-password          OPCUA_PASSWORD          password for OPC-UA authentication (optional)
-  -opcua-server-url        OPCUA_SERVER_URL        OPC-UA server endpoint URL (default: opc.tcp://127.0.0.1:4840)
-  -opcua-tidy-interval     OPCUA_TIDY_INTERVAL     interval at which to tidy-up OPC-UA subscriptions (default: 30s)
-  -opcua-user              OPCUA_USER              user name for OPC-UA authentication (optional)
-  -read-nodes-url          READ_NODES_URL          URL to query for nodes to read
 ```

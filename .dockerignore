@@ -1,6 +1,5 @@
 *
 
-!go.mod
-!go.sum
-!cmd
-!internal
+!Cargo.toml
+!Cargo.lock
+!src/
