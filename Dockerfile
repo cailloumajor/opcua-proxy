@@ -37,4 +37,4 @@ HEALTHCHECK CMD ["/usr/local/bin/healthcheck", "8080"]
 
 USER nonroot
 EXPOSE 8080
-CMD ["/usr/local/bin/opcua_proxy"]
+CMD ["/usr/local/bin/opcua-proxy"]
