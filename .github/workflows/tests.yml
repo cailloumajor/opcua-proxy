@@ -80,5 +80,5 @@ jobs:
       - name: Check command usage in README.md
         # Thanks to https://unix.stackexchange.com/a/17405
         run: diff
-          <(sed '1,/\$ static_config_api --help/d;/```/,$d' README.md)
-          <(cargo run --quiet --bin static_config_api -- --help)
+          <(sed '1,/\$ opcua-proxy --help/d;/```/,$d' README.md)
+          <(cargo run --quiet --bin opcua-proxy -- --help)
