@@ -20,11 +20,12 @@ const OPCUA_DATA_COLL: &str = "data";
 
 pub(crate) type DatabaseActorAddress = Addr<DatabaseActor>;
 
-pub(crate) async fn create_client(uri: impl AsRef<str>) -> Result<Client> {
+pub(crate) async fn create_client(uri: &str, partner_id: &str) -> Result<Client> {
     let mut options = ClientOptions::parse(uri)
         .await
         .context("error parsing connection string URI")?;
-    options.app_name = "OPC-UA proxy".to_string().into();
+    let app_name = format!("OPC-UA proxy ({})", partner_id);
+    options.app_name = app_name.into();
     options.server_selection_timeout = Duration::from_secs(2).into();
     Client::with_options(options).context("error creating the client")
 }

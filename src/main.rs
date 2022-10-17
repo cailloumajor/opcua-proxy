@@ -66,7 +66,7 @@ fn main() -> Result<()> {
 
     let system = System::new();
 
-    let db_client = system.block_on(db::create_client(&args.mongodb_uri))?;
+    let db_client = system.block_on(db::create_client(&args.mongodb_uri, &args.partner_id))?;
     let addr =
         system.block_on(async { db::DatabaseActor::new("testid".into(), db_client).start() });
 
