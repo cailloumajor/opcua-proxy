@@ -11,7 +11,7 @@ use mongodb::{
     options::{ClientOptions, UpdateOptions},
     Client, Database,
 };
-use tracing::{debug, error, info_span, Instrument};
+use tracing::{debug, debug_span, error, info, Instrument};
 
 use opcua_proxy::{DATABASE, OPCUA_DATA_COLL, OPCUA_HEALTH_COLL};
 
@@ -19,6 +19,7 @@ use crate::variant::Variant;
 
 pub(crate) type DatabaseActorAddress = Addr<DatabaseActor>;
 
+#[tracing::instrument(skip_all)]
 pub(crate) async fn create_client(uri: &str, partner_id: &str) -> Result<Client> {
     let mut options = ClientOptions::parse(uri)
         .await
@@ -26,7 +27,10 @@ pub(crate) async fn create_client(uri: &str, partner_id: &str) -> Result<Client>
     let app_name = format!("OPC-UA proxy ({})", partner_id);
     options.app_name = app_name.into();
     options.server_selection_timeout = Duration::from_secs(2).into();
-    Client::with_options(options).context("error creating the client")
+    let client = Client::with_options(options).context("error creating the client")?;
+
+    info!(status = "success");
+    Ok(client)
 }
 
 pub(crate) struct DatabaseActor {
@@ -123,7 +127,7 @@ impl Handler<DataChangeMessage> for DatabaseActor {
                 }
             }
         }
-        .instrument(info_span!("handle data change message"))
+        .instrument(debug_span!("handle data change message"))
         .boxed()
     }
 }
@@ -166,7 +170,7 @@ impl Handler<HealthMessage> for DatabaseActor {
                 }
             }
         }
-        .instrument(info_span!("handle health message"))
+        .instrument(debug_span!("handle health message"))
         .boxed()
     }
 }

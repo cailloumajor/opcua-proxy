@@ -101,6 +101,7 @@ impl TagSet {
     }
 }
 
+#[tracing::instrument(skip_all)]
 pub(crate) fn create_session(config: &Config, partner_id: &str) -> Result<Arc<RwLock<Session>>> {
     const PRODUCT_URI: &str = concat!("urn:", env!("CARGO_PKG_NAME"));
 
@@ -153,9 +154,11 @@ pub(crate) fn create_session(config: &Config, partner_id: &str) -> Result<Arc<Rw
         }))
     }
 
+    info!(status = "success");
     Ok(session)
 }
 
+#[tracing::instrument(skip_all)]
 pub(crate) fn get_namespaces(session: &impl AttributeService) -> Result<Namespaces> {
     let namespace_array_nodeid: NodeId = VariableId::Server_NamespaceArray.into();
     let read_result = session.read(
@@ -191,9 +194,11 @@ pub(crate) fn get_namespaces(session: &impl AttributeService) -> Result<Namespac
         .into_iter()
         .collect();
 
+    info!(status = "success");
     Ok(namespaces)
 }
 
+#[tracing::instrument(skip_all)]
 pub(crate) fn subscribe_to_tags<T>(
     session: &T,
     namespaces: &Namespaces,
@@ -262,9 +267,11 @@ where
         }
     }
 
+    info!(status = "success");
     Ok(())
 }
 
+#[tracing::instrument(skip_all)]
 pub(crate) fn subscribe_to_health<T>(session: &T, send_addr: DatabaseActorAddress) -> Result<()>
 where
     T: SubscriptionService + MonitoredItemService,
@@ -318,6 +325,7 @@ where
         return Err(anyhow!("bad status code : {}", result.status_code));
     }
 
+    info!(status = "success");
     Ok(())
 }
 
