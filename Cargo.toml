@@ -9,6 +9,7 @@ edition = "2021"
 [dependencies]
 actix = "0.13.0"
 anyhow = "1.0.65"
+clap-verbosity-flag = "2.0.0"
 futures-util = "0.3.24"
 mongodb = "2.3.0"
 serde = { version = "1.0.145", features = [ "derive" ] }

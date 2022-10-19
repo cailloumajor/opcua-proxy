@@ -4,6 +4,7 @@ use actix::{Actor, System};
 use anyhow::{Context, Result};
 
 use clap::Parser;
+use clap_verbosity_flag::{InfoLevel, LogLevel, Verbosity};
 use opcua_proxy::CommonArgs;
 use signal_hook::consts::TERM_SIGNALS;
 use signal_hook::iterator::Signals;
@@ -20,6 +21,9 @@ mod variant;
 #[derive(Parser)]
 struct Args {
     #[command(flatten)]
+    verbose: Verbosity<InfoLevel>,
+
+    #[command(flatten)]
     common: CommonArgs,
 
     /// Path of JSON file to get tag set from
@@ -28,6 +32,20 @@ struct Args {
 
     #[command(flatten)]
     opcua: opcua::Config,
+}
+
+fn filter_from_verbosity<T>(verbosity: &Verbosity<T>) -> tracing::level_filters::LevelFilter
+where
+    T: LogLevel,
+{
+    match verbosity.log_level_filter() {
+        LevelFilter::Off => tracing::level_filters::LevelFilter::OFF,
+        LevelFilter::Error => tracing::level_filters::LevelFilter::ERROR,
+        LevelFilter::Warn => tracing::level_filters::LevelFilter::WARN,
+        LevelFilter::Info => tracing::level_filters::LevelFilter::INFO,
+        LevelFilter::Debug => tracing::level_filters::LevelFilter::DEBUG,
+        LevelFilter::Trace => tracing::level_filters::LevelFilter::TRACE,
+    }
 }
 
 fn handle_signals(
@@ -55,7 +73,7 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
+        .with_max_level(filter_from_verbosity(&args.verbose))
         .init();
 
     LogTracer::init_with_filter(LevelFilter::Warn).context("error initializing log tracer")?;
