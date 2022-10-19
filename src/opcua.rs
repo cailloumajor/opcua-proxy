@@ -5,14 +5,15 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use opcua::client::prelude::*;
+pub(crate) use opcua::client::prelude::{Session, SessionCommand};
 use opcua::sync::RwLock;
 use serde::Deserialize;
 use tracing::info;
 use tracing::{error, info_span};
 
-pub(crate) use opcua::client::prelude::{Session, SessionCommand};
+use opcua_proxy::OPCUA_HEALTH_INTERVAL;
 
-use crate::db::DatabaseActorAddress;
+use crate::db::{DataChangeMessage, DatabaseActorAddress, HealthMessage};
 
 #[derive(Args)]
 pub(crate) struct Config {
@@ -205,8 +206,8 @@ where
     let tag_set = Arc::new(tag_set);
     let cloned_tag_set = tag_set.clone();
     let data_change_callback = DataChangeCallback::new(move |monitored_items| {
-        let _entered = info_span!("data change handler").entered();
-        let message = monitored_items
+        let _entered = info_span!("tags values change handler").entered();
+        let message: DataChangeMessage = monitored_items
             .iter()
             .filter_map(|item| {
                 let node_id = &item.item_to_monitor().node_id;
@@ -259,6 +260,62 @@ where
                 status_code
             ));
         }
+    }
+
+    Ok(())
+}
+
+pub(crate) fn subscribe_to_health<T>(session: &T, send_addr: DatabaseActorAddress) -> Result<()>
+where
+    T: SubscriptionService + MonitoredItemService,
+{
+    let data_change_callback = DataChangeCallback::new(move |monitored_items| {
+        let _entered = info_span!("health value change handler").entered();
+        let ticks = monitored_items
+            .get(0)
+            .and_then(|item| item.last_value().value.as_ref())
+            .and_then(|variant| {
+                if let Variant::DateTime(dt) = variant {
+                    Some(dt.as_chrono().timestamp_millis())
+                } else {
+                    None
+                }
+            });
+        if let Some(t) = ticks {
+            send_addr.do_send(HealthMessage::from(t));
+        } else {
+            error!(?monitored_items, err = "unexpected monitored items");
+        }
+    });
+
+    let subscription_id = session
+        .create_subscription(
+            OPCUA_HEALTH_INTERVAL.into(),
+            50,
+            10,
+            1,
+            0,
+            true,
+            data_change_callback,
+        )
+        .context("error creating subscription")?;
+
+    let server_time_node: NodeId = VariableId::Server_ServerStatus_CurrentTime.into();
+
+    let results = session
+        .create_monitored_items(
+            subscription_id,
+            TimestampsToReturn::Neither,
+            &[server_time_node.into()],
+        )
+        .context("error creating monitored item")?;
+
+    let result = results
+        .get(0)
+        .ok_or_else(|| anyhow!("missing result for monitored item creation"))?;
+
+    if !result.status_code.is_good() {
+        return Err(anyhow!("bad status code : {}", result.status_code));
     }
 
     Ok(())

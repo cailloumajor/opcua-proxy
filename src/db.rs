@@ -1,22 +1,21 @@
 use std::collections::HashMap;
 use std::fmt;
-use std::slice::Iter;
 use std::time::Duration;
+use std::vec::IntoIter;
 
 use actix::prelude::*;
 use anyhow::{Context as _, Result};
 use futures_util::FutureExt;
 use mongodb::{
-    bson::{self, doc, Document},
+    bson::{self, doc, DateTime, Document},
     options::{ClientOptions, UpdateOptions},
     Client, Database,
 };
 use tracing::{debug, error, info_span, Instrument};
 
-use crate::variant::Variant;
+use opcua_proxy::{DATABASE, OPCUA_DATA_COLL, OPCUA_HEALTH_COLL};
 
-const DATABASE: &str = "opcua";
-const OPCUA_DATA_COLL: &str = "data";
+use crate::variant::Variant;
 
 pub(crate) type DatabaseActorAddress = Addr<DatabaseActor>;
 
@@ -50,9 +49,12 @@ impl Actor for DatabaseActor {
 
 pub(crate) struct DataChangeMessage(Vec<(String, Variant)>);
 
-impl DataChangeMessage {
-    pub(crate) fn iter(&self) -> Iter<(String, Variant)> {
-        self.0.iter()
+impl IntoIterator for DataChangeMessage {
+    type Item = (String, Variant);
+    type IntoIter = IntoIter<(String, Variant)>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
@@ -90,15 +92,16 @@ impl Handler<DataChangeMessage> for DatabaseActor {
     type Result = ResponseFuture<()>;
 
     fn handle(&mut self, msg: DataChangeMessage, _ctx: &mut Self::Context) -> Self::Result {
+        let message_display = msg.to_string();
         let collection = self.db.collection::<Document>(OPCUA_DATA_COLL);
         let query = doc! { "_id": &self.partner_id };
         let update_data: HashMap<String, Variant> = msg
-            .iter()
-            .map(|(k, v)| ("data.".to_owned() + k.as_str(), v.clone()))
+            .into_iter()
+            .map(|(k, v)| ("data.".to_owned() + k.as_str(), v))
             .collect();
         let options = UpdateOptions::builder().upsert(true).build();
         async move {
-            debug!(received = "msg", %msg);
+            debug!(received = "msg", msg = message_display);
             let update_data_doc = match bson::to_document(&update_data) {
                 Ok(doc) => doc,
                 Err(err) => {
@@ -116,11 +119,54 @@ impl Handler<DataChangeMessage> for DatabaseActor {
             match collection.update_one(query, update, options).await {
                 Ok(_) => (),
                 Err(err) => {
-                    error!(when = "updating document", err = err.to_string());
+                    error!(when = "updating document", %err);
                 }
             }
         }
         .instrument(info_span!("handle data change message"))
+        .boxed()
+    }
+}
+
+pub(crate) struct HealthMessage(DateTime);
+
+impl fmt::Display for HealthMessage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl From<i64> for HealthMessage {
+    fn from(millis: i64) -> Self {
+        Self(DateTime::from_millis(millis))
+    }
+}
+
+impl Message for HealthMessage {
+    type Result = ();
+}
+
+impl Handler<HealthMessage> for DatabaseActor {
+    type Result = ResponseFuture<()>;
+
+    fn handle(&mut self, msg: HealthMessage, _ctx: &mut Self::Context) -> Self::Result {
+        let collection = self.db.collection::<Document>(OPCUA_HEALTH_COLL);
+        let query = doc! { "_id": &self.partner_id };
+        let update = doc! {
+            "$set": { "serverDateTime": msg.0 },
+            "$currentDate": { "updatedAt": true },
+        };
+        let options = UpdateOptions::builder().upsert(true).build();
+        async move {
+            debug!(received = "msg", %msg);
+            match collection.update_one(query, update, options).await {
+                Ok(_) => (),
+                Err(err) => {
+                    error!(when="updating document", %err)
+                }
+            }
+        }
+        .instrument(info_span!("handle health message"))
         .boxed()
     }
 }

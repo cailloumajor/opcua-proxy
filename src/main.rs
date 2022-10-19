@@ -4,6 +4,7 @@ use actix::{Actor, System};
 use anyhow::{Context, Result};
 
 use clap::Parser;
+use opcua_proxy::CommonArgs;
 use signal_hook::consts::TERM_SIGNALS;
 use signal_hook::iterator::Signals;
 use signal_hook::low_level::signal_name;
@@ -18,17 +19,12 @@ mod variant;
 
 #[derive(Parser)]
 struct Args {
-    /// OPC-UA partner device ID
-    #[arg(env, long)]
-    partner_id: String,
+    #[command(flatten)]
+    common: CommonArgs,
 
     /// Path of JSON file to get tag set from
     #[arg(env, long)]
     tag_set_config_path: String,
-
-    /// URL of MongoDB database
-    #[arg(env, long, default_value = "mongodb://mongo")]
-    mongodb_uri: String,
 
     #[command(flatten)]
     opcua: opcua::Config,
@@ -66,18 +62,24 @@ fn main() -> Result<()> {
 
     let system = System::new();
 
-    let db_client = system.block_on(db::create_client(&args.mongodb_uri, &args.partner_id))?;
-    let addr =
-        system.block_on(async { db::DatabaseActor::new("testid".into(), db_client).start() });
+    let db_client = system.block_on(db::create_client(
+        &args.common.mongodb_uri,
+        &args.common.partner_id,
+    ))?;
+    let addr = system.block_on(async {
+        db::DatabaseActor::new(args.common.partner_id.clone(), db_client).start()
+    });
 
-    let opcua_session = opcua::create_session(&args.opcua, &args.partner_id) //
+    let opcua_session = opcua::create_session(&args.opcua, &args.common.partner_id) //
         .context("error creating session")?;
     let namespaces = opcua::get_namespaces(&*opcua_session.read()) //
         .context("error getting namespaces")?;
     let tag_set = opcua::TagSet::from_file(&args.tag_set_config_path) //
         .context("error getting tag set")?;
-    opcua::subscribe_to_tags(&*opcua_session.read(), &namespaces, tag_set, addr)
+    opcua::subscribe_to_tags(&*opcua_session.read(), &namespaces, tag_set, addr.clone())
         .context("error subscribing to tags")?;
+    opcua::subscribe_to_health(&*opcua_session.read(), addr)
+        .context("error subscribing to health")?;
 
     let session_stop_tx = opcua::Session::run_async(opcua_session);
 
