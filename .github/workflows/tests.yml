@@ -38,7 +38,7 @@ jobs:
           toolchain: ${{ steps.get-rust-version.outputs.RUST_VERSION }}
           override: true
           components: rustfmt, clippy, llvm-tools-preview
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
         with:
