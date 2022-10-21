@@ -1,0 +1,5 @@
+[
+  { "name": "theAnswer", "nsu": "urn:open62541.server.application", "nid": "the.answer" },
+  { "name": "currentTime", "nsu": "urn:open62541.server.application", "nid": 2345 },
+  { "name": "currentTimeServer", "nsu": "http://opcfoundation.org/UA/", "nid": 2258 }
+]
