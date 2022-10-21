@@ -83,7 +83,33 @@ sequenceDiagram
 
 ## Configuration
 
-:construction: WIP :construction:
-
 ```ShellSession
+$ opcua-proxy --help
+Usage: opcua-proxy [OPTIONS] --partner-id <PARTNER_ID> --tag-set-config-path <TAG_SET_CONFIG_PATH> --pki-dir <PKI_DIR> --opcua-server-url <OPCUA_SERVER_URL>
+
+Options:
+  -v, --verbose...
+          More output per occurrence
+  -q, --quiet...
+          Less output per occurrence
+      --partner-id <PARTNER_ID>
+          OPC-UA partner device ID [env: PARTNER_ID=]
+      --mongodb-uri <MONGODB_URI>
+          URL of MongoDB database [env: MONGODB_URI=] [default: mongodb://mongo]
+      --tag-set-config-path <TAG_SET_CONFIG_PATH>
+          Path of JSON file to get tag set from [env: TAG_SET_CONFIG_PATH=]
+      --pki-dir <PKI_DIR>
+          [env: PKI_DIR=]
+      --opcua-server-url <OPCUA_SERVER_URL>
+          URL of OPC-UA server to connect to [env: OPCUA_SERVER_URL=]
+      --opcua-security-policy <OPCUA_SECURITY_POLICY>
+          OPC-UA security policy [env: OPCUA_SECURITY_POLICY=] [default: Basic256Sha256]
+      --opcua-security-mode <OPCUA_SECURITY_MODE>
+          OPC-UA security mode [env: OPCUA_SECURITY_MODE=] [default: SignAndEncrypt]
+      --opcua-user <OPCUA_USER>
+          OPC-UA authentication username (optional) [env: OPCUA_USER=]
+      --opcua-password <OPCUA_PASSWORD>
+          OPC-UA authentication password (optional) [env: OPCUA_PASSWORD=]
+  -h, --help
+          Print help information
 ```
