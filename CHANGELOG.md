@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.0.1](https://github.com/cailloumajor/opcua-proxy/compare/v3.0.0...v3.0.1) (2022-10-21)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate clap to 4.0.18 ([b5eb656](https://github.com/cailloumajor/opcua-proxy/commit/b5eb6562b23ab51517ba28d475325f376e6e9c33))
+* **deps:** update rust crate futures-util to 0.3.25 ([abb0088](https://github.com/cailloumajor/opcua-proxy/commit/abb0088ce5d4442cd7e4ff7c3b7f11c2c8d838e9))
+* **deps:** update rust crate mongodb to 2.3.1 ([9e252d3](https://github.com/cailloumajor/opcua-proxy/commit/9e252d32b817e948c80daf52d1fd6978c508b4da))
+* **deps:** update rust crate serde to 1.0.146 ([d571f6f](https://github.com/cailloumajor/opcua-proxy/commit/d571f6f6c77f6acd4cc7ec946041a48bea4e2b52))
+* **deps:** update rust crate serde_json to 1.0.87 ([08a3efb](https://github.com/cailloumajor/opcua-proxy/commit/08a3efb50a05003a3d578587257dfcb9dae95414))
+* **deps:** update rust crate tracing to 0.1.37 ([0485907](https://github.com/cailloumajor/opcua-proxy/commit/0485907da1054d3c0729456af2c4255df77a9b78))
+* **deps:** update rust crate tracing-subscriber to 0.3.16 ([2b66e03](https://github.com/cailloumajor/opcua-proxy/commit/2b66e0315bea6a90d1917a2a67cb7d8cd1c5ca9c))
+* **deps:** update rust docker tag to v1.64.0 ([028789c](https://github.com/cailloumajor/opcua-proxy/commit/028789c7e973d55eef432f8ab448b18f2c8a831a))
+
 ## [3.0.0](https://github.com/cailloumajor/opcua-proxy/compare/v2.1.4...v3.0.0) (2022-10-21)
 
 
