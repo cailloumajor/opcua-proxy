@@ -6,7 +6,6 @@
 ### ⚠ BREAKING CHANGES
 
 * rewrite in Rust
-* split API services
 
 ### Features
 
@@ -28,7 +27,6 @@
 * **deps:** update golang.org/x/exp digest to 807a232 ([64aec50](https://github.com/cailloumajor/opcua-proxy/commit/64aec509096beed4f05751b6b545ac6bde2e7288))
 * **deps:** update golang.org/x/exp digest to bd9bcdd ([b747037](https://github.com/cailloumajor/opcua-proxy/commit/b7470371a34b836eb8d467c011b3cec7d079324e))
 * serialize DateTime as a string ([93b32f1](https://github.com/cailloumajor/opcua-proxy/commit/93b32f15de1cf2ea71391518136c2c253556dd61))
-* split API services ([31e1307](https://github.com/cailloumajor/opcua-proxy/commit/31e130702fd2bac93af6e844034fd42c8ae736c0))
 * synchronize project version ([fc1a61c](https://github.com/cailloumajor/opcua-proxy/commit/fc1a61ce5f9216165e5c87d729d4b2ebdaef453b))
 * update usage in README.md ([05bd502](https://github.com/cailloumajor/opcua-proxy/commit/05bd502e8ca2ab73fceb17752f94e92bd7e3211f))
 
