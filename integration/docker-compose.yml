@@ -1,0 +1,36 @@
+version: "3.4"
+
+services:
+
+  opcua-server:
+    image: open62541/open62541
+    command:
+      - /opt/open62541/build/bin/examples/server_ctt
+      - /pki/own/server_cert.der
+      - /pki/private/server_key.der
+      - --trustlistFolder
+      - /pki/own
+    volumes:
+      - ./pki:/pki:ro
+
+  mongo:
+    image: mongo
+    volumes:
+      - ./tests.mongodb:/usr/src/tests.mongodb:ro
+
+  opcua-proxy:
+    build: ..
+    image: opcua-proxy:integration-tests
+    command:
+      - /usr/local/bin/opcua-proxy
+      - --verbose
+    environment:
+      - PARTNER_ID=integration-tests
+      - TAG_SET_CONFIG_PATH=/usr/local/etc/tags.json
+      - PKI_DIR=/pki
+      - OPCUA_SERVER_URL=opc.tcp://opcua-server:4840
+      - OPCUA_USER=user1
+      - OPCUA_PASSWORD=password
+    volumes:
+      - ./pki:/pki:ro
+      - ./tags.json:/usr/local/etc/tags.json:ro
