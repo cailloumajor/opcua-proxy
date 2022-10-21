@@ -49,7 +49,7 @@ impl Serialize for Variant {
             OpcUaVariant::Float(v) => serializer.serialize_f32(v),
             OpcUaVariant::Double(v) => serializer.serialize_f64(v),
             OpcUaVariant::String(ref v) => v.value().serialize(serializer),
-            OpcUaVariant::DateTime(ref v) => v.serialize(serializer),
+            OpcUaVariant::DateTime(ref v) => v.as_chrono().serialize(serializer),
             OpcUaVariant::Guid(ref v) => v.serialize(serializer),
             OpcUaVariant::StatusCode(v) => v.serialize(serializer),
             OpcUaVariant::ByteString(ref v) => v
@@ -184,7 +184,7 @@ mod tests {
         #[test]
         fn datetime() {
             let s = Variant::from(OpcUaVariant::DateTime(Box::new(DateTime::epoch())));
-            assert_ser_tokens(&s, &[Token::I64(0)]);
+            assert_ser_tokens(&s, &[Token::Str("1601-01-01T00:00:00Z")]);
         }
 
         #[test]
