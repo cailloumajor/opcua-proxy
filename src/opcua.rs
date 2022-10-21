@@ -126,7 +126,8 @@ pub(crate) fn create_session(config: &Config, partner_id: &str) -> Result<Arc<Rw
         .pki_dir(config.pki_dir.to_owned())
         .endpoint("default", default_endpoint)
         .default_endpoint("default")
-        .session_retry_limit(0)
+        .session_retry_interval(2000)
+        .session_retry_limit(10)
         .session_timeout(1_200_000)
         .multi_threaded_executor();
 
