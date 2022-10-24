@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.2](https://github.com/cailloumajor/opcua-proxy/compare/v3.0.1...v3.0.2) (2022-10-24)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate serde to 1.0.147 ([5ed6c71](https://github.com/cailloumajor/opcua-proxy/commit/5ed6c71fb8071f39583c087a92e8048b1746d641))
+* prevent conversion with the help of zip ([3be37ed](https://github.com/cailloumajor/opcua-proxy/commit/3be37edcc2ff2a5299c1c7374d89d166fe7ca26f))
+
 ## [3.0.1](https://github.com/cailloumajor/opcua-proxy/compare/v3.0.0...v3.0.1) (2022-10-21)
 
 
