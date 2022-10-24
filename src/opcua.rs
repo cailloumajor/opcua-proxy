@@ -82,8 +82,8 @@ impl TagSet {
     fn monitored_items(&self, namespaces: &Namespaces) -> Result<Vec<MonitoredItemCreateRequest>> {
         self.0
             .iter()
-            .enumerate()
-            .map(|(index, tag)| {
+            .zip(1..)
+            .map(|(tag, client_handle)| {
                 let ns = namespaces
                     .get(&tag.nsu)
                     .with_context(|| format!("namespace not found: {}", tag.nsu))?;
@@ -91,7 +91,7 @@ impl TagSet {
                     NodeId::new(*ns, tag.nid.to_owned()).into(),
                     MonitoringMode::Reporting,
                     MonitoringParameters {
-                        client_handle: u32::try_from(index).unwrap() + 1,
+                        client_handle,
                         ..Default::default()
                     },
                 );
@@ -183,9 +183,9 @@ pub(crate) fn get_namespaces(session: &impl AttributeService) -> Result<Namespac
     }?;
     let namespaces = namespace_variants
         .iter()
-        .enumerate()
-        .map(|(i, variant)| match variant {
-            Variant::String(uastring) => Ok((uastring.to_string(), i.try_into().unwrap())),
+        .zip(0..)
+        .map(|(variant, namespace_index)| match variant {
+            Variant::String(uastring) => Ok((uastring.to_string(), namespace_index)),
             _ => Err(anyhow!(
                 "bad member type: {:?} (expected a string)",
                 variant.type_id()
@@ -222,10 +222,11 @@ where
                 if value.is_none() {
                     error!(%node_id, err="missing value");
                 }
+                let index = usize::try_from(client_handle).unwrap() - 1;
                 let name_and_value = value.as_ref().and_then(|value| {
                     cloned_tag_set
                         .0
-                        .get(usize::try_from(client_handle).unwrap() - 1)
+                        .get(index)
                         .map(|tag| (tag.name.to_owned(), value.to_owned().into()))
                 });
                 if name_and_value.is_none() {
