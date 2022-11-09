@@ -2,7 +2,7 @@
 
 FROM --platform=$BUILDPLATFORM tonistiigi/xx:1.1.2 AS xx
 
-FROM --platform=$BUILDPLATFORM rust:1.64.0-bullseye AS builder
+FROM --platform=$BUILDPLATFORM rust:1.65.0-bullseye AS builder
 
 COPY --from=xx / /
 
