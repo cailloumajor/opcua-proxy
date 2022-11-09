@@ -3,7 +3,7 @@ version: "3.4"
 services:
 
   opcua-server:
-    image: open62541/open62541
+    image: open62541/open62541:1.0
     command:
       - /opt/open62541/build/bin/examples/server_ctt
       - /pki/own/server_cert.der
@@ -14,7 +14,7 @@ services:
       - ./pki:/pki:ro
 
   mongo:
-    image: mongo
+    image: mongo:6.0
     volumes:
       - ./tests.mongodb:/usr/src/tests.mongodb:ro
 
