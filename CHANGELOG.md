@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.3](https://github.com/cailloumajor/opcua-proxy/compare/v3.0.2...v3.0.3) (2022-11-09)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate clap to 4.0.22 ([9d7e843](https://github.com/cailloumajor/opcua-proxy/commit/9d7e843264444b069ca0c2a66499a415884ca213))
+* **deps:** update rust docker tag to v1.65.0 ([4011756](https://github.com/cailloumajor/opcua-proxy/commit/4011756fe9759609a4516453156b470d30caf95b))
+
 ## [3.0.2](https://github.com/cailloumajor/opcua-proxy/compare/v3.0.1...v3.0.2) (2022-10-24)
 
 
