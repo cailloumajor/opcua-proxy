@@ -24,10 +24,6 @@
         }
     },
 
-    "overrideFeatureInstallOrder": [
-        "ghcr.io/devcontainers/features/common-utils"
-    ],
-
     // Configure tool-specific properties.
     "customizations": {
         // Configure properties specific to VS Code.
