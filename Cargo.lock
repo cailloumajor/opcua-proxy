@@ -950,7 +950,7 @@ dependencies = [
 
 [[package]]
 name = "opcua-proxy"
-version = "3.0.4"
+version = "3.0.5"
 dependencies = [
  "actix",
  "anyhow",
