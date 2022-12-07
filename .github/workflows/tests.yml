@@ -32,35 +32,22 @@ jobs:
         id: get-rust-version
         run: echo "::set-output name=RUST_VERSION::$(grep -oP 'FROM .* rust:\K[\d.]+' Dockerfile)"
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: ${{ steps.get-rust-version.outputs.RUST_VERSION }}
-          override: true
           components: rustfmt, clippy, llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
       - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: cargo fmt --all -- --check
       - name: Lint code with Clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+        run: cargo clippy -- -D warnings
       - name: Install grcov
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: grcov
+        run: cargo install grcov
       - name: Run unit tests
-        uses: actions-rs/cargo@v1
+        run: cargo test
         env:
           RUSTFLAGS: -Cinstrument-coverage
           LLVM_PROFILE_FILE: coverage-%p-%m.profraw
-        with:
-          command: test
       - name: Generate coverage report
         run: |
           grcov $(find . -name "coverage-*.profraw" -print) \
@@ -77,6 +64,7 @@ jobs:
           fail_ci_if_error: true
           files: lcov.info
           flags: unittests
+      - run: cargo build
       - name: Check command usage in README.md
         # Thanks to https://unix.stackexchange.com/a/17405
         run: diff
