@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.0.6](https://github.com/cailloumajor/opcua-proxy/compare/v3.0.5...v3.0.6) (2022-12-16)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate clap to 4.0.29 ([be4711c](https://github.com/cailloumajor/opcua-proxy/commit/be4711cf7c7ff9fc6895c74e78c48921b87d6740))
+* **deps:** update rust crate serde to 1.0.149 ([8372f6b](https://github.com/cailloumajor/opcua-proxy/commit/8372f6bdc87b7cad55e662742ba0da7837e9ec19))
+* **deps:** update rust crate serde to 1.0.150 ([105423b](https://github.com/cailloumajor/opcua-proxy/commit/105423b2afd5e6017a705afa23a6186b4a86e38e))
+* **deps:** update rust crate serde_json to 1.0.89 ([3baec2a](https://github.com/cailloumajor/opcua-proxy/commit/3baec2a9c8a3b53bf02dc4dcc45c67050eef3a4f))
+* **deps:** update rust crate tokio to 1.23.0 ([5650ff4](https://github.com/cailloumajor/opcua-proxy/commit/5650ff4bd16f01d4dabdb00253b976ff2ee40e98))
+* **deps:** update rust docker tag to v1.66.0 ([4381ede](https://github.com/cailloumajor/opcua-proxy/commit/4381ede3bec3460bb92c6bebc5ef1359e7560ec3))
+
 ## [3.0.5](https://github.com/cailloumajor/opcua-proxy/compare/v3.0.4...v3.0.5) (2022-11-20)
 
 
