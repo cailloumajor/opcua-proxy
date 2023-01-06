@@ -1,7 +1,7 @@
 # OPC-UA proxy
 
-[![Tests and code quality](https://github.com/cailloumajor/opcua-proxy/actions/workflows/tests.yml/badge.svg)](https://github.com/cailloumajor/opcua-proxy/actions/workflows/tests.yml)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
+[![Bors enabled](https://bors.tech/images/badge_small.svg)](https://app.bors.tech/repositories/60476)
 
 A proxy microservice writing OPC-UA data changes to MongoDB.
 
