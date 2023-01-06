@@ -23,7 +23,7 @@ default-features = false
 features = [ "client" ]
 
 [dependencies.clap]
-version = "4.0.29"
+version = "4.0.32"
 default-features = false
 features = [ "std", "help", "usage", "error-context", "derive", "env" ]
 
