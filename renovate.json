@@ -4,6 +4,7 @@
     "config:base"
   ],
   "semanticCommits": "enabled",
+  "prHeader": "<!-- bors exclude following -->",
   "packageRules": [
     {
       "matchPackageNames": ["rust", "tonistiigi/xx"],

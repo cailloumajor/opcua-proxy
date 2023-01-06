@@ -3,5 +3,6 @@ status = [
     "Code quality, unit tests and code coverage",
     "Integration tests",
 ]
+cut_body_after = "<!-- bors exclude following -->"
 commit_title = "ci(bors): merge ${PR_REFS}"
 timeout_sec = 3600
