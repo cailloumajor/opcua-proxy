@@ -3,4 +3,5 @@ status = [
     "Code quality, unit tests and code coverage",
     "Integration tests",
 ]
+commit_title = "ci(bors): merge ${PR_REFS}"
 timeout_sec = 3600
