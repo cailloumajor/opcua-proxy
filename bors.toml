@@ -1,0 +1,6 @@
+status = [
+    "Ensure Conventional Commits",
+    "Code quality, unit tests and code coverage",
+    "Integration tests",
+]
+timeout_sec = 3600

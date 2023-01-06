@@ -13,7 +13,8 @@
     {
       "matchDepTypes": ["dev-dependencies"],
       "automerge": true,
-      "automergeType": "branch"
+      "automergeType": "pr-comment",
+      "automergeComment": "bors r+"
     }
   ]
 }
