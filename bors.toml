@@ -1,8 +1,5 @@
-status = [
-    "Ensure Conventional Commits",
-    "Code quality, unit tests and code coverage",
-    "Integration tests",
-]
+status = [ "Code quality, unit tests and code coverage", "Integration tests" ]
+pr_status = [ "Ensure Conventional Commits" ]
 cut_body_after = "<!-- bors exclude following -->"
 commit_title = "ci(bors): merge ${PR_REFS}"
 timeout_sec = 3600
