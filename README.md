@@ -47,6 +47,7 @@ Queries to MongoDB will use following parameters:
 For each data change notification received from the OPC-UA server, an update query will be issued to MongoDB on collection `data`, as a document comprising following fields:
 
 - `data`: mapping of tag names to their values;
+- `sourceTimestamps`: mapping of tag names to to the timestamp of last value change;
 - `updatedAt`: MongoDB current date and time.
 
 ### Health
