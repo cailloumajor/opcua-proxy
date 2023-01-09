@@ -5,6 +5,7 @@
   ],
   "semanticCommits": "enabled",
   "prHeader": "<!-- bors exclude following -->",
+  "rebaseWhen": "never",
   "packageRules": [
     {
       "matchPackageNames": ["rust", "tonistiigi/xx"],
