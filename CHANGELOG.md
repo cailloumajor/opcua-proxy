@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.1.0](https://github.com/cailloumajor/opcua-proxy/compare/v3.0.7...v3.1.0) (2023-01-10)
+
+
+### Features
+
+* add source timestamps ([473123a](https://github.com/cailloumajor/opcua-proxy/commit/473123accda141e506c64a59e3b4af32469ef03a))
+
+
+### Bug Fixes
+
+* leverage Docker build caching ([b5cbf2c](https://github.com/cailloumajor/opcua-proxy/commit/b5cbf2c20b73fa951b92fbd81d4e2220ed67dd3d))
+
 ## [3.0.7](https://github.com/cailloumajor/opcua-proxy/compare/v3.0.6...v3.0.7) (2023-01-06)
 
 
