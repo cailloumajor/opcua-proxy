@@ -50,7 +50,7 @@ while :; do
     esac
 done
 
-set -ex
+set -eux
 
 # Create a fresh pki tree
 rm -r pki || true
@@ -109,14 +109,20 @@ fi
 # Check result
 got=$(echo "$result" | jq '.theAnswer')
 want=42
-if [ "$got" -ne $want ]; then
+if ! [ "$got" -eq $want ]; then
     die "Assert error for \"theAnswer\": want $want, got $got"
 fi
 
 got=$(echo "$result" | jq '.timeDiff')
 want=100
-if [ "$got" -gt $want ]; then
+if ! [ "$got" -le $want ]; then
     die "Assert error for \"timeDiff\": want less than $want, got $got"
+fi
+
+got=$(echo "$result" | jq '.sourceTimestampDiff')
+want=0
+if ! [ "$got" -gt $want ]; then
+    die "Assert error for \"sourceTimestampDiff\": want more than $want, got $got"
 fi
 
 echo "🎉 success"

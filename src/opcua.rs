@@ -213,32 +213,33 @@ where
     let cloned_tag_set = tag_set.clone();
     let data_change_callback = DataChangeCallback::new(move |monitored_items| {
         let _entered = info_span!("tags values change handler").entered();
-        let message: DataChangeMessage = monitored_items
-            .iter()
-            .filter_map(|item| {
-                let node_id = &item.item_to_monitor().node_id;
-                let client_handle = item.client_handle();
-                let value = &item.last_value().value;
-                if value.is_none() {
-                    error!(%node_id, err="missing value");
-                }
-                let index = usize::try_from(client_handle).unwrap() - 1;
-                let name_and_value = value.as_ref().and_then(|value| {
-                    cloned_tag_set
-                        .0
-                        .get(index)
-                        .map(|tag| (tag.name.to_owned(), value.to_owned().into()))
-                });
-                if name_and_value.is_none() {
-                    error!(
-                        %node_id,
-                        client_handle,
-                        err = "tag not found for client handle"
-                    );
-                }
-                name_and_value
-            })
-            .collect();
+        let mut message = DataChangeMessage::with_capacity(monitored_items.len());
+        for item in monitored_items {
+            let node_id = &item.item_to_monitor().node_id;
+            let client_handle = item.client_handle();
+            let index = usize::try_from(client_handle).unwrap() - 1;
+            let Some(tag) = cloned_tag_set.0.get(index) else {
+                error!(%node_id, client_handle, err="tag not found for client handle");
+                continue;
+            };
+            let Some(last_value) = &item.last_value().value else {
+                error!(%node_id, err="missing value");
+                continue;
+            };
+            let source_millis = item
+                .last_value()
+                .source_timestamp
+                .map(|dt| dt.as_chrono().timestamp_millis());
+            let Some(source_millis) = source_millis else {
+                error!(%node_id, err="missing source timestamp");
+                continue;
+            };
+            message.insert(
+                tag.name.to_owned(),
+                last_value.to_owned().into(),
+                source_millis,
+            )
+        }
         send_addr.do_send(message);
     });
 
@@ -253,7 +254,7 @@ where
     let results = session
         .create_monitored_items(
             subscription_id,
-            TimestampsToReturn::Neither,
+            TimestampsToReturn::Source,
             &items_to_create,
         )
         .context("error creating monitored items")?;

@@ -1,5 +1,3 @@
-use std::fmt;
-
 use opcua::types::{Array, Variant as OpcUaVariant};
 use serde::ser::{self, Serialize, Serializer};
 
@@ -15,14 +13,8 @@ impl Serialize for Bytes {
 }
 
 /// Wraps [opcua::types::Variant] to provide custom, seamless serializing.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub(crate) struct Variant(OpcUaVariant);
-
-impl fmt::Display for Variant {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
 
 impl From<OpcUaVariant> for Variant {
     fn from(v: OpcUaVariant) -> Self {

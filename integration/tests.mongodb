@@ -11,6 +11,13 @@ result = db.data.findOne(
                     { $dateFromString: { dateString: "$data.currentTime" } }
                 ]
             }
+        },
+        sourceTimestampDiff: {
+            $dateDiff: {
+                startDate: "$sourceTimestamps.theAnswer",
+                endDate: "$$NOW",
+                unit: "millisecond"
+            }
         }
     }
 );

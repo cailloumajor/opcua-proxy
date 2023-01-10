@@ -1,21 +1,21 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::time::Duration;
-use std::vec::IntoIter;
 
 use actix::prelude::*;
 use anyhow::{Context as _, Result};
 use futures_util::FutureExt;
-use mongodb::{
-    bson::{self, doc, DateTime, Document},
-    options::{ClientOptions, UpdateOptions},
-    Client, Database,
-};
+use mongodb::bson::{self, doc, DateTime, Document};
+use mongodb::options::{ClientOptions, UpdateOptions};
+use mongodb::{Client, Database};
 use tracing::{debug, debug_span, error, info, Instrument};
 
 use opcua_proxy::{DATABASE, OPCUA_DATA_COLL, OPCUA_HEALTH_COLL};
 
 use crate::variant::Variant;
+
+const VALUES_KEY: &str = "data";
+const TIMESTAMPS_KEY: &str = "sourceTimestamps";
 
 pub(crate) type DatabaseActorAddress = Addr<DatabaseActor>;
 
@@ -51,40 +51,27 @@ impl Actor for DatabaseActor {
     type Context = Context<Self>;
 }
 
-pub(crate) struct DataChangeMessage(Vec<(String, Variant)>);
-
-impl IntoIterator for DataChangeMessage {
-    type Item = (String, Variant);
-    type IntoIter = IntoIter<(String, Variant)>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
+#[derive(Debug)]
+struct DataValue {
+    value: Variant,
+    source_timestamp: DateTime,
 }
 
-impl FromIterator<(String, Variant)> for DataChangeMessage {
-    fn from_iter<T: IntoIterator<Item = (String, Variant)>>(iter: T) -> Self {
-        let mut c = Self(Vec::new());
-        for i in iter {
-            c.0.push(i)
-        }
-        c
+#[derive(Debug)]
+pub(crate) struct DataChangeMessage(HashMap<String, DataValue>);
+
+impl DataChangeMessage {
+    pub(crate) fn with_capacity(cap: usize) -> Self {
+        Self(HashMap::with_capacity(cap))
     }
-}
 
-impl fmt::Display for DataChangeMessage {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[ ")?;
-
-        let mut tag_values = self.0.iter().peekable();
-        while let Some(tag_value) = tag_values.next() {
-            write!(f, "{}={}", tag_value.0, tag_value.1)?;
-            if tag_values.peek().is_some() {
-                write!(f, ", ")?;
-            }
-        }
-
-        write!(f, " ]")
+    pub(crate) fn insert(&mut self, tag_name: String, value: Variant, source_millis: i64) {
+        let source_timestamp = DateTime::from_millis(source_millis);
+        let data_value = DataValue {
+            value,
+            source_timestamp,
+        };
+        self.0.insert(tag_name, data_value);
     }
 }
 
@@ -96,35 +83,52 @@ impl Handler<DataChangeMessage> for DatabaseActor {
     type Result = ResponseFuture<()>;
 
     fn handle(&mut self, msg: DataChangeMessage, _ctx: &mut Self::Context) -> Self::Result {
-        let message_display = msg.to_string();
         let collection = self.db.collection::<Document>(OPCUA_DATA_COLL);
         let query = doc! { "_id": &self.partner_id };
-        let update_data: HashMap<String, Variant> = msg
-            .into_iter()
-            .map(|(k, v)| ("data.".to_owned() + k.as_str(), v))
+        let values_map: HashMap<String, Variant> = msg
+            .0
+            .iter()
+            .map(|(tag_name, data_value)| {
+                (
+                    format!("{}.{}", VALUES_KEY, tag_name),
+                    data_value.value.to_owned(),
+                )
+            })
+            .collect();
+        let timestamps_map: HashMap<String, DateTime> = msg
+            .0
+            .iter()
+            .map(|(tag_name, data_value)| {
+                (
+                    format!("{}.{}", TIMESTAMPS_KEY, tag_name),
+                    data_value.source_timestamp,
+                )
+            })
             .collect();
         let options = UpdateOptions::builder().upsert(true).build();
         async move {
-            debug!(received = "msg", msg = message_display);
-            let update_data_doc = match bson::to_document(&update_data) {
+            debug!(event = "message received", ?msg);
+            let values_doc = match bson::to_document(&values_map) {
                 Ok(doc) => doc,
                 Err(err) => {
-                    error!(
-                        when = "encoding data update document",
-                        err = err.to_string()
-                    );
+                    error!(when = "encoding values document", %err);
                     return;
                 }
             };
-            let update = doc! {
-                "$currentDate": { "updatedAt": true },
-                "$set": update_data_doc,
-            };
-            match collection.update_one(query, update, options).await {
-                Ok(_) => (),
+            let timestamps_doc = match bson::to_document(&timestamps_map) {
+                Ok(doc) => doc,
                 Err(err) => {
-                    error!(when = "updating document", %err);
+                    error!(when = "encoding timestamps document", %err);
+                    return;
                 }
+            };
+            let update = vec![
+                doc! { "$addFields": { "updatedAt": "$$NOW" } },
+                doc! { "$addFields": values_doc },
+                doc! { "$addFields": timestamps_doc },
+            ];
+            if let Err(err) = collection.update_one(query, update, options).await {
+                error!(when = "updating document", %err);
             }
         }
         .instrument(debug_span!("handle data change message"))
@@ -162,7 +166,7 @@ impl Handler<HealthMessage> for DatabaseActor {
         };
         let options = UpdateOptions::builder().upsert(true).build();
         async move {
-            debug!(received = "msg", %msg);
+            debug!(event="message received", %msg);
             match collection.update_one(query, update, options).await {
                 Ok(_) => (),
                 Err(err) => {
@@ -172,25 +176,5 @@ impl Handler<HealthMessage> for DatabaseActor {
         }
         .instrument(debug_span!("handle health message"))
         .boxed()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    mod data_change_message {
-        use super::*;
-        use opcua::types::Variant as OpcUaVariant;
-
-        #[test]
-        fn display() {
-            let dcm = DataChangeMessage(vec![
-                ("first".into(), OpcUaVariant::from("a value").into()),
-                ("second".into(), OpcUaVariant::from(42).into()),
-                ("third".into(), OpcUaVariant::from(false).into()),
-            ]);
-            assert_eq!(dcm.to_string(), "[ first=a value, second=42, third=false ]")
-        }
     }
 }
