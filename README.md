@@ -89,10 +89,6 @@ $ opcua-proxy --help
 Usage: opcua-proxy [OPTIONS] --partner-id <PARTNER_ID> --tag-set-config-path <TAG_SET_CONFIG_PATH> --pki-dir <PKI_DIR> --opcua-server-url <OPCUA_SERVER_URL>
 
 Options:
-  -v, --verbose...
-          More output per occurrence
-  -q, --quiet...
-          Less output per occurrence
       --partner-id <PARTNER_ID>
           OPC-UA partner device ID [env: PARTNER_ID=]
       --mongodb-uri <MONGODB_URI>
@@ -111,6 +107,10 @@ Options:
           OPC-UA authentication username (optional) [env: OPCUA_USER=]
       --opcua-password <OPCUA_PASSWORD>
           OPC-UA authentication password (optional) [env: OPCUA_PASSWORD=]
+  -v, --verbose...
+          More output per occurrence
+  -q, --quiet...
+          Less output per occurrence
   -h, --help
           Print help
 ```
