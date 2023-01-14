@@ -112,5 +112,5 @@ Options:
       --opcua-password <OPCUA_PASSWORD>
           OPC-UA authentication password (optional) [env: OPCUA_PASSWORD=]
   -h, --help
-          Print help information
+          Print help
 ```
