@@ -4,8 +4,14 @@
     "config:base"
   ],
   "semanticCommits": "enabled",
+  "automergeType": "pr-comment",
+  "automergeComment": "bors r+",
   "prHeader": "<!-- bors exclude following -->",
   "rebaseWhen": "never",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true
+  },
   "packageRules": [
     {
       "matchPackageNames": ["rust", "tonistiigi/xx"],
@@ -14,9 +20,7 @@
     },
     {
       "matchDepTypes": ["dev-dependencies"],
-      "automerge": true,
-      "automergeType": "pr-comment",
-      "automergeComment": "bors r+"
+      "automerge": true
     }
   ]
 }
