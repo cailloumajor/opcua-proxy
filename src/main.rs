@@ -21,9 +21,6 @@ mod variant;
 #[derive(Parser)]
 struct Args {
     #[command(flatten)]
-    verbose: Verbosity<InfoLevel>,
-
-    #[command(flatten)]
     common: CommonArgs,
 
     /// Path of JSON file to get tag set from
@@ -32,6 +29,9 @@ struct Args {
 
     #[command(flatten)]
     opcua: opcua::Config,
+
+    #[command(flatten)]
+    verbose: Verbosity<InfoLevel>,
 }
 
 fn filter_from_verbosity<T>(verbosity: &Verbosity<T>) -> tracing::level_filters::LevelFilter
