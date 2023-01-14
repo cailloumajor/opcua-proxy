@@ -14,8 +14,8 @@ use opcua_proxy::{DATABASE, OPCUA_DATA_COLL, OPCUA_HEALTH_COLL};
 
 use crate::variant::Variant;
 
-const VALUES_KEY: &str = "data";
-const TIMESTAMPS_KEY: &str = "sourceTimestamps";
+const VALUES_KEY: &str = "val";
+const TIMESTAMPS_KEY: &str = "ts";
 
 pub(crate) type DatabaseActorAddress = Addr<DatabaseActor>;
 
@@ -57,7 +57,8 @@ struct DataValue {
     source_timestamp: DateTime,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Message)]
+#[rtype(result = "()")]
 pub(crate) struct DataChangeMessage(HashMap<String, DataValue>);
 
 impl DataChangeMessage {
@@ -75,39 +76,24 @@ impl DataChangeMessage {
     }
 }
 
-impl Message for DataChangeMessage {
-    type Result = ();
-}
-
 impl Handler<DataChangeMessage> for DatabaseActor {
     type Result = ResponseFuture<()>;
 
     fn handle(&mut self, msg: DataChangeMessage, _ctx: &mut Self::Context) -> Self::Result {
         let collection = self.db.collection::<Document>(OPCUA_DATA_COLL);
         let query = doc! { "_id": &self.partner_id };
-        let values_map: HashMap<String, Variant> = msg
-            .0
-            .iter()
-            .map(|(tag_name, data_value)| {
-                (
-                    format!("{}.{}", VALUES_KEY, tag_name),
-                    data_value.value.to_owned(),
-                )
-            })
-            .collect();
-        let timestamps_map: HashMap<String, DateTime> = msg
-            .0
-            .iter()
-            .map(|(tag_name, data_value)| {
-                (
-                    format!("{}.{}", TIMESTAMPS_KEY, tag_name),
-                    data_value.source_timestamp,
-                )
-            })
-            .collect();
         let options = UpdateOptions::builder().upsert(true).build();
         async move {
             debug!(event = "message received", ?msg);
+            let mut values_map = HashMap::with_capacity(msg.0.len());
+            let mut timestamps_map = HashMap::with_capacity(msg.0.len());
+            for (tag_name, data_value) in msg.0 {
+                values_map.insert(format!("{}.{}", VALUES_KEY, tag_name), data_value.value);
+                timestamps_map.insert(
+                    format!("{}.{}", TIMESTAMPS_KEY, tag_name),
+                    data_value.source_timestamp,
+                );
+            }
             let values_doc = match bson::to_document(&values_map) {
                 Ok(doc) => doc,
                 Err(err) => {
@@ -136,6 +122,8 @@ impl Handler<DataChangeMessage> for DatabaseActor {
     }
 }
 
+#[derive(Message)]
+#[rtype(result = "()")]
 pub(crate) struct HealthMessage(DateTime);
 
 impl fmt::Display for HealthMessage {
@@ -148,10 +136,6 @@ impl From<i64> for HealthMessage {
     fn from(millis: i64) -> Self {
         Self(DateTime::from_millis(millis))
     }
-}
-
-impl Message for HealthMessage {
-    type Result = ();
 }
 
 impl Handler<HealthMessage> for DatabaseActor {

@@ -122,10 +122,10 @@ if ! [ "$got" -le $want ]; then
     die "Assert error for \"timeDiff\": want less than $want, got $got"
 fi
 
-got=$(echo "$result" | jq '.sourceTimestampDiff')
+got=$(echo "$result" | jq '.timestampDiff')
 want=0
 if ! [ "$got" -gt $want ]; then
-    die "Assert error for \"sourceTimestampDiff\": want more than $want, got $got"
+    die "Assert error for \"timestampDiff\": want more than $want, got $got"
 fi
 
 echo "🎉 success"
