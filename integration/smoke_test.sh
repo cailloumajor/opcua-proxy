@@ -83,6 +83,9 @@ generate_self_signed \
     -addext "subjectAltName=URI:urn:opcua-proxy:integration-tests"
 chmod +r pki/private/private.pem
 
+# Build services images
+docker compose build
+
 # Start services
 docker compose up -d --quiet-pull
 

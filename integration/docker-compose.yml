@@ -20,7 +20,6 @@ services:
 
   opcua-proxy:
     build: ..
-    image: opcua-proxy:integration-tests
     command:
       - /usr/local/bin/opcua-proxy
       - --verbose
