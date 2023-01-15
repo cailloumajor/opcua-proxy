@@ -16,6 +16,7 @@ services:
   mongodb:
     image: mongo:6.0
     volumes:
+      - ./initial-data.mongodb:/usr/src/initial-data.mongodb
       - ./tests.mongodb:/usr/src/tests.mongodb:ro
 
   opcua-proxy:

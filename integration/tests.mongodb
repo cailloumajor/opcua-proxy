@@ -1,8 +1,11 @@
 db = connect("mongodb://localhost/opcua");
 
+db.disableFreeMonitoring();
+
 result = db.data.findOne(
     { _id: "integration-tests" },
     {
+        shouldBeMissing: { $type: "$alreadyPresent" },
         theAnswer: "$val.theAnswer",
         timeDiff: {
             $abs: {

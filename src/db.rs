@@ -8,7 +8,7 @@ use futures_util::FutureExt;
 use mongodb::bson::{self, doc, DateTime, Document};
 use mongodb::options::{ClientOptions, UpdateOptions};
 use mongodb::{Client, Database};
-use tracing::{debug, debug_span, error, info, Instrument};
+use tracing::{debug, debug_span, error, info, info_span, Instrument};
 
 use opcua_proxy::{DATABASE, OPCUA_DATA_COLL, OPCUA_HEALTH_COLL};
 
@@ -49,6 +49,23 @@ impl DatabaseActor {
 
 impl Actor for DatabaseActor {
     type Context = Context<Self>;
+
+    fn started(&mut self, ctx: &mut Self::Context) {
+        let collection = self.db.collection::<Document>(OPCUA_DATA_COLL);
+        let document_id = self.partner_id.to_owned();
+        let query = doc! { "_id": &document_id };
+        ctx.wait(
+            async move {
+                if let Err(err) = collection.delete_one(query, None).await {
+                    error!(when = "deleting document", document_id, %err);
+                } else {
+                    info!(status = "deleted", document_id);
+                }
+            }
+            .instrument(info_span!("database_actor_started_hook"))
+            .into_actor(self),
+        )
+    }
 }
 
 #[derive(Debug)]

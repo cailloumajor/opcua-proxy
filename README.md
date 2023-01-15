@@ -42,6 +42,8 @@ Queries to MongoDB will use following parameters:
 - database: `opcua`;
 - document primary key (`_id`): partner ID, from configuration flag.
 
+When it starts, this service will delete the corresponding document in `data` collection.
+
 ### OPC-UA data change
 
 For each data change notification received from the OPC-UA server, an update query will be issued to MongoDB on collection `data`, as a document comprising following fields:
