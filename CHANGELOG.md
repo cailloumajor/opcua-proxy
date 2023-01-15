@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.0.1](https://github.com/cailloumajor/opcua-proxy/compare/v4.0.0...v4.0.1) (2023-01-15)
+
+
+### Bug Fixes
+
+* log count of deleted documents at start ([9fea2a9](https://github.com/cailloumajor/opcua-proxy/commit/9fea2a97cdb5a7d7a711f2e097e446aa86f9e71d))
+
 ## [4.0.0](https://github.com/cailloumajor/opcua-proxy/compare/v3.1.0...v4.0.0) (2023-01-15)
 
 
