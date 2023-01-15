@@ -7,6 +7,7 @@ use anyhow::{Context as _, Result};
 use futures_util::FutureExt;
 use mongodb::bson::{self, doc, DateTime, Document};
 use mongodb::options::{ClientOptions, UpdateOptions};
+use mongodb::results::DeleteResult;
 use mongodb::{Client, Database};
 use tracing::{debug, debug_span, error, info, info_span, Instrument};
 
@@ -56,10 +57,13 @@ impl Actor for DatabaseActor {
         let query = doc! { "_id": &document_id };
         ctx.wait(
             async move {
-                if let Err(err) = collection.delete_one(query, None).await {
-                    error!(when = "deleting document", document_id, %err);
-                } else {
-                    info!(status = "deleted", document_id);
+                match collection.delete_one(query, None).await {
+                    Ok(DeleteResult { deleted_count, .. }) => {
+                        info!(status = "deleted", document_id, deleted_count);
+                    }
+                    Err(err) => {
+                        error!(when = "deleting document", document_id, %err);
+                    }
                 }
             }
             .instrument(info_span!("database_actor_started_hook"))
