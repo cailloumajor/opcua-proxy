@@ -102,7 +102,7 @@ if [ "$wait_success" != "true" ]; then
 fi
 
 # Run tests on MongoDB instance
-if ! result=$(docker compose exec mongo mongosh /usr/src/tests.mongodb --quiet --nodb --norc); then
+if ! result=$(docker compose exec mongodb mongosh /usr/src/tests.mongodb --quiet --nodb --norc); then
     die "MongoDB tests returned an error"
 fi
 

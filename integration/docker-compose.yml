@@ -13,7 +13,7 @@ services:
     volumes:
       - ./pki:/pki:ro
 
-  mongo:
+  mongodb:
     image: mongo:6.0
     volumes:
       - ./tests.mongodb:/usr/src/tests.mongodb:ro

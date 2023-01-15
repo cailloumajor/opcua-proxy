@@ -12,6 +12,6 @@ pub struct CommonArgs {
     pub partner_id: String,
 
     /// URL of MongoDB database
-    #[arg(env, long, default_value = "mongodb://mongo")]
+    #[arg(env, long, default_value = "mongodb://mongodb")]
     pub mongodb_uri: String,
 }
