@@ -92,7 +92,7 @@ Options:
       --partner-id <PARTNER_ID>
           OPC-UA partner device ID [env: PARTNER_ID=]
       --mongodb-uri <MONGODB_URI>
-          URL of MongoDB database [env: MONGODB_URI=] [default: mongodb://mongo]
+          URL of MongoDB database [env: MONGODB_URI=] [default: mongodb://mongodb]
       --tag-set-config-path <TAG_SET_CONFIG_PATH>
           Path of JSON file to get tag set from [env: TAG_SET_CONFIG_PATH=]
       --pki-dir <PKI_DIR>
