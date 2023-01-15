@@ -1,5 +1,26 @@
 # Changelog
 
+## [4.0.0](https://github.com/cailloumajor/opcua-proxy/compare/v3.1.0...v4.0.0) (2023-01-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* delete MongoDB data document when starting
+* change data collection members naming
+
+### Features
+
+* change data collection members naming ([ccc5e73](https://github.com/cailloumajor/opcua-proxy/commit/ccc5e73dfa4628802478345910f6a7d74fbe509b))
+* delete MongoDB data document when starting ([744d216](https://github.com/cailloumajor/opcua-proxy/commit/744d216d3ec7549741a471da8843a9c6beb0cabf))
+
+
+### Bug Fixes
+
+* change MongoDB URI argument default value ([5ad8af5](https://github.com/cailloumajor/opcua-proxy/commit/5ad8af5c84d3cb65e334e8378b99c0b6f02e720a))
+* **deps:** update rust crate clap to 4.1.0 ([756e4a0](https://github.com/cailloumajor/opcua-proxy/commit/756e4a0b128238ca43fe517d1e5c99ece2f8b8c7))
+* **deps:** update rust crate clap to 4.1.1 ([07ce32e](https://github.com/cailloumajor/opcua-proxy/commit/07ce32ebd94a326880bd2f9fc8b1a91b2bb651e8))
+* **deps:** update rust docker tag to v1.66.1 ([13d2a92](https://github.com/cailloumajor/opcua-proxy/commit/13d2a9203d9a3101b81a7ce523ed8b12809c8ba5))
+
 ## [3.1.0](https://github.com/cailloumajor/opcua-proxy/compare/v3.0.7...v3.1.0) (2023-01-10)
 
 
