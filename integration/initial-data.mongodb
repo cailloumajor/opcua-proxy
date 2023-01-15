@@ -1,0 +1,8 @@
+use("opcua");
+
+db.disableFreeMonitoring();
+
+db.data.insertOne({
+    _id: "integration-tests",
+    alreadyPresent: true
+});

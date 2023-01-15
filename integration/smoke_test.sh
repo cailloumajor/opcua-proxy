@@ -83,11 +83,30 @@ generate_self_signed \
     -addext "subjectAltName=URI:urn:opcua-proxy:integration-tests"
 chmod +r pki/private/private.pem
 
+# Build services images
+docker compose build
+
+# Add MongoDB initial data
+docker compose up -d --quiet-pull mongodb
+max_attempts=3
+try_success=
+for i in $(seq 1 $max_attempts); do
+    if docker compose exec mongodb mongosh --norc --quiet /usr/src/initial-data.mongodb; then
+        try_success="true"
+        break
+    fi
+    echo "MongoDB initialization: try #$i failed" >&2
+    [[ $i != "$max_attempts" ]] && sleep 5
+done
+if [ "$try_success" != "true" ]; then
+    die "Failure trying to initialize MongoDB"
+fi
+
 # Start services
 docker compose up -d --quiet-pull
 
 # Wait for OPC-UA proxy to be ready
-max_attempts=6
+max_attempts=5
 wait_success=
 for i in $(seq 1 $max_attempts); do
     if docker compose exec opcua-proxy /usr/local/bin/healthcheck; then
@@ -107,6 +126,12 @@ if ! result=$(docker compose exec mongodb mongosh /usr/src/tests.mongodb --quiet
 fi
 
 # Check result
+got=$(echo "$result" | jq '.shouldBeMissing')
+want='"missing"'
+if ! [ "$got" = "$want" ]; then
+    die "Assert error for \"shouldBeMissing\": want $want, got $got"
+fi
+
 got=$(echo "$result" | jq '.theAnswer')
 want=42
 if ! [ "$got" -eq $want ]; then
@@ -119,10 +144,10 @@ if ! [ "$got" -le $want ]; then
     die "Assert error for \"timeDiff\": want less than $want, got $got"
 fi
 
-got=$(echo "$result" | jq '.sourceTimestampDiff')
+got=$(echo "$result" | jq '.timestampDiff')
 want=0
 if ! [ "$got" -gt $want ]; then
-    die "Assert error for \"sourceTimestampDiff\": want more than $want, got $got"
+    die "Assert error for \"timestampDiff\": want more than $want, got $got"
 fi
 
 echo "🎉 success"

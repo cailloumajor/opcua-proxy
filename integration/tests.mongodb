@@ -1,20 +1,23 @@
 db = connect("mongodb://localhost/opcua");
 
+db.disableFreeMonitoring();
+
 result = db.data.findOne(
     { _id: "integration-tests" },
     {
-        theAnswer: "$data.theAnswer",
+        shouldBeMissing: { $type: "$alreadyPresent" },
+        theAnswer: "$val.theAnswer",
         timeDiff: {
             $abs: {
                 $subtract: [
-                    { $dateFromString: { dateString: "$data.currentTimeServer" } },
-                    { $dateFromString: { dateString: "$data.currentTime" } }
+                    { $dateFromString: { dateString: "$val.currentTimeServer" } },
+                    { $dateFromString: { dateString: "$val.currentTime" } }
                 ]
             }
         },
-        sourceTimestampDiff: {
+        timestampDiff: {
             $dateDiff: {
-                startDate: "$sourceTimestamps.theAnswer",
+                startDate: "$ts.theAnswer",
                 endDate: "$$NOW",
                 unit: "millisecond"
             }

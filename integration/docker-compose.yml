@@ -16,11 +16,11 @@ services:
   mongodb:
     image: mongo:6.0
     volumes:
+      - ./initial-data.mongodb:/usr/src/initial-data.mongodb
       - ./tests.mongodb:/usr/src/tests.mongodb:ro
 
   opcua-proxy:
     build: ..
-    image: opcua-proxy:integration-tests
     command:
       - /usr/local/bin/opcua-proxy
       - --verbose
