@@ -25,7 +25,7 @@ pub(crate) async fn create_client(uri: &str, partner_id: &str) -> Result<Client>
     let mut options = ClientOptions::parse(uri)
         .await
         .context("error parsing connection string URI")?;
-    let app_name = format!("OPC-UA proxy ({})", partner_id);
+    let app_name = format!("OPC-UA proxy ({partner_id})");
     options.app_name = app_name.into();
     options.server_selection_timeout = Duration::from_secs(2).into();
     let client = Client::with_options(options).context("error creating the client")?;
@@ -109,9 +109,9 @@ impl Handler<DataChangeMessage> for DatabaseActor {
             let mut values_map = HashMap::with_capacity(msg.0.len());
             let mut timestamps_map = HashMap::with_capacity(msg.0.len());
             for (tag_name, data_value) in msg.0 {
-                values_map.insert(format!("{}.{}", VALUES_KEY, tag_name), data_value.value);
+                values_map.insert(format!("{VALUES_KEY}.{tag_name}"), data_value.value);
                 timestamps_map.insert(
-                    format!("{}.{}", TIMESTAMPS_KEY, tag_name),
+                    format!("{TIMESTAMPS_KEY}.{tag_name}"),
                     data_value.source_timestamp,
                 );
             }
