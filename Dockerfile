@@ -8,26 +8,24 @@ COPY --from=xx / /
 
 WORKDIR /usr/src/app
 
-ENV PKG_CONFIG_ALLOW_CROSS=1 \
-    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-ARG TARGETPLATFORM
-
-# libssl-dev is required for arm64 builds
 # hadolint ignore=DL3008
-RUN xx-apt-get install -y --no-install-recommends libssl-dev && \
-    apt-get install -y --no-install-recommends "crossbuild-essential-$(xx-info debian-arch)"
+RUN apt-get update && apt-get install -y --no-install-recommends clang lld
 
-COPY Cargo.lock Cargo.toml ./
+COPY Cargo.lock Cargo.toml cross-compile.sh ./
 COPY src ./src
 
-# hadolint ignore=SC2155
 RUN --mount=type=cache,target=/usr/local/cargo/git/db \
     --mount=type=cache,target=/usr/local/cargo/registry/index \
     --mount=type=cache,target=/usr/local/cargo/registry/cache \
-    --mount=type=cache,sharing=private,target=/usr/src/app/target \
-    export RUST_TRIPLE="$(xx-info march)-unknown-$(xx-info os)-$(xx-info libc)" && \
-    rustup target add "$RUST_TRIPLE" && \
-    cargo install --target "$RUST_TRIPLE" --locked --path . --root . && \
+    cargo fetch
+
+ARG TARGETPLATFORM
+# hadolint ignore=SC1091
+RUN --mount=type=cache,target=/usr/local/cargo/git/db \
+    --mount=type=cache,target=/usr/local/cargo/registry/index \
+    --mount=type=cache,target=/usr/local/cargo/registry/cache \
+    . ./cross-compile.sh && \
+    xx-cargo install --locked --path . --root . && \
     xx-verify bin/*
 
 # hadolint ignore=DL3006
