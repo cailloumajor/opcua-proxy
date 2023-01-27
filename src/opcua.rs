@@ -72,9 +72,9 @@ pub(crate) struct TagSet(Vec<Tag>);
 impl TagSet {
     pub fn from_file(path: &str) -> Result<Self> {
         let contents =
-            fs::read_to_string(path).with_context(|| format!("error reading file {}", path))?;
+            fs::read_to_string(path).with_context(|| format!("error reading file {path}"))?;
         let json = serde_json::from_str(&contents)
-            .with_context(|| format!("error deserializing contents of file {}", path))?;
+            .with_context(|| format!("error deserializing contents of file {path}"))?;
 
         Ok(Self(json))
     }
