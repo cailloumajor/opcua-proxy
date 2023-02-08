@@ -1,5 +1,21 @@
 # Changelog
 
+## [4.0.2](https://github.com/cailloumajor/opcua-proxy/compare/v4.0.1...v4.0.2) (2023-02-06)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate anyhow to 1.0.69 ([8163da6](https://github.com/cailloumajor/opcua-proxy/commit/8163da6792abe300acdebe4b5287cc20f3028bd5))
+* **deps:** update rust crate clap to 4.1.2 ([b459028](https://github.com/cailloumajor/opcua-proxy/commit/b459028d752c60b2439e06cb19c4a724c31e1754))
+* **deps:** update rust crate clap to 4.1.4 ([6b33b62](https://github.com/cailloumajor/opcua-proxy/commit/6b33b62d99dd9b7171fe5aed5e228b59f769f646))
+* **deps:** update rust crate futures-util to 0.3.26 ([7c8482d](https://github.com/cailloumajor/opcua-proxy/commit/7c8482df981f1a29e70f1f8ae5407851c947c0e5))
+* **deps:** update rust crate serde_json to 1.0.92 ([037c2c5](https://github.com/cailloumajor/opcua-proxy/commit/037c2c5ea76e221acd7796a4bb9899292524ef22))
+* **deps:** update rust crate tokio to 1.24.2 ([983950d](https://github.com/cailloumajor/opcua-proxy/commit/983950d82f8f075f5ea80aa847ceffdbf875f2c4))
+* **deps:** update rust crate tokio to 1.25.0 ([40398d9](https://github.com/cailloumajor/opcua-proxy/commit/40398d93df5b9b69bf1db9e8361c10b9961c0ff5))
+* **deps:** update rust docker tag to v1.67.0 ([7d156e2](https://github.com/cailloumajor/opcua-proxy/commit/7d156e2e9ee519e072112a6420a2c7c62a34f18d))
+* **deps:** update tonistiigi/xx docker tag to v1.2.0 ([622ad5a](https://github.com/cailloumajor/opcua-proxy/commit/622ad5ad9f0153e459bdaaa556add578c3e9cc2c))
+* use xx-cargo ([9923ee6](https://github.com/cailloumajor/opcua-proxy/commit/9923ee6233c41d31f40f7d8a2e8230e45a7514ed))
+
 ## [4.0.1](https://github.com/cailloumajor/opcua-proxy/compare/v4.0.0...v4.0.1) (2023-01-15)
 
 
