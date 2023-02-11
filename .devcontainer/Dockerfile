@@ -1,4 +1,4 @@
-FROM rust:1.67.0-bullseye
+FROM rust:1.67.1-bullseye
 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     # Remove imagemagick due to https://security-tracker.debian.org/tracker/CVE-2019-10131
