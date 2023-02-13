@@ -8,12 +8,13 @@ use opcua::client::prelude::*;
 pub(crate) use opcua::client::prelude::{Session, SessionCommand};
 use opcua::sync::RwLock;
 use serde::Deserialize;
+use tokio::sync::mpsc;
 use tracing::info;
 use tracing::{error, info_span};
 
 use opcua_proxy::OPCUA_HEALTH_INTERVAL;
 
-use crate::db::{DataChangeMessage, DatabaseActorAddress, HealthMessage};
+use crate::model::{DataChangeMessage, HealthMessage};
 
 #[derive(Args)]
 pub(crate) struct Config {
@@ -203,16 +204,15 @@ pub(crate) fn get_namespaces(session: &impl AttributeService) -> Result<Namespac
 pub(crate) fn subscribe_to_tags<T>(
     session: &T,
     namespaces: &Namespaces,
-    tag_set: TagSet,
-    send_addr: DatabaseActorAddress,
-) -> Result<()>
+    tag_set: Arc<TagSet>,
+) -> Result<mpsc::Receiver<DataChangeMessage>>
 where
     T: SubscriptionService + MonitoredItemService,
 {
-    let tag_set = Arc::new(tag_set);
-    let cloned_tag_set = tag_set.clone();
+    let (sender, receiver) = mpsc::channel(1);
+    let cloned_tag_set = Arc::clone(&tag_set);
     let data_change_callback = DataChangeCallback::new(move |monitored_items| {
-        let _entered = info_span!("tags values change handler").entered();
+        let _entered = info_span!("tags_values_change_handler").entered();
         let mut message = DataChangeMessage::with_capacity(monitored_items.len());
         for item in monitored_items {
             let node_id = &item.item_to_monitor().node_id;
@@ -240,7 +240,9 @@ where
                 source_millis,
             )
         }
-        send_addr.do_send(message);
+        if let Err(err) = sender.try_send(message) {
+            error!(when = "sending message to channel", %err);
+        }
     });
 
     let items_to_create = tag_set
@@ -271,16 +273,17 @@ where
     }
 
     info!(status = "success");
-    Ok(())
+    Ok(receiver)
 }
 
 #[tracing::instrument(skip_all)]
-pub(crate) fn subscribe_to_health<T>(session: &T, send_addr: DatabaseActorAddress) -> Result<()>
+pub(crate) fn subscribe_to_health<T>(session: &T) -> Result<mpsc::Receiver<HealthMessage>>
 where
     T: SubscriptionService + MonitoredItemService,
 {
+    let (sender, receiver) = mpsc::channel(1);
     let data_change_callback = DataChangeCallback::new(move |monitored_items| {
-        let _entered = info_span!("health value change handler").entered();
+        let _entered = info_span!("health_value_change_handler").entered();
         let ticks = monitored_items
             .get(0)
             .and_then(|item| item.last_value().value.as_ref())
@@ -292,7 +295,9 @@ where
                 }
             });
         if let Some(t) = ticks {
-            send_addr.do_send(HealthMessage::from(t));
+            if let Err(err) = sender.try_send(HealthMessage::from(t)) {
+                error!(when = "sending message to channel", %err);
+            }
         } else {
             error!(?monitored_items, err = "unexpected monitored items");
         }
@@ -329,7 +334,7 @@ where
     }
 
     info!(status = "success");
-    Ok(())
+    Ok(receiver)
 }
 
 #[cfg(test)]
