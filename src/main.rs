@@ -1,22 +1,25 @@
-use std::thread;
-
-use actix::{Actor, System};
-use anyhow::{Context, Result};
-
-use clap::Parser;
-use clap_verbosity_flag::{InfoLevel, LogLevel, Verbosity};
-use opcua_proxy::CommonArgs;
-use signal_hook::consts::TERM_SIGNALS;
-use signal_hook::iterator::Signals;
-use signal_hook::low_level::signal_name;
-use tokio::sync::oneshot::Sender;
-use tracing::{info, info_span};
-use tracing_log::log::LevelFilter;
-use tracing_log::LogTracer;
-
 mod db;
+mod model;
 mod opcua;
 mod variant;
+
+use std::process;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
+use anyhow::Context as _;
+use clap::Parser;
+use clap_verbosity_flag::{InfoLevel, LogLevel, Verbosity};
+use futures_util::StreamExt;
+use opcua_proxy::CommonArgs;
+use signal_hook::consts::TERM_SIGNALS;
+use signal_hook::low_level::signal_name;
+use signal_hook_tokio::Signals;
+use tokio::runtime::Runtime;
+use tokio::sync::oneshot;
+use tracing::{error, info, instrument};
+use tracing_log::log::LevelFilter;
+use tracing_log::LogTracer;
 
 #[derive(Parser)]
 struct Args {
@@ -48,28 +51,33 @@ where
     }
 }
 
-fn handle_signals(
-    mut signals: Signals,
-    session_stop_tx: Sender<opcua::SessionCommand>,
-    system: System,
+#[instrument(skip_all)]
+async fn handle_signals(
+    signals: Signals,
+    raw_exit: Arc<AtomicBool>,
+    session_stop_tx: oneshot::Sender<opcua::SessionCommand>,
 ) {
-    let mut tx = Some(session_stop_tx);
-    while let Some(signal) = signals.forever().next() {
-        let _entered = info_span!("signals handler").entered();
-        let signal_name = signal_name(signal).unwrap_or("unknown");
-        info!(msg = "received signal", signal_name);
-        if let Some(tx) = tx.take() {
-            info!(msg = "sending session stop command");
-            tx.send(opcua::SessionCommand::Stop).unwrap();
+    let mut signals_stream =
+        signals.map(|signal| (signal, signal_name(signal).unwrap_or("unknown")));
+    let mut session_stop_tx = Some(session_stop_tx);
+    while let Some((signum, signal)) = signals_stream.next().await {
+        if raw_exit.load(Ordering::Relaxed) {
+            info!(msg = "received signal", reaction = "exiting", signal);
+            process::exit(signum);
+        } else {
+            info!(msg = "received signal", reaction = "shutting down", signal);
+            if let Some(tx) = session_stop_tx.take() {
+                tx.send(opcua::SessionCommand::Stop).unwrap();
+            } else {
+                error!(err = "stop command has already been sent", signal);
+            }
         }
-        info!(msg = "stopping system");
-        system.stop();
-        signals.handle().close();
     }
-    info!("exiting signals handler");
 }
 
-fn main() -> Result<()> {
+fn main() -> anyhow::Result<()> {
+    let rt = Runtime::new().context("error creating async runtime")?;
+
     let args = Args::parse();
 
     tracing_subscriber::fmt()
@@ -78,32 +86,62 @@ fn main() -> Result<()> {
 
     LogTracer::init_with_filter(LevelFilter::Warn).context("error initializing log tracer")?;
 
-    let system = System::new();
+    let should_raw_exit = Arc::new(AtomicBool::new(true));
+    let (session_tx, session_rx) = oneshot::channel();
 
-    let db_client = system.block_on(db::create_client(
+    let signals = rt
+        .block_on(async { Signals::new(TERM_SIGNALS) })
+        .context("error registering termination signals")?;
+    let signals_handle = signals.handle();
+    let signals_task = rt.spawn(handle_signals(
+        signals,
+        Arc::clone(&should_raw_exit),
+        session_tx,
+    ));
+
+    let database = rt.block_on(db::create_database(
         &args.common.mongodb_uri,
         &args.common.partner_id,
     ))?;
-    let addr = system.block_on(async {
-        db::DatabaseActor::new(args.common.partner_id.clone(), db_client).start()
-    });
+    let database_actor = Arc::new(db::DatabaseActor::new(
+        args.common.partner_id.clone(),
+        database,
+    ));
+    rt.block_on(database_actor.delete_data_collection());
 
-    let opcua_session = opcua::create_session(&args.opcua, &args.common.partner_id) //
+    let opcua_session = opcua::create_session(&args.opcua, &args.common.partner_id)
         .context("error creating session")?;
-    let namespaces = opcua::get_namespaces(&*opcua_session.read()) //
-        .context("error getting namespaces")?;
+    should_raw_exit.store(false, Ordering::Relaxed);
+
+    let namespaces = {
+        let session = opcua_session.read();
+        opcua::get_namespaces(&*session).context("error getting namespaces")?
+    };
+
     let tag_set = opcua::TagSet::from_file(&args.tag_set_config_path) //
         .context("error getting tag set")?;
-    opcua::subscribe_to_tags(&*opcua_session.read(), &namespaces, tag_set, addr.clone())
-        .context("error subscribing to tags")?;
-    opcua::subscribe_to_health(&*opcua_session.read(), addr)
-        .context("error subscribing to health")?;
 
-    let session_stop_tx = opcua::Session::run_async(opcua_session);
+    let tags_receiver = {
+        let session = opcua_session.read();
+        opcua::subscribe_to_tags(&*session, &namespaces, Arc::new(tag_set))
+            .context("error subscribing to tags")?
+    };
+    let actor = Arc::clone(&database_actor);
+    let data_change_task = rt.spawn(async move { actor.handle_data_change(tags_receiver).await });
 
-    let signals = Signals::new(TERM_SIGNALS)?;
-    let current_system = System::current();
-    thread::spawn(move || handle_signals(signals, session_stop_tx, current_system));
+    let health_receiver = {
+        let session = opcua_session.read();
+        opcua::subscribe_to_health(&*session).context("error subscribing to health")?
+    };
+    let actor = Arc::clone(&database_actor);
+    let health_task = rt.spawn(async move { actor.handle_health(health_receiver).await });
 
-    system.run().context("error running system")
+    opcua::Session::run_loop(opcua_session, 10, session_rx);
+
+    signals_handle.close();
+
+    rt.block_on(async { tokio::try_join!(signals_task, data_change_task, health_task) })
+        .context("error joining tasks")?;
+
+    Ok(())
 }
