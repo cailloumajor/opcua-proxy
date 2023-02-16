@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.1.0](https://github.com/cailloumajor/opcua-proxy/compare/v4.0.2...v4.1.0) (2023-02-15)
+
+
+### Features
+
+* switch to idiomatic pipeline model ([9e8b56f](https://github.com/cailloumajor/opcua-proxy/commit/9e8b56f74ea640d7cf8659eb70a4b1d8f8fccffe))
+
+
+### Bug Fixes
+
+* **deps:** update rust crate serde_json to 1.0.93 ([7d64b3f](https://github.com/cailloumajor/opcua-proxy/commit/7d64b3f7c70739156f755ded3590c18061a951e1))
+* **deps:** update rust docker tag to v1.67.1 ([79305bd](https://github.com/cailloumajor/opcua-proxy/commit/79305bd6f7a668fdfdcee1a2e90c9739ecd67ffc))
+
 ## [4.0.2](https://github.com/cailloumajor/opcua-proxy/compare/v4.0.1...v4.0.2) (2023-02-06)
 
 
