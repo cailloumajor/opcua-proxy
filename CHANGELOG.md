@@ -1,5 +1,15 @@
 # Changelog
 
+## [4.1.1](https://github.com/cailloumajor/opcua-proxy/compare/v4.1.0...v4.1.1) (2023-02-16)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate clap to 4.1.6 ([3ee0dc7](https://github.com/cailloumajor/opcua-proxy/commit/3ee0dc75240f712e3ca517996d42b09ea4af59ba))
+* **deps:** update rust crate signal-hook to 0.3.15 ([86b6384](https://github.com/cailloumajor/opcua-proxy/commit/86b63847cde76710d175b0fd0d948d379dba5671))
+* **deps:** update tonistiigi/xx docker tag to v1.2.1 ([f34218a](https://github.com/cailloumajor/opcua-proxy/commit/f34218a2d72d64846db4f730ebc642015d4db1a6))
+* express feature flag requirement ([a5d73a3](https://github.com/cailloumajor/opcua-proxy/commit/a5d73a3e04b51e1e8397313f70295ce25c2ad3f4))
+
 ## [4.1.0](https://github.com/cailloumajor/opcua-proxy/compare/v4.0.2...v4.1.0) (2023-02-15)
 
 
