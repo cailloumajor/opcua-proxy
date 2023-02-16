@@ -4,10 +4,7 @@
     "config:base"
   ],
   "semanticCommits": "enabled",
-  "automergeType": "pr-comment",
-  "automergeComment": "bors r+",
-  "prHeader": "<!-- bors exclude following -->",
-  "rebaseWhen": "never",
+  "automergeType": "branch",
   "lockFileMaintenance": {
     "enabled": true,
     "automerge": true
