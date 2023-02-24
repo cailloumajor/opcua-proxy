@@ -3,11 +3,9 @@ mod model;
 mod opcua;
 mod variant;
 
-use std::process;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use anyhow::Context as _;
+use anyhow::{anyhow, Context as _};
 use clap::Parser;
 use clap_verbosity_flag::{InfoLevel, LogLevel, Verbosity};
 use futures_util::StreamExt;
@@ -15,11 +13,13 @@ use opcua_proxy::CommonArgs;
 use signal_hook::consts::TERM_SIGNALS;
 use signal_hook::low_level::signal_name;
 use signal_hook_tokio::Signals;
-use tokio::runtime::Runtime;
 use tokio::sync::oneshot;
+use tokio::task::spawn_blocking;
 use tracing::{error, info, instrument};
 use tracing_log::log::LevelFilter;
 use tracing_log::LogTracer;
+
+use db::MongoDBDatabase;
 
 #[derive(Parser)]
 struct Args {
@@ -54,30 +54,31 @@ where
 #[instrument(skip_all)]
 async fn handle_signals(
     signals: Signals,
-    raw_exit: Arc<AtomicBool>,
     session_stop_tx: oneshot::Sender<opcua::SessionCommand>,
-) {
-    let mut signals_stream =
-        signals.map(|signal| (signal, signal_name(signal).unwrap_or("unknown")));
+) -> anyhow::Result<()> {
+    let mut signals_stream = signals.map(|signal| signal_name(signal).unwrap_or("unknown"));
     let mut session_stop_tx = Some(session_stop_tx);
-    while let Some((signum, signal)) = signals_stream.next().await {
-        if raw_exit.load(Ordering::Relaxed) {
-            info!(msg = "received signal", reaction = "exiting", signal);
-            process::exit(signum);
+    let mut graceful = false;
+    info!(status = "starting");
+    while let Some(signal) = signals_stream.next().await {
+        info!(msg = "received signal", reaction = "shutting down", signal);
+        if let Some(tx) = session_stop_tx.take() {
+            tx.send(opcua::SessionCommand::Stop).unwrap();
+            graceful = true;
         } else {
-            info!(msg = "received signal", reaction = "shutting down", signal);
-            if let Some(tx) = session_stop_tx.take() {
-                tx.send(opcua::SessionCommand::Stop).unwrap();
-            } else {
-                error!(err = "stop command has already been sent", signal);
-            }
+            error!(err = "stop command has already been sent", signal);
         }
+    }
+    info!(status = "terminating");
+    if graceful {
+        Ok(())
+    } else {
+        Err(anyhow!("unexpected shutdown"))
     }
 }
 
-fn main() -> anyhow::Result<()> {
-    let rt = Runtime::new().context("error creating async runtime")?;
-
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     tracing_subscriber::fmt()
@@ -86,39 +87,24 @@ fn main() -> anyhow::Result<()> {
 
     LogTracer::init_with_filter(LevelFilter::Warn).context("error initializing log tracer")?;
 
-    let should_raw_exit = Arc::new(AtomicBool::new(true));
-    let (session_tx, session_rx) = oneshot::channel();
+    let database =
+        MongoDBDatabase::create(&args.common.mongodb_uri, &args.common.partner_id).await?;
+    database.delete_data_collection().await;
 
-    let signals = rt
-        .block_on(async { Signals::new(TERM_SIGNALS) })
-        .context("error registering termination signals")?;
-    let signals_handle = signals.handle();
-    let signals_task = rt.spawn(handle_signals(
-        signals,
-        Arc::clone(&should_raw_exit),
-        session_tx,
-    ));
-
-    let database = rt.block_on(db::create_database(
-        &args.common.mongodb_uri,
-        &args.common.partner_id,
-    ))?;
-    let database_actor = Arc::new(db::DatabaseActor::new(
-        args.common.partner_id.clone(),
-        database,
-    ));
-    rt.block_on(database_actor.delete_data_collection());
-
-    let opcua_session = opcua::create_session(&args.opcua, &args.common.partner_id)
-        .context("error creating session")?;
-    should_raw_exit.store(false, Ordering::Relaxed);
+    let opcua_session =
+        spawn_blocking(move || opcua::create_session(&args.opcua, &args.common.partner_id))
+            .await
+            .context("error joining opcua::create_session blocking task")?
+            .context("error creating OPC-UA session")?;
 
     let namespaces = {
         let session = opcua_session.read();
         opcua::get_namespaces(&*session).context("error getting namespaces")?
     };
 
-    let tag_set = opcua::TagSet::from_file(&args.tag_set_config_path) //
+    let tag_set = spawn_blocking(move || opcua::TagSet::from_file(&args.tag_set_config_path))
+        .await
+        .context("error joining tag set creation blocking task")?
         .context("error getting tag set")?;
 
     let tags_receiver = {
@@ -126,22 +112,26 @@ fn main() -> anyhow::Result<()> {
         opcua::subscribe_to_tags(&*session, &namespaces, Arc::new(tag_set))
             .context("error subscribing to tags")?
     };
-    let actor = Arc::clone(&database_actor);
-    let data_change_task = rt.spawn(async move { actor.handle_data_change(tags_receiver).await });
+    let data_change_task = database.handle_data_change(tags_receiver);
 
     let health_receiver = {
         let session = opcua_session.read();
         opcua::subscribe_to_health(&*session).context("error subscribing to health")?
     };
-    let actor = Arc::clone(&database_actor);
-    let health_task = rt.spawn(async move { actor.handle_health(health_receiver).await });
+    let health_task = database.handle_health(health_receiver);
 
-    opcua::Session::run_loop(opcua_session, 10, session_rx);
+    let session_stop_tx = opcua::Session::run_async(opcua_session);
+
+    let signals = Signals::new(TERM_SIGNALS).context("error registering termination signals")?;
+    let signals_handle = signals.handle();
+    let signals_task = tokio::spawn(handle_signals(signals, session_stop_tx));
+
+    tokio::try_join!(data_change_task, health_task)
+        .context("error joining data change and/or health tasks")?;
 
     signals_handle.close();
 
-    rt.block_on(async { tokio::try_join!(signals_task, data_change_task, health_task) })
-        .context("error joining tasks")?;
+    signals_task.await.context("error joining signals task")??;
 
     Ok(())
 }
