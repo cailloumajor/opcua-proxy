@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.1.2](https://github.com/cailloumajor/opcua-proxy/compare/v4.1.1...v4.1.2) (2023-02-24)
+
+
+### Bug Fixes
+
+* enhance async tasks organization ([cb94cb7](https://github.com/cailloumajor/opcua-proxy/commit/cb94cb75f03831f59507a0bd522252020a270d50))
+
 ## [4.1.1](https://github.com/cailloumajor/opcua-proxy/compare/v4.1.0...v4.1.1) (2023-02-16)
 
 
