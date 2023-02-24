@@ -1,6 +1,4 @@
 {
-    "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
-
     "build": {
         "args": {
             "http_proxy": "${localEnv:http_proxy}",
@@ -18,7 +16,7 @@
     },
 
     "features": {
-        "ghcr.io/devcontainers/features/common-utils:1": {},
+        "ghcr.io/devcontainers/features/common-utils:2": {},
         "ghcr.io/devcontainers/features/rust:1": {
             "version": "none"
         }
