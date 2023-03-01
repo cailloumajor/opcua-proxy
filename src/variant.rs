@@ -47,7 +47,7 @@ impl Serialize for Variant {
             OpcUaVariant::ByteString(ref v) => v
                 .value
                 .as_ref()
-                .map(|v| Bytes(v.to_owned()))
+                .map(|v| Bytes(v.clone()))
                 .serialize(serializer),
             OpcUaVariant::Array(ref v) => serialize_array(v, serializer),
             _ => Err(ser::Error::custom(format!(

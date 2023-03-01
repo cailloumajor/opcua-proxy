@@ -43,14 +43,13 @@ impl MongoDBDatabase {
     #[tracing::instrument(skip_all)]
     pub(crate) async fn delete_data_collection(&self) {
         let collection = self.db.collection::<Document>(OPCUA_DATA_COLL);
-        let document_id = self.partner_id.to_owned();
-        let query = doc! { "_id": &document_id };
+        let query = doc! { "_id": &self.partner_id };
         match collection.delete_one(query, None).await {
             Ok(DeleteResult { deleted_count, .. }) => {
-                info!(status = "deleted", document_id, deleted_count);
+                info!(status = "deleted", self.partner_id, deleted_count);
             }
             Err(err) => {
-                error!(when = "deleting document", document_id, %err);
+                error!(when = "deleting document", self.partner_id, %err);
             }
         }
     }
@@ -96,7 +95,7 @@ impl MongoDBDatabase {
                         doc! { "$addFields": timestamps_doc },
                     ];
                     if let Err(err) = collection
-                        .update_one(query.to_owned(), update, options.to_owned())
+                        .update_one(query.clone(), update, options.clone())
                         .await
                     {
                         error!(when = "updating document", %err);
@@ -128,7 +127,7 @@ impl MongoDBDatabase {
                         "$currentDate": { "updatedAt": true },
                     };
                     match collection
-                        .update_one(query.to_owned(), update, options.to_owned())
+                        .update_one(query.clone(), update, options.clone())
                         .await
                     {
                         Ok(_) => (),

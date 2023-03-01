@@ -89,7 +89,7 @@ impl TagSet {
                     .get(&tag.nsu)
                     .with_context(|| format!("namespace not found: {}", tag.nsu))?;
                 let create_request = MonitoredItemCreateRequest::new(
-                    NodeId::new(*ns, tag.nid.to_owned()).into(),
+                    NodeId::new(*ns, tag.nid.clone()).into(),
                     MonitoringMode::Reporting,
                     MonitoringParameters {
                         client_handle,
@@ -114,17 +114,17 @@ pub(crate) fn create_session(config: &Config, partner_id: &str) -> Result<Arc<Rw
         };
 
     let default_endpoint = ClientEndpoint {
-        url: config.opcua_server_url.to_owned(),
-        security_policy: config.opcua_security_policy.to_owned(),
-        security_mode: config.opcua_security_mode.to_owned(),
+        url: config.opcua_server_url.clone(),
+        security_policy: config.opcua_security_policy.clone(),
+        security_mode: config.opcua_security_mode.clone(),
         user_token_id: user_token_id.to_owned(),
     };
 
     let mut client_builder = ClientBuilder::new()
         .application_name(env!("CARGO_PKG_DESCRIPTION"))
         .product_uri(PRODUCT_URI)
-        .application_uri(PRODUCT_URI.to_owned() + ":" + partner_id)
-        .pki_dir(config.pki_dir.to_owned())
+        .application_uri(format!("{PRODUCT_URI}:{partner_id}"))
+        .pki_dir(config.pki_dir.clone())
         .endpoint("default", default_endpoint)
         .default_endpoint("default")
         .session_retry_interval(2000)
@@ -234,11 +234,7 @@ where
                 error!(%node_id, err="missing source timestamp");
                 continue;
             };
-            message.insert(
-                tag.name.to_owned(),
-                last_value.to_owned().into(),
-                source_millis,
-            )
+            message.insert(tag.name.clone(), last_value.clone().into(), source_millis)
         }
         if let Err(err) = sender.try_send(message) {
             error!(when = "sending message to channel", %err);
