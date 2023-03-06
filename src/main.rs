@@ -16,8 +16,7 @@ use signal_hook_tokio::Signals;
 use tokio::sync::oneshot;
 use tokio::task::spawn_blocking;
 use tracing::{error, info, instrument};
-use tracing_log::log::LevelFilter;
-use tracing_log::LogTracer;
+use tracing_log::{log, LogTracer};
 
 use db::MongoDBDatabase;
 
@@ -42,12 +41,12 @@ where
     T: LogLevel,
 {
     match verbosity.log_level_filter() {
-        LevelFilter::Off => tracing::level_filters::LevelFilter::OFF,
-        LevelFilter::Error => tracing::level_filters::LevelFilter::ERROR,
-        LevelFilter::Warn => tracing::level_filters::LevelFilter::WARN,
-        LevelFilter::Info => tracing::level_filters::LevelFilter::INFO,
-        LevelFilter::Debug => tracing::level_filters::LevelFilter::DEBUG,
-        LevelFilter::Trace => tracing::level_filters::LevelFilter::TRACE,
+        log::LevelFilter::Off => tracing::level_filters::LevelFilter::OFF,
+        log::LevelFilter::Error => tracing::level_filters::LevelFilter::ERROR,
+        log::LevelFilter::Warn => tracing::level_filters::LevelFilter::WARN,
+        log::LevelFilter::Info => tracing::level_filters::LevelFilter::INFO,
+        log::LevelFilter::Debug => tracing::level_filters::LevelFilter::DEBUG,
+        log::LevelFilter::Trace => tracing::level_filters::LevelFilter::TRACE,
     }
 }
 
@@ -85,7 +84,12 @@ async fn main() -> anyhow::Result<()> {
         .with_max_level(filter_from_verbosity(&args.verbose))
         .init();
 
-    LogTracer::init_with_filter(LevelFilter::Warn).context("error initializing log tracer")?;
+    let log_tracer_level = if args.verbose.log_level() == Some(log::Level::Info) {
+        log::LevelFilter::Warn
+    } else {
+        args.verbose.log_level_filter()
+    };
+    LogTracer::init_with_filter(log_tracer_level).context("error initializing log tracer")?;
 
     let database =
         MongoDBDatabase::create(&args.common.mongodb_uri, &args.common.partner_id).await?;
