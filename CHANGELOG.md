@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.1.4](https://github.com/cailloumajor/opcua-proxy/compare/v4.1.3...v4.1.4) (2023-03-06)
+
+
+### Bug Fixes
+
+* apply verbosity to opcua crate's logs ([dbce4ca](https://github.com/cailloumajor/opcua-proxy/commit/dbce4ca7de3acf3b6018e4f5700fa455a94d131f))
+* **deps:** update rust crate serde_json to 1.0.94 ([1e7837a](https://github.com/cailloumajor/opcua-proxy/commit/1e7837a09510a75e1ff3d4e1442bf21581fed01f))
+
 ## [4.1.3](https://github.com/cailloumajor/opcua-proxy/compare/v4.1.2...v4.1.3) (2023-03-02)
 
 
