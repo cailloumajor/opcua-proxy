@@ -44,7 +44,7 @@ jobs:
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.2
         with:
-          version: v0.4.0-pre.9
+          version: v0.4.0-pre.9 # renovate: sccache
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
       - name: Lint code with Clippy
