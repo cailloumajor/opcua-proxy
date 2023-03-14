@@ -39,4 +39,4 @@ default-features = false
 features = [ "smallvec", "fmt", "ansi" ]
 
 [dev-dependencies]
-serde_test = "1.0.155"
+serde_test = "1.0.156"
