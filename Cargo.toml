@@ -7,7 +7,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.69"
+anyhow = "1.0.70"
 clap-verbosity-flag = "2.0.0"
 futures-util = "0.3.27"
 mongodb = "2.4.0"
