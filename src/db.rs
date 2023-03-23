@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use anyhow::Context as _;
-use mongodb::bson::{self, doc, Document};
+use mongodb::bson::{self, doc, DateTime, Document};
 use mongodb::options::{ClientOptions, UpdateOptions};
 use mongodb::results::DeleteResult;
 use mongodb::{Client, Database};
@@ -12,7 +12,7 @@ use tracing::{debug, error, info, info_span, Instrument};
 
 use opcua_proxy::{DATABASE, OPCUA_DATA_COLL, OPCUA_HEALTH_COLL};
 
-use crate::model::{DataChangeMessage, HealthMessage};
+use crate::model::TagChange;
 
 const VALUES_KEY: &str = "val";
 const TIMESTAMPS_KEY: &str = "ts";
@@ -56,7 +56,7 @@ impl MongoDBDatabase {
 
     pub(crate) fn handle_data_change(
         &self,
-        mut messages: mpsc::Receiver<DataChangeMessage>,
+        mut messages: mpsc::Receiver<Vec<TagChange>>,
     ) -> JoinHandle<()> {
         let collection = self.db.collection::<Document>(OPCUA_DATA_COLL);
         let query = doc! { "_id": &self.partner_id };
@@ -70,10 +70,17 @@ impl MongoDBDatabase {
                     debug!(event = "message received", ?message);
                     let mut values_map = HashMap::with_capacity(message.len());
                     let mut timestamps_map = HashMap::with_capacity(message.len());
-                    for (tag_name, value, source_timestamp) in message {
+                    for TagChange {
+                        tag_name,
+                        value,
+                        source_timestamp,
+                    } in message
+                    {
                         values_map.insert(format!("{VALUES_KEY}.{tag_name}"), value);
-                        timestamps_map
-                            .insert(format!("{TIMESTAMPS_KEY}.{tag_name}"), source_timestamp);
+                        timestamps_map.insert(
+                            format!("{TIMESTAMPS_KEY}.{tag_name}"),
+                            DateTime::from_millis(source_timestamp),
+                        );
                     }
                     let values_doc = match bson::to_document(&values_map) {
                         Ok(doc) => doc,
@@ -108,10 +115,7 @@ impl MongoDBDatabase {
         )
     }
 
-    pub(crate) fn handle_health(
-        &self,
-        mut messages: mpsc::Receiver<HealthMessage>,
-    ) -> JoinHandle<()> {
+    pub(crate) fn handle_health(&self, mut messages: mpsc::Receiver<i64>) -> JoinHandle<()> {
         let collection = self.db.collection::<Document>(OPCUA_HEALTH_COLL);
         let query = doc! { "_id": &self.partner_id };
         let options = UpdateOptions::builder().upsert(true).build();
@@ -123,7 +127,7 @@ impl MongoDBDatabase {
                 while let Some(message) = messages.recv().await {
                     debug!(event="message received", %message);
                     let update = doc! {
-                        "$set": { "serverDateTime": message.date_time() },
+                        "$set": { "serverDateTime": message },
                         "$currentDate": { "updatedAt": true },
                     };
                     match collection
