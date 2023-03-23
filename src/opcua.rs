@@ -14,7 +14,7 @@ use tracing::{error, info_span};
 
 use opcua_proxy::OPCUA_HEALTH_INTERVAL;
 
-use crate::model::{DataChangeMessage, HealthMessage};
+use crate::model::TagChange;
 
 #[derive(Args)]
 pub(crate) struct Config {
@@ -211,7 +211,7 @@ pub(crate) fn subscribe_to_tags<T>(
     session: &T,
     namespaces: &Namespaces,
     tag_set: Arc<TagSet>,
-) -> anyhow::Result<mpsc::Receiver<DataChangeMessage>>
+) -> anyhow::Result<mpsc::Receiver<Vec<TagChange>>>
 where
     T: SubscriptionService + MonitoredItemService,
 {
@@ -219,7 +219,7 @@ where
     let cloned_tag_set = Arc::clone(&tag_set);
     let data_change_callback = DataChangeCallback::new(move |monitored_items| {
         let _entered = info_span!("tags_values_change_handler").entered();
-        let mut message = DataChangeMessage::with_capacity(monitored_items.len());
+        let mut message = Vec::with_capacity(monitored_items.len());
         for item in monitored_items {
             let node_id = &item.item_to_monitor().node_id;
             let client_handle = item.client_handle();
@@ -232,15 +232,19 @@ where
                 error!(%node_id, err="missing value");
                 continue;
             };
-            let source_millis = item
+            let Some(source_timestamp) = item
                 .last_value()
                 .source_timestamp
-                .map(|dt| dt.as_chrono().timestamp_millis());
-            let Some(source_millis) = source_millis else {
+                .map(|dt| dt.as_chrono().timestamp_millis())
+            else {
                 error!(%node_id, err="missing source timestamp");
                 continue;
             };
-            message.insert(tag.name.clone(), last_value.clone().into(), source_millis)
+            message.push(TagChange {
+                tag_name: tag.name.clone(),
+                value: last_value.clone().into(),
+                source_timestamp,
+            })
         }
         if let Err(err) = sender.try_send(message) {
             error!(when = "sending message to channel", %err);
@@ -279,29 +283,22 @@ where
 }
 
 #[tracing::instrument(skip_all)]
-pub(crate) fn subscribe_to_health<T>(session: &T) -> anyhow::Result<mpsc::Receiver<HealthMessage>>
+pub(crate) fn subscribe_to_health<T>(session: &T) -> anyhow::Result<mpsc::Receiver<i64>>
 where
     T: SubscriptionService + MonitoredItemService,
 {
     let (sender, receiver) = mpsc::channel(1);
     let data_change_callback = DataChangeCallback::new(move |monitored_items| {
         let _entered = info_span!("health_value_change_handler").entered();
-        let ticks = monitored_items
+        let Some(Variant::DateTime(server_time)) = monitored_items
             .get(0)
             .and_then(|item| item.last_value().value.as_ref())
-            .and_then(|variant| {
-                if let Variant::DateTime(dt) = variant {
-                    Some(dt.as_chrono().timestamp_millis())
-                } else {
-                    None
-                }
-            });
-        if let Some(t) = ticks {
-            if let Err(err) = sender.try_send(HealthMessage::from(t)) {
-                error!(when = "sending message to channel", %err);
-            }
-        } else {
+        else {
             error!(?monitored_items, err = "unexpected monitored items");
+            return;
+        };
+        if let Err(err) = sender.try_send(server_time.as_chrono().timestamp_millis()) {
+            error!(when = "sending message to channel", %err);
         }
     });
 
