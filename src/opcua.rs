@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Context as _};
 use clap::Args;
 use opcua::client::prelude::*;
 pub(crate) use opcua::client::prelude::{Session, SessionCommand};
@@ -71,7 +71,7 @@ struct Tag {
 pub(crate) struct TagSet(Vec<Tag>);
 
 impl TagSet {
-    pub fn from_file(path: &str) -> Result<Self> {
+    pub fn from_file(path: &str) -> anyhow::Result<Self> {
         let contents =
             fs::read_to_string(path).with_context(|| format!("error reading file {path}"))?;
         let json = serde_json::from_str(&contents)
@@ -80,7 +80,10 @@ impl TagSet {
         Ok(Self(json))
     }
 
-    fn monitored_items(&self, namespaces: &Namespaces) -> Result<Vec<MonitoredItemCreateRequest>> {
+    fn monitored_items(
+        &self,
+        namespaces: &Namespaces,
+    ) -> anyhow::Result<Vec<MonitoredItemCreateRequest>> {
         self.0
             .iter()
             .zip(1..)
@@ -103,7 +106,10 @@ impl TagSet {
 }
 
 #[tracing::instrument(skip_all)]
-pub(crate) fn create_session(config: &Config, partner_id: &str) -> Result<Arc<RwLock<Session>>> {
+pub(crate) fn create_session(
+    config: &Config,
+    partner_id: &str,
+) -> anyhow::Result<Arc<RwLock<Session>>> {
     const PRODUCT_URI: &str = concat!("urn:", env!("CARGO_PKG_NAME"));
 
     let (user_token_id, user_identity_token) =
@@ -161,7 +167,7 @@ pub(crate) fn create_session(config: &Config, partner_id: &str) -> Result<Arc<Rw
 }
 
 #[tracing::instrument(skip_all)]
-pub(crate) fn get_namespaces(session: &impl AttributeService) -> Result<Namespaces> {
+pub(crate) fn get_namespaces(session: &impl AttributeService) -> anyhow::Result<Namespaces> {
     let namespace_array_nodeid: NodeId = VariableId::Server_NamespaceArray.into();
     let read_result = session.read(
         &[namespace_array_nodeid.into()],
@@ -192,7 +198,7 @@ pub(crate) fn get_namespaces(session: &impl AttributeService) -> Result<Namespac
                 variant.type_id()
             )),
         })
-        .collect::<Result<Vec<_>>>()?
+        .collect::<anyhow::Result<Vec<_>>>()?
         .into_iter()
         .collect();
 
@@ -205,7 +211,7 @@ pub(crate) fn subscribe_to_tags<T>(
     session: &T,
     namespaces: &Namespaces,
     tag_set: Arc<TagSet>,
-) -> Result<mpsc::Receiver<DataChangeMessage>>
+) -> anyhow::Result<mpsc::Receiver<DataChangeMessage>>
 where
     T: SubscriptionService + MonitoredItemService,
 {
@@ -273,7 +279,7 @@ where
 }
 
 #[tracing::instrument(skip_all)]
-pub(crate) fn subscribe_to_health<T>(session: &T) -> Result<mpsc::Receiver<HealthMessage>>
+pub(crate) fn subscribe_to_health<T>(session: &T) -> anyhow::Result<mpsc::Receiver<HealthMessage>>
 where
     T: SubscriptionService + MonitoredItemService,
 {
