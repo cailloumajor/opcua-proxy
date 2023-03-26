@@ -1,5 +1,6 @@
 use opcua::types::{Array, Variant as OpcUaVariant};
-use serde::ser::{self, Serialize, Serializer};
+use serde::ser::{Serialize, Serializer};
+use tracing::{error, instrument};
 
 struct Bytes(Vec<u8>);
 
@@ -23,6 +24,7 @@ impl From<OpcUaVariant> for Variant {
 }
 
 impl Serialize for Variant {
+    #[instrument(name = "serialize_variant", skip_all)]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -50,10 +52,11 @@ impl Serialize for Variant {
                 .map(|v| Bytes(v.clone()))
                 .serialize(serializer),
             OpcUaVariant::Array(ref v) => serialize_array(v, serializer),
-            _ => Err(ser::Error::custom(format!(
-                "serialization unimplemented for {:?}",
-                &self.0.type_id()
-            ))),
+            _ => {
+                let type_id = self.0.type_id();
+                error!(kind = "unimplemented serialization", ?type_id);
+                serializer.serialize_unit()
+            }
         }
     }
 }
@@ -63,9 +66,8 @@ where
     S: Serializer,
 {
     if array.has_dimensions() {
-        Err(ser::Error::custom(
-            "serialization unimplemented for multi-dimensional arrays",
-        ))
+        error!(kind = "unimplemented serialization for multi-dimensional arrays");
+        serializer.serialize_unit()
     } else {
         array
             .values
@@ -83,7 +85,7 @@ mod tests {
 
     mod serialize {
         use opcua::types::{
-            Array, ByteString, DateTime, Guid, StatusCode, UAString, VariantTypeId,
+            Array, ByteString, DateTime, DiagnosticInfo, Guid, StatusCode, UAString, VariantTypeId,
         };
         use serde_test::{assert_ser_tokens, Token};
 
@@ -223,6 +225,25 @@ mod tests {
                     Token::SeqEnd,
                 ],
             );
+        }
+
+        #[test]
+        fn multi_dimension_array() {
+            let s = Variant::from(OpcUaVariant::Array(Box::new(
+                Array::new_multi(
+                    VariantTypeId::Byte,
+                    (1u8..=4u8).map(OpcUaVariant::from).collect::<Vec<_>>(),
+                    [2, 2],
+                )
+                .unwrap(),
+            )));
+            assert_ser_tokens(&s, &[Token::Unit]);
+        }
+
+        #[test]
+        fn unimplemented() {
+            let s = Variant::from(OpcUaVariant::from(DiagnosticInfo::null()));
+            assert_ser_tokens(&s, &[Token::Unit]);
         }
     }
 }
