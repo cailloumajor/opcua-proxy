@@ -43,6 +43,7 @@ impl Serialize for Variant {
             OpcUaVariant::Float(v) => serializer.serialize_f32(v),
             OpcUaVariant::Double(v) => serializer.serialize_f64(v),
             OpcUaVariant::String(ref v) => v.value().serialize(serializer),
+            OpcUaVariant::LocalizedText(ref v) => v.text.value().serialize(serializer),
             OpcUaVariant::DateTime(ref v) => v.as_chrono().serialize(serializer),
             OpcUaVariant::Guid(ref v) => v.serialize(serializer),
             OpcUaVariant::StatusCode(v) => v.serialize(serializer),
@@ -85,7 +86,8 @@ mod tests {
 
     mod serialize {
         use opcua::types::{
-            Array, ByteString, DateTime, DiagnosticInfo, Guid, StatusCode, UAString, VariantTypeId,
+            Array, ByteString, DateTime, DiagnosticInfo, Guid, LocalizedText, StatusCode, UAString,
+            VariantTypeId,
         };
         use serde_test::{assert_ser_tokens, Token};
 
@@ -173,6 +175,15 @@ mod tests {
         fn string() {
             let s = Variant::from(OpcUaVariant::String("test string".into()));
             assert_ser_tokens(&s, &[Token::Some, Token::String("test string")]);
+        }
+
+        #[test]
+        fn localized_text() {
+            let s = Variant::from(OpcUaVariant::from(LocalizedText::new(
+                "somelocale",
+                "some text",
+            )));
+            assert_ser_tokens(&s, &[Token::Some, Token::String("some text")]);
         }
 
         #[test]
