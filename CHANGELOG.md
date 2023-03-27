@@ -1,5 +1,40 @@
 # Changelog
 
+## [4.2.0](https://github.com/cailloumajor/opcua-proxy/compare/v4.1.4...v4.2.0) (2023-03-27)
+
+
+### Features
+
+* implement tags configuration fetching from API ([6eeacdd](https://github.com/cailloumajor/opcua-proxy/commit/6eeacdd522d982a7160b2fb02edd446dd23cc3af))
+
+
+### Bug Fixes
+
+* **deps:** update rust crate anyhow to 1.0.70 ([06eb2ac](https://github.com/cailloumajor/opcua-proxy/commit/06eb2ac70a3e8ebcfe5d7f681e87a1ece1b21cf8))
+* **deps:** update rust crate clap to 4.1.10 ([ddd11ee](https://github.com/cailloumajor/opcua-proxy/commit/ddd11ee45670f9d806cfc01d8767b9e369802c4b))
+* **deps:** update rust crate clap to 4.1.11 ([9f2a00b](https://github.com/cailloumajor/opcua-proxy/commit/9f2a00b358a608b09384fb12862a2c6d2d714898))
+* **deps:** update rust crate clap to 4.1.12 ([b2c2bbb](https://github.com/cailloumajor/opcua-proxy/commit/b2c2bbb0943c0fd631561691ea6f6b5fcf3e1645))
+* **deps:** update rust crate clap to 4.1.13 ([1b56f30](https://github.com/cailloumajor/opcua-proxy/commit/1b56f30776f239e4f4ccde6f88d6516f673b13f5))
+* **deps:** update rust crate clap to 4.1.9 ([850267f](https://github.com/cailloumajor/opcua-proxy/commit/850267f239e5b1576f20f687cac6196b4c6375a1))
+* **deps:** update rust crate futures-util to 0.3.27 ([01dbee1](https://github.com/cailloumajor/opcua-proxy/commit/01dbee17a6efd3a332ca576b109fd717e2f17637))
+* **deps:** update rust crate serde to 1.0.153 ([8ea2653](https://github.com/cailloumajor/opcua-proxy/commit/8ea26530497bf95ff2982219186703c4bfc5fd07))
+* **deps:** update rust crate serde to 1.0.154 ([c466fb9](https://github.com/cailloumajor/opcua-proxy/commit/c466fb9686b6fddf33eb26c3daabed8d78f42ea5))
+* **deps:** update rust crate serde to 1.0.155 ([05cdf6e](https://github.com/cailloumajor/opcua-proxy/commit/05cdf6e13ead0a2d9fc36af3aa09d0edeba2e7f5))
+* **deps:** update rust crate serde to 1.0.156 ([d1bc1c6](https://github.com/cailloumajor/opcua-proxy/commit/d1bc1c61da1b760e78ef99147729dc01a6164733))
+* **deps:** update rust crate serde to 1.0.157 ([681c9bc](https://github.com/cailloumajor/opcua-proxy/commit/681c9bc7794ed843087c6996baebb806a06f3356))
+* **deps:** update rust crate serde to 1.0.158 ([89e7a60](https://github.com/cailloumajor/opcua-proxy/commit/89e7a60e2bd6b2c2857245fd7377320460d677df))
+* **deps:** update rust docker tag to v1.68.0 ([1e26153](https://github.com/cailloumajor/opcua-proxy/commit/1e2615352f32f6b2db667a396e0b7ad8f955f131))
+* **deps:** update rust docker tag to v1.68.1 ([5d796e0](https://github.com/cailloumajor/opcua-proxy/commit/5d796e09f2994312404766246c8c9bc582c138b3))
+* implement localized text serialization ([95b1e69](https://github.com/cailloumajor/opcua-proxy/commit/95b1e69190d35287b142972ca91ddf00a261a0d8))
+* prevent nesting opcua client's async runtime ([cf21a58](https://github.com/cailloumajor/opcua-proxy/commit/cf21a58f99a71df264e9c6f829301217edf46a0e))
+* serialize unsupported variants as null ([d00c1b9](https://github.com/cailloumajor/opcua-proxy/commit/d00c1b967b0fc97aaba998524bdd428fc37b1ea3))
+* simplify messages ([ce47ead](https://github.com/cailloumajor/opcua-proxy/commit/ce47eadb2c5d0fc6076a7d2e2b1a89a0b3fabace))
+
+
+### Reverts
+
+* do not use Cargo sparse protocol yet ([447ee96](https://github.com/cailloumajor/opcua-proxy/commit/447ee968e64bd38ee8dab45ab4c3bd765c268d84))
+
 ## [4.1.4](https://github.com/cailloumajor/opcua-proxy/compare/v4.1.3...v4.1.4) (2023-03-06)
 
 
