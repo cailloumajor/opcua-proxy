@@ -71,7 +71,10 @@ sequenceDiagram
     participant OPCServer as OPC-UA server
     participant Proxy as OPC-UA proxy
     participant MongoDB
+    participant ConfigAPI as Configuration API
     critical
+        Proxy->>+ConfigAPI: Queries configuration data
+        ConfigAPI-->>-Proxy: Sends configuration data
         Proxy->>+OPCServer: Connects
         OPCServer-->>-Proxy: Connection success
         Proxy->>+OPCServer: Creates subscription
