@@ -30,7 +30,8 @@
             "settings": {
                 "[toml][rust]": {
                     "editor.formatOnSave": true
-                }
+                },
+                "rust-analyzer.check.command": "clippy"
             },
             // Add the IDs of extensions you want installed when the container is created.
             "extensions": [
