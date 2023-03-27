@@ -1,0 +1,10 @@
+{
+  "integration-tests": [
+    {
+      "container": {
+        "namespaceUri": "http://opcfoundation.org/UA/",
+        "nodeIdentifier": 2256
+      }
+    }
+  ]
+}

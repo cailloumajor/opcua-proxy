@@ -6,6 +6,7 @@ use mongodb::bson::{self, doc, DateTime, Document};
 use mongodb::options::{ClientOptions, UpdateOptions};
 use mongodb::results::DeleteResult;
 use mongodb::{Client, Database};
+use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, info_span, Instrument};
@@ -56,13 +57,14 @@ impl MongoDBDatabase {
 
     pub(crate) fn handle_data_change(
         &self,
+        runtime: &Runtime,
         mut messages: mpsc::Receiver<Vec<TagChange>>,
     ) -> JoinHandle<()> {
         let collection = self.db.collection::<Document>(OPCUA_DATA_COLL);
         let query = doc! { "_id": &self.partner_id };
         let options = UpdateOptions::builder().upsert(true).build();
 
-        tokio::spawn(
+        runtime.spawn(
             async move {
                 info!(status = "starting");
 
@@ -115,12 +117,16 @@ impl MongoDBDatabase {
         )
     }
 
-    pub(crate) fn handle_health(&self, mut messages: mpsc::Receiver<i64>) -> JoinHandle<()> {
+    pub(crate) fn handle_health(
+        &self,
+        runtime: &Runtime,
+        mut messages: mpsc::Receiver<i64>,
+    ) -> JoinHandle<()> {
         let collection = self.db.collection::<Document>(OPCUA_HEALTH_COLL);
         let query = doc! { "_id": &self.partner_id };
         let options = UpdateOptions::builder().upsert(true).build();
 
-        tokio::spawn(
+        runtime.spawn(
             async move {
                 info!(status = "starting");
 

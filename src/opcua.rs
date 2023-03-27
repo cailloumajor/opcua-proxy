@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fs;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context as _};
@@ -9,12 +8,11 @@ pub(crate) use opcua::client::prelude::{Session, SessionCommand};
 use opcua::sync::RwLock;
 use serde::Deserialize;
 use tokio::sync::mpsc;
-use tracing::info;
-use tracing::{error, info_span};
+use tracing::{error, info, info_span, instrument};
 
 use opcua_proxy::OPCUA_HEALTH_INTERVAL;
 
-use crate::model::TagChange;
+use crate::model::{NodeIdentifier, TagChange, TagsConfigGroup};
 
 #[derive(Args)]
 pub(crate) struct Config {
@@ -45,13 +43,6 @@ pub(crate) struct Config {
 
 type Namespaces = HashMap<String, u16>;
 
-#[derive(Clone, Deserialize)]
-#[serde(untagged)]
-enum NodeIdentifier {
-    Numeric(u32),
-    String(String),
-}
-
 impl From<NodeIdentifier> for Identifier {
     fn from(identifier: NodeIdentifier) -> Self {
         match identifier {
@@ -61,38 +52,82 @@ impl From<NodeIdentifier> for Identifier {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct Tag {
     name: String,
-    nsu: String,
-    nid: NodeIdentifier,
+    node_id: NodeId,
 }
 
+#[derive(Debug)]
 pub(crate) struct TagSet(Vec<Tag>);
 
 impl TagSet {
-    pub fn from_file(path: &str) -> anyhow::Result<Self> {
-        let contents =
-            fs::read_to_string(path).with_context(|| format!("error reading file {path}"))?;
-        let json = serde_json::from_str(&contents)
-            .with_context(|| format!("error deserializing contents of file {path}"))?;
+    #[instrument(name = "tag_set_from_config", skip_all)]
+    pub(crate) fn from_config(
+        config: Vec<TagsConfigGroup>,
+        namespaces: &Namespaces,
+        session: &impl ViewService,
+    ) -> anyhow::Result<Self> {
+        let mut tag_set: Vec<Tag> = Vec::new();
 
-        Ok(Self(json))
+        for config_group in config {
+            match config_group {
+                TagsConfigGroup::Container {
+                    namespace_uri,
+                    node_identifier,
+                } => {
+                    let namespace = namespaces
+                        .get(&namespace_uri)
+                        .with_context(|| format!("namespace `{namespace_uri}` not found"))?;
+                    let node_id = NodeId::new(*namespace, node_identifier);
+                    let browse_description = BrowseDescription {
+                        node_id,
+                        browse_direction: BrowseDirection::Forward,
+                        reference_type_id: ReferenceTypeId::HasComponent.into(),
+                        include_subtypes: false,
+                        node_class_mask: NodeClassMask::VARIABLE.bits(),
+                        result_mask: BrowseDescriptionResultMask::RESULT_MASK_DISPLAY_NAME.bits(),
+                    };
+                    let browse_result = session
+                        .browse(&[browse_description])
+                        .context("Browse error")?
+                        .unwrap()
+                        .pop()
+                        .context("empty Browse results")?;
+                    if !browse_result.status_code.is_good() {
+                        return Err(anyhow!("BrowseResult error: {}", browse_result.status_code));
+                    }
+                    if !browse_result.continuation_point.is_null() {
+                        return Err(anyhow!(
+                            "got a ContinuationPoint, handling it is unimplemented"
+                        ));
+                    }
+                    for ReferenceDescription {
+                        node_id,
+                        display_name,
+                        ..
+                    } in browse_result.references.unwrap()
+                    {
+                        tag_set.push(Tag {
+                            name: display_name.to_string(),
+                            node_id: node_id.node_id,
+                        });
+                    }
+                }
+            }
+        }
+
+        info!(status = "success");
+        Ok(Self(tag_set))
     }
 
-    fn monitored_items(
-        &self,
-        namespaces: &Namespaces,
-    ) -> anyhow::Result<Vec<MonitoredItemCreateRequest>> {
+    fn monitored_items(&self) -> anyhow::Result<Vec<MonitoredItemCreateRequest>> {
         self.0
             .iter()
             .zip(1..)
             .map(|(tag, client_handle)| {
-                let ns = namespaces
-                    .get(&tag.nsu)
-                    .with_context(|| format!("namespace not found: {}", tag.nsu))?;
                 let create_request = MonitoredItemCreateRequest::new(
-                    NodeId::new(*ns, tag.nid.clone()).into(),
+                    tag.node_id.clone().into(),
                     MonitoringMode::Reporting,
                     MonitoringParameters {
                         client_handle,
@@ -105,7 +140,7 @@ impl TagSet {
     }
 }
 
-#[tracing::instrument(skip_all)]
+#[instrument(skip_all)]
 pub(crate) fn create_session(
     config: &Config,
     partner_id: &str,
@@ -166,7 +201,7 @@ pub(crate) fn create_session(
     Ok(session)
 }
 
-#[tracing::instrument(skip_all)]
+#[instrument(skip_all)]
 pub(crate) fn get_namespaces(session: &impl AttributeService) -> anyhow::Result<Namespaces> {
     let namespace_array_nodeid: NodeId = VariableId::Server_NamespaceArray.into();
     let read_result = session.read(
@@ -206,10 +241,9 @@ pub(crate) fn get_namespaces(session: &impl AttributeService) -> anyhow::Result<
     Ok(namespaces)
 }
 
-#[tracing::instrument(skip_all)]
+#[instrument(skip_all)]
 pub(crate) fn subscribe_to_tags<T>(
     session: &T,
-    namespaces: &Namespaces,
     tag_set: Arc<TagSet>,
 ) -> anyhow::Result<mpsc::Receiver<Vec<TagChange>>>
 where
@@ -252,7 +286,7 @@ where
     });
 
     let items_to_create = tag_set
-        .monitored_items(namespaces)
+        .monitored_items()
         .context("error creating monitored items create requests")?;
 
     let subscription_id = session
@@ -282,7 +316,7 @@ where
     Ok(receiver)
 }
 
-#[tracing::instrument(skip_all)]
+#[instrument(skip_all)]
 pub(crate) fn subscribe_to_health<T>(session: &T) -> anyhow::Result<mpsc::Receiver<i64>>
 where
     T: SubscriptionService + MonitoredItemService,
@@ -339,6 +373,186 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    mod tag_set {
+        use super::*;
+
+        mod from_config {
+            use super::*;
+
+            struct ViewServiceMock {
+                browse_outcome: Result<Option<Vec<BrowseResult>>, StatusCode>,
+            }
+
+            #[allow(unused_variables)]
+            impl Service for ViewServiceMock {
+                fn make_request_header(&self) -> RequestHeader {
+                    unimplemented!();
+                }
+
+                fn send_request<T>(&self, request: T) -> Result<SupportedMessage, StatusCode>
+                where
+                    T: Into<SupportedMessage>,
+                {
+                    unimplemented!();
+                }
+
+                fn async_send_request<T>(
+                    &self,
+                    request: T,
+                    sender: Option<std::sync::mpsc::SyncSender<SupportedMessage>>,
+                ) -> Result<u32, StatusCode>
+                where
+                    T: Into<SupportedMessage>,
+                {
+                    unimplemented!();
+                }
+            }
+
+            #[allow(unused_variables)]
+            impl ViewService for ViewServiceMock {
+                fn browse(
+                    &self,
+                    nodes_to_browse: &[BrowseDescription],
+                ) -> Result<Option<Vec<BrowseResult>>, StatusCode> {
+                    self.browse_outcome.clone()
+                }
+
+                fn browse_next(
+                    &self,
+                    release_continuation_points: bool,
+                    continuation_points: &[ByteString],
+                ) -> Result<Option<Vec<BrowseResult>>, StatusCode> {
+                    unimplemented!();
+                }
+
+                fn translate_browse_paths_to_node_ids(
+                    &self,
+                    browse_paths: &[BrowsePath],
+                ) -> Result<Vec<BrowsePathResult>, StatusCode> {
+                    unimplemented!();
+                }
+
+                fn register_nodes(
+                    &self,
+                    nodes_to_register: &[NodeId],
+                ) -> Result<Vec<NodeId>, StatusCode> {
+                    unimplemented!();
+                }
+
+                fn unregister_nodes(
+                    &self,
+                    nodes_to_unregister: &[NodeId],
+                ) -> Result<(), StatusCode> {
+                    unimplemented!();
+                }
+            }
+
+            #[test]
+            fn container_namespace_not_found() {
+                let config = vec![TagsConfigGroup::Container {
+                    namespace_uri: "nonexistent".to_string(),
+                    node_identifier: NodeIdentifier::Numeric(0),
+                }];
+                let namespaces = HashMap::new();
+                let session = ViewServiceMock {
+                    browse_outcome: Ok(Some(vec![])),
+                };
+
+                let result = TagSet::from_config(config, &namespaces, &session);
+
+                assert!(result.is_err());
+            }
+
+            #[test]
+            fn browse_error() {
+                let config = vec![TagsConfigGroup::Container {
+                    namespace_uri: "urn:ns".to_string(),
+                    node_identifier: NodeIdentifier::Numeric(0),
+                }];
+                let namespaces = HashMap::from([("urn:ns".to_string(), 1)]);
+                let session = ViewServiceMock {
+                    browse_outcome: Err(StatusCode::BadInternalError),
+                };
+
+                let result = TagSet::from_config(config, &namespaces, &session);
+
+                assert!(result.is_err());
+            }
+
+            #[test]
+            fn empty_browse_results() {
+                let config = vec![TagsConfigGroup::Container {
+                    namespace_uri: "urn:ns".to_string(),
+                    node_identifier: NodeIdentifier::Numeric(0),
+                }];
+                let namespaces = HashMap::from([("urn:ns".to_string(), 1)]);
+                let session = ViewServiceMock {
+                    browse_outcome: Ok(Some(vec![])),
+                };
+
+                let result = TagSet::from_config(config, &namespaces, &session);
+
+                assert!(result.is_err());
+            }
+
+            #[test]
+            fn continuation_point() {
+                let config = vec![TagsConfigGroup::Container {
+                    namespace_uri: "urn:ns".to_string(),
+                    node_identifier: NodeIdentifier::Numeric(0),
+                }];
+                let namespaces = HashMap::from([("urn:ns".to_string(), 1)]);
+                let session = ViewServiceMock {
+                    browse_outcome: Ok(Some(vec![BrowseResult {
+                        status_code: StatusCode::Good,
+                        continuation_point: "deadbeef".into(),
+                        references: Some(vec![]),
+                    }])),
+                };
+
+                let result = TagSet::from_config(config, &namespaces, &session);
+
+                assert!(result.is_err());
+            }
+
+            #[test]
+            fn success() {
+                let config = vec![TagsConfigGroup::Container {
+                    namespace_uri: "urn:ns".to_string(),
+                    node_identifier: NodeIdentifier::Numeric(0),
+                }];
+                let namespaces = HashMap::from([("urn:ns".to_string(), 1)]);
+                let references = [VariableId::LocalTime, VariableId::Server_ServiceLevel]
+                    .iter()
+                    .map(|var| ReferenceDescription {
+                        reference_type_id: NodeId::null(),
+                        is_forward: true,
+                        node_id: NodeId::from(var).into(),
+                        browse_name: QualifiedName::null(),
+                        display_name: format!("{var:?}").into(),
+                        node_class: NodeClass::Unspecified,
+                        type_definition: ExpandedNodeId::null(),
+                    })
+                    .collect();
+                let session = ViewServiceMock {
+                    browse_outcome: Ok(Some(vec![BrowseResult {
+                        status_code: StatusCode::Good,
+                        continuation_point: ByteString::null(),
+                        references: Some(references),
+                    }])),
+                };
+
+                let result = TagSet::from_config(config, &namespaces, &session)
+                    .expect("result should not be an error");
+
+                assert_eq!(result.0[0].name, "LocalTime");
+                assert_eq!(result.0[0].node_id, VariableId::LocalTime.into());
+                assert_eq!(result.0[1].name, "Server_ServiceLevel");
+                assert_eq!(result.0[1].node_id, VariableId::Server_ServiceLevel.into());
+            }
+        }
+    }
 
     mod get_namespaces {
         use super::*;
