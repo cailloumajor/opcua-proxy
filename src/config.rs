@@ -2,15 +2,12 @@ use anyhow::{anyhow, Context as _};
 use tracing::{debug, info, instrument};
 use url::Url;
 
-use crate::model::TagsConfigGroup;
+use crate::model::ConfigFromApi;
 
 type Conn = trillium_client::Conn<'static, trillium_tokio::TcpConnector>;
 
 #[instrument(skip_all)]
-pub(crate) async fn fetch_config(
-    api_url: &Url,
-    partner_id: &str,
-) -> anyhow::Result<Vec<TagsConfigGroup>> {
+pub(crate) async fn fetch_config(api_url: &Url, partner_id: &str) -> anyhow::Result<ConfigFromApi> {
     let config_url = api_url
         .join(partner_id)
         .context("error joining config API URL and partner ID")?;
