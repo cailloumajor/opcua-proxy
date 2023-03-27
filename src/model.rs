@@ -11,6 +11,12 @@ pub(crate) enum NodeIdentifier {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct ConfigFromApi {
+    pub(crate) tags: Vec<TagsConfigGroup>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) enum TagsConfigGroup {
     #[serde(rename_all = "camelCase")]
     Container {

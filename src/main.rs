@@ -105,7 +105,7 @@ fn main() -> anyhow::Result<()> {
         .context("error creating MongoDB database handle")?;
     rt.block_on(database.delete_data_collection());
 
-    let tags_config = rt
+    let config_from_api = rt
         .block_on(fetch_config(&args.config_api_url, &args.common.partner_id))
         .context("error fetching configuration")?;
 
@@ -115,7 +115,7 @@ fn main() -> anyhow::Result<()> {
     let tags_receiver = {
         let session = opcua_session.read();
         let namespaces = opcua::get_namespaces(&*session).context("error getting namespaces")?;
-        let tag_set = opcua::TagSet::from_config(tags_config, &namespaces, &*session)
+        let tag_set = opcua::TagSet::from_config(config_from_api.tags, &namespaces, &*session)
             .context("error converting config to tag set")?;
         opcua::subscribe_to_tags(&*session, Arc::new(tag_set))
             .context("error subscribing to tags")?

@@ -14,7 +14,7 @@ See [DESIGN.md](DESIGN.md).
 
 When starting, this service will query the configuration URL argument, joined with the partner ID argument, for tags to which it will subscribe on.
 
-The configuration API must return tags configuration in the form of a JSON array, whose each element can be of one of following formats.
+The configuration API must return tags configuration in the form of a JSON object, containing a `tags` key, whose value is a JSON array, whose each element can be of one of following formats.
 
 #### Nodes container
 
