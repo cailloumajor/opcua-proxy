@@ -10,28 +10,34 @@ See [DESIGN.md](DESIGN.md).
 
 ## Specifications
 
-### Tag set
+### Tags configuration
 
-The tags to read from OPC-UA server are grouped into a tag set, which is represented in JSON format as an array of objects.
+When starting, this service will query the configuration URL argument, joined with the partner ID argument, for tags to which it will subscribe on.
+
+The configuration API must return tags configuration in the form of a JSON array, whose each element can be of one of following formats.
+
+#### Nodes container
+
+This format allows to collect tags from an OPC-UA container node which has [`HasComponent`][hascomponent] forward reference(s). Each referenced node will be added to the tag set to monitor, with its [`DisplayName`][displayname] as tag name.
 
 ```jsonc
-[
-  { "name": "firstTag",  "nsu": "urn:namespace", "nid": "node1" },
-  { "name": "secondTag", "nsu": "urn:namespace", "nid": 2 },
-  // ...
-]
+{
+  "container": {
+    "namespaceUri": "urn:namespace",
+    "nodeIdentifier": "containerNode"
+  }
+}
 ```
 
-Each object in the array consists of key/value pairs described below.
+| Key              | Value type                          | Description                         |
+| ---------------- | ----------------------------------- | ----------------------------------- |
+| `namespaceUri`   | string                              | OPC-UA namespace URI                |
+| `nodeIdentifier` | string \| number (positive integer) | OPC-UA [NodeId][nodeid] identifier* |
 
-| Key    | Value type                          | Description                         |
-| ------ | ----------------------------------- | ----------------------------------- |
-| `name` | string                              | Tag name                            |
-| `nsu`  | string                              | OPC-UA namespace URI                |
-| `nid`  | string \| number (positive integer) | OPC-UA [NodeId][nodeid] identifier* |
+_\* identifier type will be inferred from JSON type._
 
-_\*[NodeId][nodeid] identifier type will be inferred from JSON type._
-
+[hascomponent]: https://reference.opcfoundation.org/Core/Part3/v105/docs/7.7
+[displayname]: https://reference.opcfoundation.org/Core/Part3/5.2.5/
 [nodeid]: https://reference.opcfoundation.org/v104/Core/docs/Part3/8.2.1/
 
 ### MongoDB
@@ -87,15 +93,15 @@ sequenceDiagram
 
 ```ShellSession
 $ opcua-proxy --help
-Usage: opcua-proxy [OPTIONS] --partner-id <PARTNER_ID> --tag-set-config-path <TAG_SET_CONFIG_PATH> --pki-dir <PKI_DIR> --opcua-server-url <OPCUA_SERVER_URL>
+Usage: opcua-proxy [OPTIONS] --partner-id <PARTNER_ID> --config-api-url <CONFIG_API_URL> --pki-dir <PKI_DIR> --opcua-server-url <OPCUA_SERVER_URL>
 
 Options:
       --partner-id <PARTNER_ID>
           OPC-UA partner device ID [env: PARTNER_ID=]
       --mongodb-uri <MONGODB_URI>
           URL of MongoDB database [env: MONGODB_URI=] [default: mongodb://mongodb]
-      --tag-set-config-path <TAG_SET_CONFIG_PATH>
-          Path of JSON file to get tag set from [env: TAG_SET_CONFIG_PATH=]
+      --config-api-url <CONFIG_API_URL>
+          Base API URL to get configuration from [env: CONFIG_API_URL=]
       --pki-dir <PKI_DIR>
           [env: PKI_DIR=]
       --opcua-server-url <OPCUA_SERVER_URL>

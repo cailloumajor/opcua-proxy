@@ -102,7 +102,23 @@ if [ "$try_success" != "true" ]; then
     die "Failure trying to initialize MongoDB"
 fi
 
-# Start services
+# Start config API
+docker compose up -d --quiet-pull config-api
+max_attempts=3
+wait_success=
+for i in $(seq 1 $max_attempts); do
+    if docker compose exec config-api wget --spider http://127.0.0.1:3000/; then
+        wait_success="true"
+        break
+    fi
+    echo "Waiting for config API to be healthy: try #$i failed" >&2
+    [[ $i != "$max_attempts" ]] && sleep 3
+done
+if [ "$wait_success" != "true" ]; then
+    die "Failure waiting for config API to be healthy"
+fi
+
+# Start remaining services
 docker compose up -d --quiet-pull
 
 # Wait for OPC-UA proxy to be ready
@@ -121,33 +137,8 @@ if [ "$wait_success" != "true" ]; then
 fi
 
 # Run tests on MongoDB instance
-if ! result=$(docker compose exec mongodb mongosh /usr/src/tests.mongodb --quiet --nodb --norc); then
-    die "MongoDB tests returned an error"
-fi
-
-# Check result
-got=$(echo "$result" | jq '.shouldBeMissing')
-want='"missing"'
-if ! [ "$got" = "$want" ]; then
-    die "Assert error for \"shouldBeMissing\": want $want, got $got"
-fi
-
-got=$(echo "$result" | jq '.theAnswer')
-want=42
-if ! [ "$got" -eq $want ]; then
-    die "Assert error for \"theAnswer\": want $want, got $got"
-fi
-
-got=$(echo "$result" | jq '.timeDiff')
-want=100
-if ! [ "$got" -le $want ]; then
-    die "Assert error for \"timeDiff\": want less than $want, got $got"
-fi
-
-got=$(echo "$result" | jq '.timestampDiff')
-want=0
-if ! [ "$got" -gt $want ]; then
-    die "Assert error for \"timestampDiff\": want more than $want, got $got"
+if ! docker compose exec mongodb mongosh /usr/src/tests.mongodb --quiet --nodb --norc; then
+    die "MongoDB tests failed"
 fi
 
 echo "🎉 success"

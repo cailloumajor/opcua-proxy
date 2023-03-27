@@ -1,8 +1,3 @@
-mod db;
-mod model;
-mod opcua;
-mod variant;
-
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context as _};
@@ -14,10 +9,17 @@ use signal_hook::consts::TERM_SIGNALS;
 use signal_hook::low_level::signal_name;
 use signal_hook_tokio::Signals;
 use tokio::sync::oneshot;
-use tokio::task::spawn_blocking;
 use tracing::{error, info, instrument};
 use tracing_log::{log, LogTracer};
+use url::Url;
 
+mod config;
+mod db;
+mod model;
+mod opcua;
+mod variant;
+
+use config::fetch_config;
 use db::MongoDBDatabase;
 
 #[derive(Parser)]
@@ -25,9 +27,9 @@ struct Args {
     #[command(flatten)]
     common: CommonArgs,
 
-    /// Path of JSON file to get tag set from
+    /// Base API URL to get configuration from
     #[arg(env, long)]
-    tag_set_config_path: String,
+    config_api_url: Url,
 
     #[command(flatten)]
     opcua: opcua::Config,
@@ -76,8 +78,7 @@ async fn handle_signals(
     }
 }
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     tracing_subscriber::fmt()
@@ -91,51 +92,57 @@ async fn main() -> anyhow::Result<()> {
     };
     LogTracer::init_with_filter(log_tracer_level).context("error initializing log tracer")?;
 
-    let database =
-        MongoDBDatabase::create(&args.common.mongodb_uri, &args.common.partner_id).await?;
-    database.delete_data_collection().await;
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .context("error building async runtime")?;
 
-    let opcua_session =
-        spawn_blocking(move || opcua::create_session(&args.opcua, &args.common.partner_id))
-            .await
-            .context("error joining opcua::create_session blocking task")?
-            .context("error creating OPC-UA session")?;
+    let database = rt
+        .block_on(MongoDBDatabase::create(
+            &args.common.mongodb_uri,
+            &args.common.partner_id,
+        ))
+        .context("error creating MongoDB database handle")?;
+    rt.block_on(database.delete_data_collection());
 
-    let namespaces = {
-        let session = opcua_session.read();
-        opcua::get_namespaces(&*session).context("error getting namespaces")?
-    };
+    let tags_config = rt
+        .block_on(fetch_config(&args.config_api_url, &args.common.partner_id))
+        .context("error fetching configuration")?;
 
-    let tag_set = spawn_blocking(move || opcua::TagSet::from_file(&args.tag_set_config_path))
-        .await
-        .context("error joining tag set creation blocking task")?
-        .context("error getting tag set")?;
+    let opcua_session = opcua::create_session(&args.opcua, &args.common.partner_id)
+        .context("error creating OPC-UA session")?;
 
     let tags_receiver = {
         let session = opcua_session.read();
-        opcua::subscribe_to_tags(&*session, &namespaces, Arc::new(tag_set))
+        let namespaces = opcua::get_namespaces(&*session).context("error getting namespaces")?;
+        let tag_set = opcua::TagSet::from_config(tags_config, &namespaces, &*session)
+            .context("error converting config to tag set")?;
+        opcua::subscribe_to_tags(&*session, Arc::new(tag_set))
             .context("error subscribing to tags")?
     };
-    let data_change_task = database.handle_data_change(tags_receiver);
+    let data_change_task = database.handle_data_change(&rt, tags_receiver);
 
     let health_receiver = {
         let session = opcua_session.read();
         opcua::subscribe_to_health(&*session).context("error subscribing to health")?
     };
-    let health_task = database.handle_health(health_receiver);
+    let health_task = database.handle_health(&rt, health_receiver);
 
     let session_stop_tx = opcua::Session::run_async(opcua_session);
 
-    let signals = Signals::new(TERM_SIGNALS).context("error registering termination signals")?;
+    let signals = rt
+        .block_on(async { Signals::new(TERM_SIGNALS) })
+        .context("error registering termination signals")?;
     let signals_handle = signals.handle();
-    let signals_task = tokio::spawn(handle_signals(signals, session_stop_tx));
+    let signals_task = rt.spawn(handle_signals(signals, session_stop_tx));
 
-    tokio::try_join!(data_change_task, health_task)
+    rt.block_on(async { tokio::try_join!(data_change_task, health_task) })
         .context("error joining data change and/or health tasks")?;
 
     signals_handle.close();
 
-    signals_task.await.context("error joining signals task")??;
+    rt.block_on(signals_task)
+        .context("error joining signals task")??;
 
     Ok(())
 }

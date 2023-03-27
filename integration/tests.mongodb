@@ -1,3 +1,5 @@
+const assert = require("node:assert/strict");
+
 db = connect("mongodb://localhost/opcua");
 
 db.disableFreeMonitoring();
@@ -6,18 +8,18 @@ result = db.data.findOne(
     { _id: "integration-tests" },
     {
         shouldBeMissing: { $type: "$alreadyPresent" },
-        theAnswer: "$val.theAnswer",
+        state: "$val.State",
         timeDiff: {
             $abs: {
                 $subtract: [
-                    { $dateFromString: { dateString: "$val.currentTimeServer" } },
-                    { $dateFromString: { dateString: "$val.currentTime" } }
+                    { $dateFromString: { dateString: "$val.CurrentTime" } },
+                    { $dateFromString: { dateString: "$val.StartTime" } }
                 ]
             }
         },
         timestampDiff: {
             $dateDiff: {
-                startDate: "$ts.theAnswer",
+                startDate: "$ts.State",
                 endDate: "$$NOW",
                 unit: "millisecond"
             }
@@ -26,3 +28,11 @@ result = db.data.findOne(
 );
 
 print(EJSON.stringify(result));
+
+assert.equal(result.shouldBeMissing, "missing");
+
+assert.equal(result.state, 0);
+
+assert.ok(result.timeDiff > 0);
+
+assert.ok(result.timestampDiff > 0);

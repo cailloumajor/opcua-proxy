@@ -1,5 +1,6 @@
 use opcua::types::{Array, Variant as OpcUaVariant};
-use serde::ser::{self, Serialize, Serializer};
+use serde::ser::{Serialize, Serializer};
+use tracing::{error, instrument};
 
 struct Bytes(Vec<u8>);
 
@@ -23,6 +24,7 @@ impl From<OpcUaVariant> for Variant {
 }
 
 impl Serialize for Variant {
+    #[instrument(name = "serialize_variant", skip_all)]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -41,6 +43,7 @@ impl Serialize for Variant {
             OpcUaVariant::Float(v) => serializer.serialize_f32(v),
             OpcUaVariant::Double(v) => serializer.serialize_f64(v),
             OpcUaVariant::String(ref v) => v.value().serialize(serializer),
+            OpcUaVariant::LocalizedText(ref v) => v.text.value().serialize(serializer),
             OpcUaVariant::DateTime(ref v) => v.as_chrono().serialize(serializer),
             OpcUaVariant::Guid(ref v) => v.serialize(serializer),
             OpcUaVariant::StatusCode(v) => v.serialize(serializer),
@@ -50,10 +53,11 @@ impl Serialize for Variant {
                 .map(|v| Bytes(v.clone()))
                 .serialize(serializer),
             OpcUaVariant::Array(ref v) => serialize_array(v, serializer),
-            _ => Err(ser::Error::custom(format!(
-                "serialization unimplemented for {:?}",
-                &self.0.type_id()
-            ))),
+            _ => {
+                let type_id = self.0.type_id();
+                error!(kind = "unimplemented serialization", ?type_id);
+                serializer.serialize_unit()
+            }
         }
     }
 }
@@ -63,9 +67,8 @@ where
     S: Serializer,
 {
     if array.has_dimensions() {
-        Err(ser::Error::custom(
-            "serialization unimplemented for multi-dimensional arrays",
-        ))
+        error!(kind = "unimplemented serialization for multi-dimensional arrays");
+        serializer.serialize_unit()
     } else {
         array
             .values
@@ -83,7 +86,8 @@ mod tests {
 
     mod serialize {
         use opcua::types::{
-            Array, ByteString, DateTime, Guid, StatusCode, UAString, VariantTypeId,
+            Array, ByteString, DateTime, DiagnosticInfo, Guid, LocalizedText, StatusCode, UAString,
+            VariantTypeId,
         };
         use serde_test::{assert_ser_tokens, Token};
 
@@ -174,6 +178,15 @@ mod tests {
         }
 
         #[test]
+        fn localized_text() {
+            let s = Variant::from(OpcUaVariant::from(LocalizedText::new(
+                "somelocale",
+                "some text",
+            )));
+            assert_ser_tokens(&s, &[Token::Some, Token::String("some text")]);
+        }
+
+        #[test]
         fn datetime() {
             let s = Variant::from(OpcUaVariant::DateTime(Box::new(DateTime::epoch())));
             assert_ser_tokens(&s, &[Token::Str("1601-01-01T00:00:00Z")]);
@@ -223,6 +236,25 @@ mod tests {
                     Token::SeqEnd,
                 ],
             );
+        }
+
+        #[test]
+        fn multi_dimension_array() {
+            let s = Variant::from(OpcUaVariant::Array(Box::new(
+                Array::new_multi(
+                    VariantTypeId::Byte,
+                    (1u8..=4u8).map(OpcUaVariant::from).collect::<Vec<_>>(),
+                    [2, 2],
+                )
+                .unwrap(),
+            )));
+            assert_ser_tokens(&s, &[Token::Unit]);
+        }
+
+        #[test]
+        fn unimplemented() {
+            let s = Variant::from(OpcUaVariant::from(DiagnosticInfo::null()));
+            assert_ser_tokens(&s, &[Token::Unit]);
         }
     }
 }
