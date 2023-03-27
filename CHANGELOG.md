@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.2.1](https://github.com/cailloumajor/opcua-proxy/compare/v4.2.0...v4.2.1) (2023-03-27)
+
+
+### Bug Fixes
+
+* expect a root `tags` key from config API ([bbe7907](https://github.com/cailloumajor/opcua-proxy/commit/bbe79070cd757bdb1f77c669a8ef10663b9e93b7))
+
 ## [4.2.0](https://github.com/cailloumajor/opcua-proxy/compare/v4.1.4...v4.2.0) (2023-03-27)
 
 
