@@ -277,6 +277,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "crossbeam-queue"
+version = "0.3.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1cfb3ea8a53f37c40dea2c7bedcbd88bdfae54f5e2175d6ecaff1c988353add"
+dependencies = [
+ "cfg-if",
+ "crossbeam-utils",
+]
+
+[[package]]
 name = "crossbeam-utils"
 version = "0.8.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1991,10 +2001,11 @@ dependencies = [
 
 [[package]]
 name = "trillium-client"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae9417aea6cf5787673b78469b651ffe772f8086e83e145bd06cba630ecd3105"
+checksum = "d1aed2e4d30d049ed3bc72248c43efd7509702c14c86dcae681f757ccc0a3d8a"
 dependencies = [
+ "crossbeam-queue",
  "dashmap",
  "encoding_rs",
  "futures-lite",
@@ -2002,7 +2013,6 @@ dependencies = [
  "log",
  "memmem",
  "mime",
- "parking_lot",
  "serde",
  "serde_json",
  "size",
