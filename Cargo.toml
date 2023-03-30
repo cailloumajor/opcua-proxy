@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.70"
 clap-verbosity-flag = "2.0.0"
-futures-util = "0.3.27"
+futures-util = "0.3.28"
 mongodb = "2.4.0"
 serde = { version = "1.0.159", features = [ "derive" ] }
 signal-hook = { version = "0.3.15", default-features = false }
