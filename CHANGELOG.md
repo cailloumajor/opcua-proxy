@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.2.3](https://github.com/cailloumajor/opcua-proxy/compare/v4.2.2...v4.2.3) (2023-03-31)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate futures-util to 0.3.28 ([576a957](https://github.com/cailloumajor/opcua-proxy/commit/576a9570372ca1e093db163aa9acc7b522503102))
+
 ## [4.2.2](https://github.com/cailloumajor/opcua-proxy/compare/v4.2.1...v4.2.2) (2023-03-30)
 
 
