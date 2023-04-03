@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.4.0](https://github.com/cailloumajor/opcua-proxy/compare/v4.3.0...v4.4.0) (2023-04-03)
+
+
+### Features
+
+* implement tags age recording configuration ([6ffee9d](https://github.com/cailloumajor/opcua-proxy/commit/6ffee9d8e8d9435e7c1605ec2a1c3de03555a7b4))
+
 ## [4.3.0](https://github.com/cailloumajor/opcua-proxy/compare/v4.2.3...v4.3.0) (2023-04-03)
 
 
