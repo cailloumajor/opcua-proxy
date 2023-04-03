@@ -82,14 +82,6 @@ fn main() -> anyhow::Result<()> {
         .build()
         .context("error building async runtime")?;
 
-    let database = rt
-        .block_on(MongoDBDatabase::create(
-            &args.common.mongodb_uri,
-            &args.common.partner_id,
-        ))
-        .context("error creating MongoDB database handle")?;
-    rt.block_on(database.delete_data_collection());
-
     let config_from_api = rt
         .block_on(fetch_config(&args.config_api_url, &args.common.partner_id))
         .context("error fetching configuration")?;
@@ -97,11 +89,27 @@ fn main() -> anyhow::Result<()> {
     let opcua_session = opcua::create_session(&args.opcua, &args.common.partner_id)
         .context("error creating OPC-UA session")?;
 
-    let tags_receiver = {
+    let tag_set = {
         let session = opcua_session.read();
         let namespaces = opcua::get_namespaces(&*session).context("error getting namespaces")?;
-        let tag_set = opcua::TagSet::from_config(config_from_api.tags, &namespaces, &*session)
-            .context("error converting config to tag set")?;
+        opcua::TagSet::from_config(config_from_api.tags, &namespaces, &*session)
+            .context("error converting config to tag set")?
+    };
+
+    tag_set.check_contains_tags(&config_from_api.record_age_for_tags)?;
+
+    let database = rt.block_on(async {
+        let db = MongoDBDatabase::create(&args.common.mongodb_uri, &args.common.partner_id)
+            .await
+            .context("error creating MongoDB database handle")?;
+        db.initialize_data_collection(&config_from_api.record_age_for_tags)
+            .await
+            .context("error initializing MongoDB data collection")?;
+        Ok::<_, anyhow::Error>(db)
+    })?;
+
+    let tags_receiver = {
+        let session = opcua_session.read();
         opcua::subscribe_to_tags(&*session, Arc::new(tag_set))
             .context("error subscribing to tags")?
     };

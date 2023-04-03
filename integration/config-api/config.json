@@ -7,6 +7,10 @@
           "nodeIdentifier": 2256
         }
       }
+    ],
+    "recordAgeForTags": [
+      "SecondsTillShutdown",
+      "ShutdownReason"
     ]
   }
 }

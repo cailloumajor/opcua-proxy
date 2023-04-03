@@ -14,7 +14,16 @@ See [DESIGN.md](DESIGN.md).
 
 When starting, this service will query the configuration URL argument, joined with the partner ID argument, for tags to which it will subscribe on.
 
-The configuration API must return tags configuration in the form of a JSON object, containing a `tags` key, whose value is a JSON array, whose each element can be of one of following formats.
+The configuration API must return tags configuration in the form of a JSON object, as below.
+
+| Key                | Value type       | Description                             |
+| ------------------ | ---------------- | --------------------------------------- |
+| `tags`             | array of objects | Tags description (see below)            |
+| `recordAgeForTags` | array of strings | Tag names whose age should be recorded* |
+
+_\* This service does not use directly this parameter, but writes it in the database._
+
+Each element of `tags` array can be of one of the following formats.
 
 #### Nodes container
 
@@ -22,10 +31,18 @@ This format allows to collect tags from an OPC-UA container node which has [`Has
 
 ```jsonc
 {
-  "container": {
-    "namespaceUri": "urn:namespace",
-    "nodeIdentifier": "containerNode"
-  }
+  // ...
+  "tags": [
+    // ...
+    {
+      "container": {
+        "namespaceUri": "urn:namespace",
+        "nodeIdentifier": "containerNode"
+      }
+    }
+    // ...
+  ]
+  // ...
 }
 ```
 
