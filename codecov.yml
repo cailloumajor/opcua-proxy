@@ -1,3 +1,4 @@
 ignore:
+  - src/level_filter.rs
   - src/main.rs
   - src/bin/healthcheck.rs

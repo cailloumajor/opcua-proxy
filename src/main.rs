@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context as _};
 use clap::Parser;
-use clap_verbosity_flag::{InfoLevel, LogLevel, Verbosity};
+use clap_verbosity_flag::{InfoLevel, Verbosity};
+use env_logger::Env;
 use futures_util::StreamExt;
 use opcua_proxy::CommonArgs;
 use signal_hook::consts::TERM_SIGNALS;
@@ -10,17 +11,19 @@ use signal_hook::low_level::signal_name;
 use signal_hook_tokio::Signals;
 use tokio::sync::oneshot;
 use tracing::{error, info, instrument};
-use tracing_log::{log, LogTracer};
+use tracing_log::format_trace;
 use url::Url;
 
 mod config;
 mod db;
+mod level_filter;
 mod model;
 mod opcua;
 mod variant;
 
 use config::fetch_config;
 use db::MongoDBDatabase;
+use level_filter::VerbosityLevelFilter;
 
 #[derive(Parser)]
 struct Args {
@@ -36,20 +39,6 @@ struct Args {
 
     #[command(flatten)]
     verbose: Verbosity<InfoLevel>,
-}
-
-fn filter_from_verbosity<T>(verbosity: &Verbosity<T>) -> tracing::level_filters::LevelFilter
-where
-    T: LogLevel,
-{
-    match verbosity.log_level_filter() {
-        log::LevelFilter::Off => tracing::level_filters::LevelFilter::OFF,
-        log::LevelFilter::Error => tracing::level_filters::LevelFilter::ERROR,
-        log::LevelFilter::Warn => tracing::level_filters::LevelFilter::WARN,
-        log::LevelFilter::Info => tracing::level_filters::LevelFilter::INFO,
-        log::LevelFilter::Debug => tracing::level_filters::LevelFilter::DEBUG,
-        log::LevelFilter::Trace => tracing::level_filters::LevelFilter::TRACE,
-    }
 }
 
 #[instrument(skip_all)]
@@ -82,15 +71,11 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     tracing_subscriber::fmt()
-        .with_max_level(filter_from_verbosity(&args.verbose))
+        .with_max_level(VerbosityLevelFilter::from(&args.verbose))
         .init();
-
-    let log_tracer_level = if args.verbose.log_level() == Some(log::Level::Info) {
-        log::LevelFilter::Warn
-    } else {
-        args.verbose.log_level_filter()
-    };
-    LogTracer::init_with_filter(log_tracer_level).context("error initializing log tracer")?;
+    env_logger::Builder::from_env(Env::default().default_filter_or("info,opcua=warn"))
+        .format(|_, record| format_trace(record))
+        .init();
 
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
