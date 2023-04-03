@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.3.0](https://github.com/cailloumajor/opcua-proxy/compare/v4.2.3...v4.3.0) (2023-04-03)
+
+
+### Features
+
+* use env_logger to handle logs ([8151f18](https://github.com/cailloumajor/opcua-proxy/commit/8151f184491edbeb583772ba3166eab60ceb68e8))
+
+
+### Bug Fixes
+
+* **deps:** update rust crate clap-verbosity-flag to 2.0.1 ([f8550c7](https://github.com/cailloumajor/opcua-proxy/commit/f8550c78ba249dbb20fdf0e62801df3b00e9f365))
+
 ## [4.2.3](https://github.com/cailloumajor/opcua-proxy/compare/v4.2.2...v4.2.3) (2023-03-31)
 
 
