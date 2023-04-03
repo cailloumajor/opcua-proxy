@@ -209,9 +209,9 @@ dependencies = [
 
 [[package]]
 name = "clap-verbosity-flag"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23e2b6c3dcdb73299f48ae05b294da14e2f560b3ed2c09e742269eb1b22af231"
+checksum = "1eef05769009513df2eb1c3b4613e7fad873a14c600ff025b08f250f59fee7de"
 dependencies = [
  "clap",
  "log",
@@ -468,6 +468,15 @@ dependencies = [
  "proc-macro2 1.0.52",
  "quote 1.0.26",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "env_logger"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85cdab6a89accf66733ad5a1693a4dcced6aeff64602b634530dd73c1f3ee9f0"
+dependencies = [
+ "log",
 ]
 
 [[package]]
@@ -1070,6 +1079,7 @@ dependencies = [
  "anyhow",
  "clap",
  "clap-verbosity-flag",
+ "env_logger",
  "futures-util",
  "mongodb",
  "opcua",
@@ -1981,6 +1991,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6176eae26dd70d0c919749377897b54a9276bd7061339665dd68777926b5a70"
 dependencies = [
  "nu-ansi-term",
+ "parking_lot",
  "sharded-slab",
  "smallvec",
  "thread_local",
