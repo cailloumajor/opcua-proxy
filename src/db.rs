@@ -3,13 +3,12 @@ use std::time::Duration;
 
 use anyhow::Context as _;
 use mongodb::bson::{self, doc, DateTime, Document};
-use mongodb::options::{ClientOptions, UpdateOptions};
-use mongodb::results::DeleteResult;
+use mongodb::options::{ClientOptions, ReplaceOptions, UpdateOptions};
 use mongodb::{Client, Database};
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
-use tracing::{debug, error, info, info_span, Instrument};
+use tracing::{debug, error, info, info_span, instrument, Instrument};
 
 use opcua_proxy::{DATABASE, OPCUA_DATA_COLL, OPCUA_HEALTH_COLL};
 
@@ -24,7 +23,7 @@ pub(crate) struct MongoDBDatabase {
 }
 
 impl MongoDBDatabase {
-    #[tracing::instrument(name = "create_mongodb_database", skip_all)]
+    #[instrument(name = "create_mongodb_database", skip_all)]
     pub(crate) async fn create(uri: &str, partner_id: &str) -> anyhow::Result<Self> {
         let mut options = ClientOptions::parse(uri)
             .await
@@ -41,18 +40,16 @@ impl MongoDBDatabase {
         })
     }
 
-    #[tracing::instrument(skip_all)]
-    pub(crate) async fn delete_data_collection(&self) {
+    #[instrument(skip_all)]
+    pub(crate) async fn initialize_data_collection(&self, tags: &[String]) -> anyhow::Result<()> {
         let collection = self.db.collection::<Document>(OPCUA_DATA_COLL);
         let query = doc! { "_id": &self.partner_id };
-        match collection.delete_one(query, None).await {
-            Ok(DeleteResult { deleted_count, .. }) => {
-                info!(status = "deleted", self.partner_id, deleted_count);
-            }
-            Err(err) => {
-                error!(when = "deleting document", self.partner_id, %err);
-            }
-        }
+        let options = ReplaceOptions::builder().upsert(true).build();
+        let replacement = doc! { "recordAgeForTags": tags };
+        collection.replace_one(query, replacement, options).await?;
+
+        info!(status = "success");
+        Ok(())
     }
 
     pub(crate) fn handle_data_change(
