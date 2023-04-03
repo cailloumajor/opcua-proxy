@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.70"
-clap-verbosity-flag = "2.0.0"
+clap-verbosity-flag = "2.0.1"
 env_logger = { version = "0.10.0", default-features = false }
 futures-util = "0.3.28"
 mongodb = "2.4.0"
