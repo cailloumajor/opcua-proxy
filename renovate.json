@@ -9,14 +9,6 @@
     "enabled": true,
     "automerge": true
   },
-  "regexManagers": [
-    {
-      "fileMatch": ["\\.github/workflows/tests\\.yml"],
-      "matchStrings": ["version: (?<currentValue>.*?) # renovate: sccache"],
-      "depNameTemplate": "mozilla/sccache",
-      "datasourceTemplate": "github-releases"
-    }
-  ],
   "packageRules": [
     {
       "matchPackageNames": ["rust", "tonistiigi/xx"],
