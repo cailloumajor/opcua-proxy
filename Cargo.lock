@@ -69,13 +69,13 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.67"
+version = "0.1.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86ea188f25f0255d8f92797797c97ebf5631fa88178beb1a46fdf5622c9a00e4"
+checksum = "b9ccdd8f2a161be9bd5c023df56f1b2a0bd1d83872ae53b71a84a12c9bf6e842"
 dependencies = [
  "proc-macro2 1.0.52",
  "quote 1.0.26",
- "syn 2.0.8",
+ "syn 2.0.12",
 ]
 
 [[package]]
@@ -243,7 +243,7 @@ dependencies = [
  "heck",
  "proc-macro2 1.0.52",
  "quote 1.0.26",
- "syn 2.0.8",
+ "syn 2.0.12",
 ]
 
 [[package]]
@@ -336,7 +336,7 @@ dependencies = [
  "proc-macro2 1.0.52",
  "quote 1.0.26",
  "scratch",
- "syn 2.0.8",
+ "syn 2.0.12",
 ]
 
 [[package]]
@@ -353,7 +353,7 @@ checksum = "631569015d0d8d54e6c241733f944042623ab6df7bc3be7466874b05fcdb1c5f"
 dependencies = [
  "proc-macro2 1.0.52",
  "quote 1.0.26",
- "syn 2.0.8",
+ "syn 2.0.12",
 ]
 
 [[package]]
@@ -581,9 +581,9 @@ checksum = "4fff74096e71ed47f8e023204cfd0aa1289cd54ae5430a9523be060cdb849964"
 
 [[package]]
 name = "futures-lite"
-version = "1.12.0"
+version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7694489acd39452c77daa48516b894c153f192c3578d5a839b62c58099fcbf48"
+checksum = "49a9d51ce47660b1e808d3c990b4709f2f415d928835a17dfd16991515c46bce"
 dependencies = [
  "fastrand",
  "futures-core",
@@ -602,7 +602,7 @@ checksum = "89ca545a94061b6365f2c7355b4b32bd20df3ff95f02da9329b34ccc3bd6ee72"
 dependencies = [
  "proc-macro2 1.0.52",
  "quote 1.0.26",
- "syn 2.0.8",
+ "syn 2.0.12",
 ]
 
 [[package]]
@@ -1383,9 +1383,9 @@ dependencies = [
 
 [[package]]
 name = "rlimit"
-version = "0.6.2"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc0bf25554376fd362f54332b8410a625c71f15445bca32ffdfdf4ec9ac91726"
+checksum = "f8a29d87a652dc4d43c586328706bb5cdff211f3f39a530f240b53f7221dab8e"
 dependencies = [
  "libc",
 ]
@@ -1514,7 +1514,7 @@ checksum = "291a097c63d8497e00160b166a967a4a79c64f3facdd01cbd7502231688d77df"
 dependencies = [
  "proc-macro2 1.0.52",
  "quote 1.0.26",
- "syn 2.0.8",
+ "syn 2.0.12",
 ]
 
 [[package]]
@@ -1754,9 +1754,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.8"
+version = "2.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bcc02725fd69ab9f26eab07fad303e2497fad6fb9eba4f96c4d1687bdf704ad9"
+checksum = "79d9531f94112cfc3e4c8f5f02cb2b58f72c97b7efd85f70203cc6d8efda5927"
 dependencies = [
  "proc-macro2 1.0.52",
  "quote 1.0.26",
@@ -1801,7 +1801,7 @@ checksum = "f9456a42c5b0d803c8cd86e73dd7cc9edd429499f37a3550d286d5e86720569f"
 dependencies = [
  "proc-macro2 1.0.52",
  "quote 1.0.26",
- "syn 2.0.8",
+ "syn 2.0.12",
 ]
 
 [[package]]
@@ -1894,7 +1894,7 @@ checksum = "61a573bdc87985e9d6ddeed1b3d864e8a302c847e40d647746df2f1de209d1ce"
 dependencies = [
  "proc-macro2 1.0.52",
  "quote 1.0.26",
- "syn 2.0.8",
+ "syn 2.0.12",
 ]
 
 [[package]]
@@ -2014,7 +2014,7 @@ dependencies = [
  "async-trait",
  "futures-lite",
  "log",
- "trillium-http",
+ "trillium-http 0.2.13",
 ]
 
 [[package]]
@@ -2035,7 +2035,7 @@ dependencies = [
  "serde_json",
  "size",
  "thiserror",
- "trillium-http",
+ "trillium-http 0.2.13",
  "trillium-tls-common",
  "url 2.3.1",
 ]
@@ -2062,19 +2062,52 @@ dependencies = [
 ]
 
 [[package]]
-name = "trillium-server-common"
+name = "trillium-http"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02f8a8649680599d1142d454668be5f864f81809d77543ec5ac615b73241b8aa"
+checksum = "ebe2d7f65b0f99e2b138650addffb1075a859aaf08accbcdd850e48357cbb77f"
 dependencies = [
+ "encoding_rs",
+ "futures-lite",
+ "hashbrown 0.13.2",
+ "httparse",
+ "httpdate",
+ "log",
+ "memmem",
+ "mime",
+ "smallvec",
+ "smartcow",
+ "smartstring",
+ "stopper",
+ "thiserror",
+ "trillium-macros",
+]
+
+[[package]]
+name = "trillium-macros"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d19bf7f37bc3e66beae9792c0f7a0e3500465cf431da63fdb6af593b0e353a4"
+dependencies = [
+ "proc-macro2 1.0.52",
+ "quote 1.0.26",
+ "syn 2.0.12",
+]
+
+[[package]]
+name = "trillium-server-common"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aafafc4458fd5d18a7f237a7cca76a8bc254a98a234f306879f0b05a2f758d81"
+dependencies = [
+ "async-trait",
  "atomic-waker",
  "futures-lite",
  "log",
- "pin-project-lite",
  "rlimit",
  "trillium",
- "trillium-http",
- "trillium-tls-common",
+ "trillium-http 0.3.0",
+ "url 2.3.1",
 ]
 
 [[package]]
@@ -2090,9 +2123,9 @@ dependencies = [
 
 [[package]]
 name = "trillium-tokio"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8cc915392c17586f51a945ac6c11a7840582ff1efa2063ef81bb30fe20fc061"
+checksum = "7432ae7a226f1e116ac0c9ef40f8f857de2d5845d2f3ded6319fce7141ea0b63"
 dependencies = [
  "async-compat",
  "log",
@@ -2101,7 +2134,8 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "trillium",
- "trillium-http",
+ "trillium-http 0.3.0",
+ "trillium-macros",
  "trillium-server-common",
 ]
 
