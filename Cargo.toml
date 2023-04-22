@@ -37,7 +37,7 @@ default-features = false
 features = [ "std" ]
 
 [dependencies.tracing-subscriber]
-version = "0.3.16"
+version = "0.3.17"
 default-features = false
 features = [ "ansi", "fmt", "parking_lot", "smallvec", "std" ]
 
