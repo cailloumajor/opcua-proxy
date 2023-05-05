@@ -10,6 +10,7 @@ use signal_hook::consts::TERM_SIGNALS;
 use signal_hook::low_level::signal_name;
 use signal_hook_tokio::Signals;
 use tokio::sync::oneshot;
+use tokio::task::LocalSet;
 use tracing::{error, info, instrument};
 use tracing_log::format_trace;
 use url::Url;
@@ -82,8 +83,13 @@ fn main() -> anyhow::Result<()> {
         .build()
         .context("error building async runtime")?;
 
-    let config_from_api = rt
-        .block_on(fetch_config(&args.config_api_url, &args.common.partner_id))
+    // `fetch_config` uses actix-web client (awc), which needs to run in a LocalSet.
+    let local_set = LocalSet::new();
+    let config_from_api = local_set
+        .block_on(
+            &rt,
+            fetch_config(&args.config_api_url, &args.common.partner_id),
+        )
         .context("error fetching configuration")?;
 
     let opcua_session = opcua::create_session(&args.opcua, &args.common.partner_id)

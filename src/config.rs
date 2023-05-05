@@ -1,7 +1,6 @@
 use anyhow::{anyhow, Context as _};
+use awc::Client;
 use tracing::{debug, info, instrument};
-use trillium_client::Client;
-use trillium_tokio::ClientConfig;
 use url::Url;
 
 use crate::model::ConfigFromApi;
@@ -11,17 +10,19 @@ pub(crate) async fn fetch_config(api_url: &Url, partner_id: &str) -> anyhow::Res
     let config_url = api_url
         .join(partner_id)
         .context("error joining config API URL and partner ID")?;
-    let client = Client::new(ClientConfig::default());
+    let client = Client::default();
     let mut response = client
-        .get(config_url)
+        .get(config_url.as_str())
+        .send()
         .await
+        .map_err(|err| anyhow!(err.to_string()))
         .context("tags configuration request error")?;
-    let response_status = response.status().expect("missing response status code");
+    let response_status = response.status();
     if !response_status.is_success() {
         return Err(anyhow!("bad response status: {}", response_status));
     }
     let tags_config = response
-        .response_json()
+        .json()
         .await
         .context("tags configuration deserialization error")?;
 
