@@ -44,4 +44,4 @@ default-features = false
 features = [ "ansi", "fmt", "parking_lot", "smallvec", "std" ]
 
 [dev-dependencies]
-serde_test = "1.0.162"
+serde_test = "1.0.163"
