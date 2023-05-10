@@ -30,7 +30,7 @@ default-features = false
 features = [ "client", "vendored-openssl" ]
 
 [dependencies.tokio]
-version = "1.28.0"
+version = "1.28.1"
 features = [ "macros", "rt-multi-thread", "sync" ]
 
 [dependencies.tracing-log]
