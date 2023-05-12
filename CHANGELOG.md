@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.6.0](https://github.com/cailloumajor/opcua-proxy/compare/v4.5.0...v4.6.0) (2023-05-12)
+
+
+### Features
+
+* use reqwest instead of awc ([ffa208a](https://github.com/cailloumajor/opcua-proxy/commit/ffa208ae79f16124cf23fa0fcabc8ba63f0a1e95))
+
+
+### Bug Fixes
+
+* **deps:** update rust crate serde to 1.0.163 ([eaaf310](https://github.com/cailloumajor/opcua-proxy/commit/eaaf310bd9cae36aefbe716ad90ce533d7651f40))
+* **deps:** update rust crate tokio to 1.28.1 ([071263d](https://github.com/cailloumajor/opcua-proxy/commit/071263d230c0cc00d988f3b69587b7b796633f15))
+
 ## [4.5.0](https://github.com/cailloumajor/opcua-proxy/compare/v4.4.0...v4.5.0) (2023-05-05)
 
 
