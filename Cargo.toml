@@ -8,7 +8,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.71"
-awc = { version = "3.1.1", default-features = false }
 clap-verbosity-flag = "2.0.1"
 env_logger = { version = "0.10.0", default-features = false }
 futures-util = "0.3.28"
@@ -28,6 +27,11 @@ features = [ "std", "help", "usage", "error-context", "derive", "env" ]
 version = "0.11.0"
 default-features = false
 features = [ "client", "vendored-openssl" ]
+
+[dependencies.reqwest]
+version = "0.11.17"
+default-features = false
+features = [ "json" ]
 
 [dependencies.tokio]
 version = "1.28.1"
