@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Context as _};
-use awc::Client;
 use tracing::{debug, info, instrument};
 use url::Url;
 
@@ -10,12 +9,8 @@ pub(crate) async fn fetch_config(api_url: &Url, partner_id: &str) -> anyhow::Res
     let config_url = api_url
         .join(partner_id)
         .context("error joining config API URL and partner ID")?;
-    let client = Client::default();
-    let mut response = client
-        .get(config_url.as_str())
-        .send()
+    let response = reqwest::get(config_url)
         .await
-        .map_err(|err| anyhow!(err.to_string()))
         .context("tags configuration request error")?;
     let response_status = response.status();
     if !response_status.is_success() {
