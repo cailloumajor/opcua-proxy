@@ -2,10 +2,15 @@
   "integration-tests": {
     "tags": [
       {
-        "container": {
-          "namespaceUri": "http://opcfoundation.org/UA/",
-          "nodeIdentifier": 2256
-        }
+        "type": "container",
+        "namespaceUri": "http://opcfoundation.org/UA/",
+        "nodeIdentifier": 2256
+      },
+      {
+        "type": "tag",
+        "name": "theAnswer",
+        "namespaceUri": "urn:open62541.server.application",
+        "nodeIdentifier": "the.answer"
       }
     ],
     "recordAgeForTags": [

@@ -17,10 +17,16 @@ pub(crate) struct ConfigFromApi {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", tag = "type")]
 pub(crate) enum TagsConfigGroup {
     #[serde(rename_all = "camelCase")]
     Container {
+        namespace_uri: String,
+        node_identifier: NodeIdentifier,
+    },
+    #[serde(rename_all = "camelCase")]
+    Tag {
+        name: String,
         namespace_uri: String,
         node_identifier: NodeIdentifier,
     },

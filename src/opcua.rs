@@ -115,6 +115,17 @@ impl TagSet {
                         });
                     }
                 }
+                TagsConfigGroup::Tag {
+                    name,
+                    namespace_uri,
+                    node_identifier,
+                } => {
+                    let namespace = namespaces
+                        .get(&namespace_uri)
+                        .with_context(|| format!("namespace `{namespace_uri}` not found"))?;
+                    let node_id = NodeId::new(*namespace, node_identifier);
+                    tag_set.push(Tag { name, node_id })
+                }
             }
         }
 
@@ -530,12 +541,37 @@ mod tests {
             }
 
             #[test]
-            fn success() {
-                let config = vec![TagsConfigGroup::Container {
-                    namespace_uri: "urn:ns".to_string(),
+            fn tag_namespace_not_found() {
+                let config = vec![TagsConfigGroup::Tag {
+                    name: "somename".to_string(),
+                    namespace_uri: "nonexistent".to_string(),
                     node_identifier: NodeIdentifier::Numeric(0),
                 }];
-                let namespaces = HashMap::from([("urn:ns".to_string(), 1)]);
+                let namespaces = HashMap::new();
+                let session = ViewServiceMock {
+                    browse_outcome: Ok(Some(vec![])),
+                };
+
+                let result = TagSet::from_config(config, &namespaces, &session);
+
+                assert!(result.is_err());
+            }
+
+            #[test]
+            fn success() {
+                let config = vec![
+                    TagsConfigGroup::Container {
+                        namespace_uri: "urn:ns".to_string(),
+                        node_identifier: NodeIdentifier::Numeric(0),
+                    },
+                    TagsConfigGroup::Tag {
+                        name: "somename".to_string(),
+                        namespace_uri: "urn:ns2".to_string(),
+                        node_identifier: NodeIdentifier::String("some_node_id".to_string()),
+                    },
+                ];
+                let namespaces =
+                    HashMap::from([("urn:ns".to_string(), 1), ("urn:ns2".to_string(), 2)]);
                 let references = [VariableId::LocalTime, VariableId::Server_ServiceLevel]
                     .iter()
                     .map(|var| ReferenceDescription {
@@ -563,6 +599,11 @@ mod tests {
                 assert_eq!(result.0[0].node_id, VariableId::LocalTime.into());
                 assert_eq!(result.0[1].name, "Server_ServiceLevel");
                 assert_eq!(result.0[1].node_id, VariableId::Server_ServiceLevel.into());
+                assert_eq!(result.0[2].name, "somename");
+                assert_eq!(
+                    result.0[2].node_id,
+                    NodeId::new(2, NodeIdentifier::String("some_node_id".to_string()))
+                )
             }
         }
 

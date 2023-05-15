@@ -23,7 +23,7 @@ The configuration API must return tags configuration in the form of a JSON objec
 
 _\* This service does not use directly this parameter, but writes it in the database._
 
-Each element of `tags` array can be of one of the following formats.
+Each element of `tags` array is an object with a `type` property and is of one of the following formats.
 
 #### Nodes container
 
@@ -35,10 +35,9 @@ This format allows to collect tags from an OPC-UA container node which has [`Has
   "tags": [
     // ...
     {
-      "container": {
-        "namespaceUri": "urn:namespace",
-        "nodeIdentifier": "containerNode"
-      }
+      "type": "container",
+      "namespaceUri": "urn:namespace",
+      "nodeIdentifier": "containerNode"
     }
     // ...
   ]
@@ -48,6 +47,35 @@ This format allows to collect tags from an OPC-UA container node which has [`Has
 
 | Key              | Value type                          | Description                         |
 | ---------------- | ----------------------------------- | ----------------------------------- |
+| `namespaceUri`   | string                              | OPC-UA namespace URI                |
+| `nodeIdentifier` | string \| number (positive integer) | OPC-UA [NodeId][nodeid] identifier* |
+
+_\* identifier type will be inferred from JSON type._
+
+#### Single tag
+
+This format directly refers to a single tag.
+
+```jsonc
+{
+  // ...
+  "tags": [
+    // ...
+    {
+      "type": "tag",
+      "name": "tagName",
+      "namespaceUri": "urn:namespace",
+      "nodeIdentifier": "someNode"
+    }
+    // ...
+  ]
+  // ...
+}
+```
+
+| Key              | Value type                          | Description                         |
+| ---------------- | ----------------------------------- | ----------------------------------- |
+| `name`           | string                              | Tag name                            |
 | `namespaceUri`   | string                              | OPC-UA namespace URI                |
 | `nodeIdentifier` | string \| number (positive integer) | OPC-UA [NodeId][nodeid] identifier* |
 
