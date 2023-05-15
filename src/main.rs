@@ -96,7 +96,9 @@ fn main() -> anyhow::Result<()> {
             .context("error converting config to tag set")?
     };
 
-    tag_set.check_contains_tags(&config_from_api.record_age_for_tags)?;
+    tag_set
+        .check_contains_tags(&config_from_api.record_age_for_tags)
+        .context("error checking age-recorded tags")?;
 
     let database = rt.block_on(async {
         let db = MongoDBDatabase::create(&args.common.mongodb_uri, &args.common.partner_id)
