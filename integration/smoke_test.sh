@@ -107,7 +107,7 @@ fi
 
 # Start config API
 docker compose up -d --quiet-pull config-api
-max_attempts=3
+max_attempts=5
 wait_success=
 for i in $(seq 1 $max_attempts); do
     if docker compose exec config-api wget --spider http://127.0.0.1:3000/; then
