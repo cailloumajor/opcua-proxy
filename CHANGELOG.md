@@ -1,5 +1,24 @@
 # Changelog
 
+## [5.0.0](https://github.com/cailloumajor/opcua-proxy/compare/v4.6.0...v5.0.0) (2023-05-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* implement single tags configuration
+
+### Features
+
+* delete health collection at start and stop ([b42de61](https://github.com/cailloumajor/opcua-proxy/commit/b42de61d00f09105d344ccb2ee81b8ca84b74474))
+* implement single tags configuration ([a9f5761](https://github.com/cailloumajor/opcua-proxy/commit/a9f5761b40ec4a32afb339ac0d715dda6d66a76a))
+
+
+### Bug Fixes
+
+* add error context ([c027edb](https://github.com/cailloumajor/opcua-proxy/commit/c027edb680dab24dcab36edc7f5831ecf13210ad))
+* initialize data document with minimal structure ([38960c6](https://github.com/cailloumajor/opcua-proxy/commit/38960c6fcba3a842f3c9b13bebed0d09e664b25a))
+* prevent emitting empty tags changes message ([dbe9fd3](https://github.com/cailloumajor/opcua-proxy/commit/dbe9fd36c2ca387c00f30460f276bb30f3a5765d))
+
 ## [4.6.0](https://github.com/cailloumajor/opcua-proxy/compare/v4.5.0...v4.6.0) (2023-05-12)
 
 
