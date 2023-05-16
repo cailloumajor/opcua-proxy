@@ -10,7 +10,7 @@ print(EJSON.stringify(result));
 
 assert.ok(!Object.hasOwn(result, "alreadyPresent"));
 
-// assert.ok(!Object.hasOwn(result, "updatedAt"));
+assert.ok(!Object.hasOwn(result, "updatedAt"));
 
 // assert.equal(Object.keys(result.val).length, 0);
 
