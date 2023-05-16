@@ -65,7 +65,12 @@ impl MongoDBDatabase {
         let collection = self.db.collection::<Document>(OPCUA_DATA_COLL);
         let query = doc! { "_id": &self.partner_id };
         let options = ReplaceOptions::builder().upsert(true).build();
-        let replacement = doc! { "recordAgeForTags": tags };
+        let replacement = doc! {
+            "recordAgeForTags": tags,
+            "val": {},
+            "ts": {},
+            "updatedAt": DateTime::from_millis(-1000),
+        };
         collection.replace_one(query, replacement, options).await?;
 
         info!(status = "success");

@@ -10,11 +10,11 @@ print(EJSON.stringify(result));
 
 assert.ok(!Object.hasOwn(result, "alreadyPresent"));
 
-assert.ok(!Object.hasOwn(result, "updatedAt"));
+assert.equal(Object.keys(result.val).length, 0);
 
-// assert.equal(Object.keys(result.val).length, 0);
+assert.equal(Object.keys(result.ts).length, 0);
 
-// assert.equal(Object.keys(result.ts).length, 0);
+assert.equal(result.updatedAt.toISOString(), "1969-12-31T23:59:59.000Z");
 
 assert.ok(Array.isArray(result.recordAgeForTags));
 assert.equal(result.recordAgeForTags.length, 0);
