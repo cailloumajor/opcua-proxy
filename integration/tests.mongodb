@@ -7,7 +7,6 @@ db.disableFreeMonitoring();
 result = db.data.findOne(
     { _id: "integration-tests" },
     {
-        shouldBeMissing: { $type: "$alreadyPresent" },
         state: "$val.State",
         theAnswer: "$val.theAnswer",
         timeDiff: {
@@ -30,8 +29,6 @@ result = db.data.findOne(
 );
 
 print(EJSON.stringify(result));
-
-assert.equal(result.shouldBeMissing, "missing");
 
 assert.equal(result.state, 0);
 

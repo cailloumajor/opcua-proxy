@@ -9,7 +9,7 @@ pub(crate) use opcua::client::prelude::{Session, SessionCommand};
 use opcua::sync::RwLock;
 use serde::Deserialize;
 use tokio::sync::mpsc;
-use tracing::{error, info, info_span, instrument};
+use tracing::{error, info, info_span, instrument, warn};
 
 use opcua_proxy::OPCUA_HEALTH_INTERVAL;
 
@@ -287,7 +287,7 @@ where
                 continue;
             };
             let Some(last_value) = &item.last_value().value else {
-                error!(%node_id, err="missing value");
+                warn!(%node_id, msg = "missing value");
                 continue;
             };
             let Some(source_timestamp) = item
@@ -295,7 +295,7 @@ where
                 .source_timestamp
                 .map(|dt| dt.as_chrono().timestamp_millis())
             else {
-                error!(%node_id, err="missing source timestamp");
+                error!(%node_id, err = "missing source timestamp");
                 continue;
             };
             message.push(TagChange {
@@ -303,6 +303,10 @@ where
                 value: last_value.clone().into(),
                 source_timestamp,
             })
+        }
+        if message.is_empty() {
+            warn!(msg = "discarded empty tags changes message");
+            return;
         }
         if let Err(err) = sender.try_send(message) {
             error!(when = "sending message to channel", %err);

@@ -17,12 +17,16 @@ services:
     image: mongo:6.0
     volumes:
       - ./initial-data.mongodb:/usr/src/initial-data.mongodb
+      - ./tests-nodata.mongodb:/usr/src/tests-nodata.mongodb
       - ./tests.mongodb:/usr/src/tests.mongodb:ro
 
   config-api:
     build: ./config-api
+    ports:
+      - 3000:3000
     volumes:
       - ./config-api/config.json:/usr/src/config.json:ro
+      - ./config-api/routes.json:/usr/src/routes.json:ro
 
   opcua-proxy:
     build: ..
@@ -31,7 +35,7 @@ services:
       - --verbose
     environment:
       - PARTNER_ID=integration-tests
-      - CONFIG_API_URL=http://config-api:3000/
+      - CONFIG_API_URL=${CONFIG_API_URL}
       - PKI_DIR=/pki
       - OPCUA_SERVER_URL=opc.tcp://opcua-server:4840
       - OPCUA_USER=user1

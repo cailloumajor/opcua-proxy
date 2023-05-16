@@ -1,5 +1,16 @@
 {
-  "integration-tests": {
+  "novalue": {
+    "tags": [
+      {
+        "type": "tag",
+        "name": "theAnswerNoRead",
+        "namespaceUri": "urn:open62541.server.application",
+        "nodeIdentifier": "the.answer.no.read"
+      }
+    ],
+    "recordAgeForTags": []
+  },
+  "normal": {
     "tags": [
       {
         "type": "container",

@@ -109,6 +109,7 @@ fn main() -> anyhow::Result<()> {
             .context("error initializing MongoDB data collection")?;
         Ok::<_, anyhow::Error>(db)
     })?;
+    let database = Arc::new(database);
 
     let tags_receiver = {
         let session = opcua_session.read();
