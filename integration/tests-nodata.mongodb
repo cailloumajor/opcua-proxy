@@ -1,0 +1,20 @@
+const assert = require("node:assert/strict");
+
+db = connect("mongodb://localhost/opcua");
+
+db.disableFreeMonitoring();
+
+result = db.data.findOne({ _id: "integration-tests" });
+
+print(EJSON.stringify(result));
+
+assert.ok(!Object.hasOwn(result, "alreadyPresent"));
+
+// assert.ok(!Object.hasOwn(result, "updatedAt"));
+
+// assert.equal(Object.keys(result.val).length, 0);
+
+// assert.equal(Object.keys(result.ts).length, 0);
+
+assert.ok(Array.isArray(result.recordAgeForTags));
+assert.equal(result.recordAgeForTags.length, 0);

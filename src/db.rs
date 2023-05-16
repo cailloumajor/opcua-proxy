@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context as _;
@@ -23,6 +24,25 @@ pub(crate) struct MongoDBDatabase {
 }
 
 impl MongoDBDatabase {
+    #[instrument(skip_all)]
+    async fn delete_health_collection(&self) {
+        let query = doc! { "_id": &self.partner_id };
+        match self
+            .db
+            .collection::<Document>(OPCUA_HEALTH_COLL)
+            .delete_one(query, None)
+            .await
+        {
+            Ok(delete_result) if delete_result.deleted_count > 0 => {
+                info!(msg = "deleted health collection");
+            }
+            Ok(_) => {}
+            Err(err) => {
+                error!(when = "deleting health collection", %err);
+            }
+        }
+    }
+
     #[instrument(name = "create_mongodb_database", skip_all)]
     pub(crate) async fn create(uri: &str, partner_id: &str) -> anyhow::Result<Self> {
         let mut options = ClientOptions::parse(uri)
@@ -115,7 +135,7 @@ impl MongoDBDatabase {
     }
 
     pub(crate) fn handle_health(
-        &self,
+        self: Arc<Self>,
         runtime: &Runtime,
         mut messages: mpsc::Receiver<i64>,
     ) -> JoinHandle<()> {
@@ -127,22 +147,23 @@ impl MongoDBDatabase {
             async move {
                 info!(status = "starting");
 
+                self.delete_health_collection().await;
+
                 while let Some(message) = messages.recv().await {
                     debug!(event="message received", %message);
                     let update = doc! {
                         "$set": { "serverDateTime": message },
                         "$currentDate": { "updatedAt": true },
                     };
-                    match collection
+                    if let Err(err) = collection
                         .update_one(query.clone(), update, options.clone())
                         .await
                     {
-                        Ok(_) => (),
-                        Err(err) => {
-                            error!(when="updating document", %err)
-                        }
+                        error!(when="updating document", %err);
                     }
                 }
+
+                self.delete_health_collection().await;
 
                 info!(status = "terminating");
             }
