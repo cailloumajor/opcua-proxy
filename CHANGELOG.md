@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.1](https://github.com/cailloumajor/opcua-proxy/compare/v5.0.0...v5.0.1) (2023-05-17)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate reqwest to 0.11.18 ([dbe43e7](https://github.com/cailloumajor/opcua-proxy/commit/dbe43e759562e29c85cb74d6d7ffd6ac453119a6))
+
 ## [5.0.0](https://github.com/cailloumajor/opcua-proxy/compare/v4.6.0...v5.0.0) (2023-05-16)
 
 
