@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.2](https://github.com/cailloumajor/opcua-proxy/compare/v5.0.1...v5.0.2) (2023-05-21)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate clap to 4.3.0 ([0f73a26](https://github.com/cailloumajor/opcua-proxy/commit/0f73a2698c7e131159726f1ab3b13f2df2a39d14))
+
 ## [5.0.1](https://github.com/cailloumajor/opcua-proxy/compare/v5.0.0...v5.0.1) (2023-05-17)
 
 
