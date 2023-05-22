@@ -151,7 +151,7 @@ Options:
       --config-api-url <CONFIG_API_URL>
           Base API URL to get configuration from [env: CONFIG_API_URL=]
       --pki-dir <PKI_DIR>
-          [env: PKI_DIR=]
+          Path of the PKI directory [env: PKI_DIR=]
       --opcua-server-url <OPCUA_SERVER_URL>
           URL of OPC-UA server to connect to [env: OPCUA_SERVER_URL=]
       --opcua-security-policy <OPCUA_SECURITY_POLICY>

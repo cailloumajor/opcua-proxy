@@ -17,7 +17,7 @@ use crate::model::{NodeIdentifier, TagChange, TagsConfigGroup};
 
 #[derive(Args)]
 pub(crate) struct Config {
-    // Path of the PKI directory
+    /// Path of the PKI directory
     #[arg(env, long)]
     pki_dir: String,
 
