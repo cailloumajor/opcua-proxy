@@ -77,11 +77,11 @@ cp pki/own/server_cert.der pki/trusted/"$common_name [$fingerprint]".der
 
 # Create self-signed certificate and private key for client
 generate_self_signed \
-    -keyout pki/private/private.pem \
-    -out pki/own/cert.der \
+    -keyout pki/private/opcua-proxy-integration-tests-key.pem \
+    -out pki/own/opcua-proxy-integration-tests-cert.der \
     -subj "/C=FR/L=Testing Land/O=Testing Corp./CN=OPC-UA proxy" \
     -addext "subjectAltName=URI:urn:opcua-proxy:integration-tests"
-chmod +r pki/private/private.pem
+chmod +r pki/private/opcua-proxy-integration-tests-key.pem
 
 # Prevent docker compose warnings about unset environment variable.
 export CONFIG_API_URL=""
