@@ -10,6 +10,15 @@ See [DESIGN.md](DESIGN.md).
 
 ## Specifications
 
+### Public Key Infrastructure (PKI)
+
+PKI path is configured with a CLI option (see [Configuration](#configuration)).
+
+This service expects to find:
+
+- A certificate file at `<PKI_DIR>/own/opcua-proxy-<PARTNER_ID>-cert.der`;
+- A private key file at `<PKI_DIR>/private/opcua-proxy-<PARTNER_ID>-key.pem`.
+
 ### Tags configuration
 
 When starting, this service will query the configuration URL argument, joined with the partner ID argument, for tags to which it will subscribe on.

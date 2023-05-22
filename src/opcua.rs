@@ -185,11 +185,15 @@ pub(crate) fn create_session(
         user_token_id: user_token_id.to_owned(),
     };
 
+    let cert_key_prefix = format!("{}-{}", env!("CARGO_PKG_NAME"), partner_id);
+
     let mut client_builder = ClientBuilder::new()
         .application_name(env!("CARGO_PKG_DESCRIPTION"))
         .product_uri(PRODUCT_URI)
         .application_uri(format!("{PRODUCT_URI}:{partner_id}"))
         .pki_dir(config.pki_dir.clone())
+        .certificate_path(format!("own/{cert_key_prefix}-cert.der"))
+        .private_key_path(format!("private/{cert_key_prefix}-key.pem"))
         .endpoint("default", default_endpoint)
         .default_endpoint("default")
         .session_retry_interval(2000)
