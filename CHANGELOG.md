@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.1.0](https://github.com/cailloumajor/opcua-proxy/compare/v5.0.2...v5.1.0) (2023-05-22)
+
+
+### Features
+
+* use specific cert and key files naming ([a4539b5](https://github.com/cailloumajor/opcua-proxy/commit/a4539b5953c95ffad05e4a35c20cdc20dd4af91c))
+
 ## [5.0.2](https://github.com/cailloumajor/opcua-proxy/compare/v5.0.1...v5.0.2) (2023-05-21)
 
 
