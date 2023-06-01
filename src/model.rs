@@ -13,7 +13,6 @@ pub(crate) enum NodeIdentifier {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ConfigFromApi {
     pub(crate) tags: Vec<TagsConfigGroup>,
-    pub(crate) record_age_for_tags: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]

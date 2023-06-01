@@ -24,7 +24,6 @@ result = db.data.findOne(
                 unit: "millisecond"
             }
         },
-        ageRecord: "$recordAgeForTags",
     }
 );
 
@@ -37,7 +36,3 @@ assert.equal(result.theAnswer, 42);
 assert.ok(result.timeDiff > 0);
 
 assert.ok(result.timestampDiff > 0);
-
-assert.equal(result.ageRecord.length, 2);
-assert.ok(result.ageRecord.includes("SecondsTillShutdown"));
-assert.ok(result.ageRecord.includes("ShutdownReason"));
