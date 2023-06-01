@@ -1,5 +1,17 @@
 # Changelog
 
+## [5.2.0](https://github.com/cailloumajor/opcua-proxy/compare/v5.1.0...v5.2.0) (2023-06-01)
+
+
+### Features
+
+* remove tags age recording config passthrough ([c49e1ef](https://github.com/cailloumajor/opcua-proxy/commit/c49e1efb29869ef41176a4461b77b3014b896d47))
+
+
+### Bug Fixes
+
+* **deps:** update rust crate tokio to 1.28.2 ([9d2a97c](https://github.com/cailloumajor/opcua-proxy/commit/9d2a97c4f403f5d9d3e28ff3e9a22c78f2f1c5ab))
+
 ## [5.1.0](https://github.com/cailloumajor/opcua-proxy/compare/v5.0.2...v5.1.0) (2023-05-22)
 
 
