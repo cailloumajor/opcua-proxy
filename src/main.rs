@@ -96,15 +96,11 @@ fn main() -> anyhow::Result<()> {
             .context("error converting config to tag set")?
     };
 
-    tag_set
-        .check_contains_tags(&config_from_api.record_age_for_tags)
-        .context("error checking age-recorded tags")?;
-
     let database = rt.block_on(async {
         let db = MongoDBDatabase::create(&args.common.mongodb_uri, &args.common.partner_id)
             .await
             .context("error creating MongoDB database handle")?;
-        db.initialize_data_collection(&config_from_api.record_age_for_tags)
+        db.initialize_data_collection()
             .await
             .context("error initializing MongoDB data collection")?;
         Ok::<_, anyhow::Error>(db)

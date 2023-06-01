@@ -25,12 +25,9 @@ When starting, this service will query the configuration URL argument, joined wi
 
 The configuration API must return tags configuration in the form of a JSON object, as below.
 
-| Key                | Value type       | Description                             |
-| ------------------ | ---------------- | --------------------------------------- |
-| `tags`             | array of objects | Tags description (see below)            |
-| `recordAgeForTags` | array of strings | Tag names whose age should be recorded* |
-
-_\* This service does not use directly this parameter, but writes it in the database._
+| Key    | Value type       | Description                  |
+| ------ | ---------------- | ---------------------------- |
+| `tags` | array of objects | Tags description (see below) |
 
 Each element of `tags` array is an object with a `type` property and is of one of the following formats.
 

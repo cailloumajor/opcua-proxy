@@ -61,12 +61,11 @@ impl MongoDBDatabase {
     }
 
     #[instrument(skip_all)]
-    pub(crate) async fn initialize_data_collection(&self, tags: &[String]) -> anyhow::Result<()> {
+    pub(crate) async fn initialize_data_collection(&self) -> anyhow::Result<()> {
         let collection = self.db.collection::<Document>(OPCUA_DATA_COLL);
         let query = doc! { "_id": &self.partner_id };
         let options = ReplaceOptions::builder().upsert(true).build();
         let replacement = doc! {
-            "recordAgeForTags": tags,
             "val": {},
             "ts": {},
             "updatedAt": DateTime::from_millis(-1000),

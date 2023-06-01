@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fmt::Display;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context as _};
@@ -131,18 +130,6 @@ impl TagSet {
 
         info!(status = "success");
         Ok(Self(tag_set))
-    }
-
-    pub(crate) fn check_contains_tags<T>(&self, tags_names: &[T]) -> anyhow::Result<()>
-    where
-        T: AsRef<str> + Display,
-    {
-        for tag_name in tags_names {
-            if !self.0.iter().any(|tag| tag.name == tag_name.as_ref()) {
-                return Err(anyhow!("tag `{tag_name}` was not found in the tag set"));
-            }
-        }
-        Ok(())
     }
 
     fn monitored_items(&self) -> anyhow::Result<Vec<MonitoredItemCreateRequest>> {
@@ -612,56 +599,6 @@ mod tests {
                     result.0[2].node_id,
                     NodeId::new(2, NodeIdentifier::String("some_node_id".to_string()))
                 )
-            }
-        }
-
-        mod check_contains_tags {
-            use super::*;
-
-            fn create_tag_set() -> TagSet {
-                TagSet(vec![
-                    Tag {
-                        name: "firstTag".into(),
-                        node_id: (0, "").into(),
-                    },
-                    Tag {
-                        name: "secondTag".into(),
-                        node_id: (0, "").into(),
-                    },
-                    Tag {
-                        name: "thirdTag".into(),
-                        node_id: (0, "").into(),
-                    },
-                ])
-            }
-
-            #[test]
-            fn empty_tags_names() {
-                let tag_set = create_tag_set();
-
-                let result = tag_set.check_contains_tags::<&str>(&[]);
-
-                assert!(result.is_ok());
-            }
-
-            #[test]
-            fn missing_tag_name() {
-                let tag_set = create_tag_set();
-                let tags_names = &["secondTag", "nonExistent"];
-
-                let result = tag_set.check_contains_tags(tags_names);
-
-                assert!(result.is_err());
-            }
-
-            #[test]
-            fn success() {
-                let tag_set = create_tag_set();
-                let tags_names = &["firstTag", "thirdTag"];
-
-                let result = tag_set.check_contains_tags(tags_names);
-
-                assert!(result.is_ok());
             }
         }
     }
