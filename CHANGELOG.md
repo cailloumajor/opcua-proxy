@@ -1,5 +1,25 @@
 # Changelog
 
+## [5.2.1](https://github.com/cailloumajor/opcua-proxy/compare/v5.2.0...v5.2.1) (2023-07-17)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate anyhow to 1.0.72 ([62f808a](https://github.com/cailloumajor/opcua-proxy/commit/62f808ac6b415195071e6821e962e32b2ed48286))
+* **deps:** update rust crate clap to 4.3.1 ([5c53e99](https://github.com/cailloumajor/opcua-proxy/commit/5c53e99a3a03e7195a8e7f51490a640913bb7318))
+* **deps:** update rust crate clap to 4.3.11 ([3c0aba8](https://github.com/cailloumajor/opcua-proxy/commit/3c0aba8d027c1eea860654b6d375aa839b070d14))
+* **deps:** update rust crate clap to 4.3.12 ([3ab98b8](https://github.com/cailloumajor/opcua-proxy/commit/3ab98b8da46fc1987c6cd4c98ecc42968570ac45))
+* **deps:** update rust crate clap to 4.3.2 ([181910c](https://github.com/cailloumajor/opcua-proxy/commit/181910c697b588038782108f93a818a8b1a778c6))
+* **deps:** update rust crate clap to 4.3.3 ([273d758](https://github.com/cailloumajor/opcua-proxy/commit/273d758f6d0c87250a57ba044f3f914bac13a38e))
+* **deps:** update rust crate mongodb to 2.6.0 ([1898e31](https://github.com/cailloumajor/opcua-proxy/commit/1898e310d6638a23825a6a2777ff47a39a9f00ae))
+* **deps:** update rust crate serde to 1.0.164 ([008ca80](https://github.com/cailloumajor/opcua-proxy/commit/008ca80d965ffcd0839c5acb3845a89e27aa238c))
+* **deps:** update rust crate serde to 1.0.171 ([53affbc](https://github.com/cailloumajor/opcua-proxy/commit/53affbcff927f11768a578afab82ae1db7c19466))
+* **deps:** update rust crate signal-hook to 0.3.16 ([fe615bb](https://github.com/cailloumajor/opcua-proxy/commit/fe615bb0dcd0fbab72801b5114a4ce25ce8a6927))
+* **deps:** update rust crate tokio to 1.29.1 ([744cc59](https://github.com/cailloumajor/opcua-proxy/commit/744cc59b3337d00c639a6a13bf04421e29806609))
+* **deps:** update rust crate url to 2.4.0 ([8a99cdf](https://github.com/cailloumajor/opcua-proxy/commit/8a99cdfd39aae31dcad71f058a8b5a7a13679bef))
+* **deps:** update rust docker tag to v1.70.0 ([e402d0a](https://github.com/cailloumajor/opcua-proxy/commit/e402d0a8f1fa91b92222a2b46d2abf02ac01c8fd))
+* **deps:** update rust docker tag to v1.71.0 ([dfbc589](https://github.com/cailloumajor/opcua-proxy/commit/dfbc589397bbe19e63e8ad9bfec27f9fe94e4f41))
+
 ## [5.2.0](https://github.com/cailloumajor/opcua-proxy/compare/v5.1.0...v5.2.0) (2023-06-01)
 
 
