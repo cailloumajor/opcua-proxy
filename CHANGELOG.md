@@ -1,5 +1,18 @@
 # Changelog
 
+## [5.2.2](https://github.com/cailloumajor/opcua-proxy/compare/v5.2.1...v5.2.2) (2023-07-25)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate clap to 4.3.15 ([39e7b1f](https://github.com/cailloumajor/opcua-proxy/commit/39e7b1f2e76721ea1a498508f864daafbe609c69))
+* **deps:** update rust crate clap to 4.3.17 ([e512207](https://github.com/cailloumajor/opcua-proxy/commit/e5122075c1834715f3b242e6dffadc7ca3a37254))
+* **deps:** update rust crate clap to 4.3.19 ([300e9d6](https://github.com/cailloumajor/opcua-proxy/commit/300e9d63377d801c4842a7366e26e06d4c74230c))
+* **deps:** update rust crate serde to 1.0.173 ([4b72904](https://github.com/cailloumajor/opcua-proxy/commit/4b729041966e02a4e6bb3c79d1499a90cc40bf0e))
+* **deps:** update rust crate serde to 1.0.174 ([8e8827d](https://github.com/cailloumajor/opcua-proxy/commit/8e8827d4ae94cd9d0d3164556c091f74244a9502))
+* **deps:** update rust crate serde to 1.0.175 ([10f77da](https://github.com/cailloumajor/opcua-proxy/commit/10f77da64f2338f62e55d03bb1dabd8dc74fe481))
+* **deps:** update rust crate signal-hook to 0.3.17 ([9891526](https://github.com/cailloumajor/opcua-proxy/commit/989152634d21625a55c6babbe451d276eb83b36f))
+
 ## [5.2.1](https://github.com/cailloumajor/opcua-proxy/compare/v5.2.0...v5.2.1) (2023-07-17)
 
 
