@@ -1,5 +1,13 @@
 # Changelog
 
+## [5.2.4](https://github.com/cailloumajor/opcua-proxy/compare/v5.2.3...v5.2.4) (2023-08-16)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate anyhow to 1.0.74 ([2fbba46](https://github.com/cailloumajor/opcua-proxy/commit/2fbba4646dd65479b58d5a9d741822e2cd9ddf16))
+* **deps:** update rust crate mongodb to 2.6.1 ([6b48178](https://github.com/cailloumajor/opcua-proxy/commit/6b481782a258a7da948ab462fd9fa7fd9fc1cdb2))
+
 ## [5.2.3](https://github.com/cailloumajor/opcua-proxy/compare/v5.2.2...v5.2.3) (2023-08-14)
 
 
