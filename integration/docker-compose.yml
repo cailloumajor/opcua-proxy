@@ -14,7 +14,7 @@ services:
       - ./pki:/pki:ro
 
   mongodb:
-    image: mongo:6.0
+    image: mongo:7.0
     volumes:
       - ./initial-data.mongodb:/usr/src/initial-data.mongodb
       - ./tests-nodata.mongodb:/usr/src/tests-nodata.mongodb
