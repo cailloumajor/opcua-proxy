@@ -1045,7 +1045,7 @@ dependencies = [
 
 [[package]]
 name = "opcua-proxy"
-version = "5.2.5"
+version = "5.2.6"
 dependencies = [
  "anyhow",
  "clap",
