@@ -1,8 +1,8 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context as _;
+use arcstr::ArcStr;
 use mongodb::bson::{self, doc, DateTime, Document};
 use mongodb::options::{ClientOptions, ReplaceOptions, UpdateOptions};
 use mongodb::{Client, Database};
@@ -18,15 +18,16 @@ use crate::model::TagChange;
 const VALUES_KEY: &str = "val";
 const TIMESTAMPS_KEY: &str = "ts";
 
+#[derive(Clone)]
 pub(crate) struct MongoDBDatabase {
-    partner_id: String,
+    partner_id: ArcStr,
     db: Database,
 }
 
 impl MongoDBDatabase {
     #[instrument(skip_all)]
     async fn delete_health_collection(&self) {
-        let query = doc! { "_id": &self.partner_id };
+        let query = doc! { "_id": self.partner_id.as_str() };
         match self
             .db
             .collection::<Document>(OPCUA_HEALTH_COLL)
@@ -55,7 +56,7 @@ impl MongoDBDatabase {
 
         info!(status = "success");
         Ok(Self {
-            partner_id: partner_id.to_string(),
+            partner_id: ArcStr::from(partner_id),
             db: client.database(DATABASE),
         })
     }
@@ -63,7 +64,7 @@ impl MongoDBDatabase {
     #[instrument(skip_all)]
     pub(crate) async fn initialize_data_collection(&self) -> anyhow::Result<()> {
         let collection = self.db.collection::<Document>(OPCUA_DATA_COLL);
-        let query = doc! { "_id": &self.partner_id };
+        let query = doc! { "_id": self.partner_id.as_str() };
         let options = ReplaceOptions::builder().upsert(true).build();
         let replacement = doc! {
             "val": {},
@@ -82,7 +83,7 @@ impl MongoDBDatabase {
         mut messages: mpsc::Receiver<Vec<TagChange>>,
     ) -> JoinHandle<()> {
         let collection = self.db.collection::<Document>(OPCUA_DATA_COLL);
-        let query = doc! { "_id": &self.partner_id };
+        let query = doc! { "_id": self.partner_id.as_str() };
         let options = UpdateOptions::builder().upsert(true).build();
 
         runtime.spawn(
@@ -139,19 +140,20 @@ impl MongoDBDatabase {
     }
 
     pub(crate) fn handle_health(
-        self: Arc<Self>,
+        &self,
         runtime: &Runtime,
         mut messages: mpsc::Receiver<i64>,
     ) -> JoinHandle<()> {
         let collection = self.db.collection::<Document>(OPCUA_HEALTH_COLL);
-        let query = doc! { "_id": &self.partner_id };
+        let query = doc! { "_id": self.partner_id.as_str() };
         let options = UpdateOptions::builder().upsert(true).build();
+        let cloned_self = self.clone();
 
         runtime.spawn(
             async move {
                 info!(status = "starting");
 
-                self.delete_health_collection().await;
+                cloned_self.delete_health_collection().await;
 
                 while let Some(message) = messages.recv().await {
                     debug!(event="message received", %message);
@@ -167,7 +169,7 @@ impl MongoDBDatabase {
                     }
                 }
 
-                self.delete_health_collection().await;
+                cloned_self.delete_health_collection().await;
 
                 info!(status = "terminating");
             }

@@ -58,7 +58,7 @@ struct Tag {
     node_id: NodeId,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct TagSet(Vec<Tag>);
 
 impl TagSet {
@@ -259,13 +259,13 @@ pub(crate) fn get_namespaces(session: &impl AttributeService) -> anyhow::Result<
 #[instrument(skip_all)]
 pub(crate) fn subscribe_to_tags<T>(
     session: &T,
-    tag_set: Arc<TagSet>,
+    tag_set: TagSet,
 ) -> anyhow::Result<mpsc::Receiver<Vec<TagChange>>>
 where
     T: SubscriptionService + MonitoredItemService,
 {
     let (sender, receiver) = mpsc::channel(1);
-    let cloned_tag_set = Arc::clone(&tag_set);
+    let cloned_tag_set = tag_set.clone();
     let data_change_callback = DataChangeCallback::new(move |monitored_items| {
         let _entered = info_span!("tags_values_change_handler").entered();
         let mut message = Vec::with_capacity(monitored_items.len());
