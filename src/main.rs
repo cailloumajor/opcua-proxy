@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use anyhow::{anyhow, Context as _};
 use clap::Parser;
 use clap_verbosity_flag::{InfoLevel, Verbosity};
@@ -105,12 +103,10 @@ fn main() -> anyhow::Result<()> {
             .context("error initializing MongoDB data collection")?;
         Ok::<_, anyhow::Error>(db)
     })?;
-    let database = Arc::new(database);
 
     let tags_receiver = {
         let session = opcua_session.read();
-        opcua::subscribe_to_tags(&*session, Arc::new(tag_set))
-            .context("error subscribing to tags")?
+        opcua::subscribe_to_tags(&*session, tag_set).context("error subscribing to tags")?
     };
     let data_change_task = database.handle_data_change(&rt, tags_receiver);
 
