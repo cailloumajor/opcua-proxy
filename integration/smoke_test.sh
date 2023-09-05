@@ -53,35 +53,23 @@ done
 set -eux
 
 # Create a fresh pki tree
-rm -r pki || true
-mkdir -p pki/{own,private,rejected,trusted}
-
-# Create self-signed certificate and private key for server
-common_name="open62541Server@opcua-server"
-generate_self_signed \
-    -keyout pki/private/server_key.pem \
-    -out pki/own/server_cert.der \
-    -subj "/C=DE/L=Here/O=open62541/CN=$common_name" \
-    -addext "subjectAltName=URI:urn:open62541.server.application,DNS:opcua-server"
-openssl rsa \
-    -traditional \
-    -inform PEM \
-    -in pki/private/server_key.pem \
-    -outform DER \
-    -out pki/private/server_key.der
-rm pki/private/server_key.pem
-openssl_fingerprint=$(openssl x509 -in pki/own/server_cert.der -noout -fingerprint -sha1)
-[[ $openssl_fingerprint =~ ([[:xdigit:]]{2}:){19}[[:xdigit:]]{2} ]]
-fingerprint=$(echo "${BASH_REMATCH[0]}" | tr "[:upper:]" "[:lower:]" | tr -d ":")
-cp pki/own/server_cert.der pki/trusted/"$common_name [$fingerprint]".der
+rm -r pki-server pki-client || true
+mkdir -p pki-server/{own,trusted}/certs
+mkdir -p pki-client/{own,private,rejected,trusted}
 
 # Create self-signed certificate and private key for client
 generate_self_signed \
-    -keyout pki/private/opcua-proxy-integration-tests-key.pem \
-    -out pki/own/opcua-proxy-integration-tests-cert.der \
+    -keyout pki-client/private/opcua-proxy-integration-tests-key.pem \
+    -out pki-client/own/opcua-proxy-integration-tests-cert.der \
     -subj "/C=FR/L=Testing Land/O=Testing Corp./CN=OPC-UA proxy" \
     -addext "subjectAltName=URI:urn:opcua-proxy:integration-tests"
-chmod +r pki/private/opcua-proxy-integration-tests-key.pem
+chmod +r pki-client/private/opcua-proxy-integration-tests-key.pem
+cp pki-client/own/opcua-proxy-integration-tests-cert.der pki-server/trusted/certs/
+
+# Set required variables for Docker Compose
+OPCUA_SERVER_UID="$(id -u)"
+OPCUA_SERVER_GID="$(id -g)"
+export OPCUA_SERVER_UID OPCUA_SERVER_GID
 
 # Prevent docker compose warnings about unset environment variable.
 export CONFIG_API_URL=""
@@ -123,13 +111,32 @@ fi
 
 # Start OPC-UA server
 docker compose up -d --quiet-pull opcua-server
+max_attempts=3
+wait_success=
+for i in $(seq 1 $max_attempts); do
+    if find pki-server/own/certs -name "*.der" | grep -F "" -q; then
+        wait_success="true"
+        break
+    fi
+    echo "Waiting for OPC-UA server certificate creation: try #$i failed" >&2
+    [[ $i != "$max_attempts" ]] && sleep 3
+done
+if [ "$wait_success" != "true" ]; then
+    die "Failure waiting for OPC-UA server certificate creation"
+fi
+
+# Add OPC-UA server certificate to opcua-proxy trusted
+for f in pki-server/own/certs/*.der; do
+    filename=$(basename "$f" | sed -r 's/(.*\[)([^]]*)(.*)/\1\L\2\E\3/')
+    cp "$f" "pki-client/trusted/$filename"
+done
 
 # Start opcua-proxy (no-value configuration)
 CONFIG_API_URL=http://config-api:3000/novalue/ \
 docker compose up -d opcua-proxy
 
 # Wait for OPC-UA proxy to be ready
-max_attempts=5
+max_attempts=8
 wait_success=
 for i in $(seq 1 $max_attempts); do
     if docker compose exec opcua-proxy /usr/local/bin/healthcheck; then
@@ -137,7 +144,7 @@ for i in $(seq 1 $max_attempts); do
         break
     fi
     echo "Waiting for OPC-UA proxy to be healthy: try #$i failed" >&2
-    [[ $i != "$max_attempts" ]] && sleep 5
+    [[ $i != "$max_attempts" ]] && sleep 3
 done
 if [ "$wait_success" != "true" ]; then
     die "Failure waiting for OPC-UA proxy to be healthy"
@@ -154,7 +161,7 @@ CONFIG_API_URL=http://config-api:3000/normal/ \
 docker compose up -d opcua-proxy
 
 # Wait for OPC-UA proxy to be ready
-max_attempts=5
+max_attempts=8
 wait_success=
 for i in $(seq 1 $max_attempts); do
     if docker compose exec opcua-proxy /usr/local/bin/healthcheck; then
@@ -162,7 +169,7 @@ for i in $(seq 1 $max_attempts); do
         break
     fi
     echo "Waiting for OPC-UA proxy to be healthy: try #$i failed" >&2
-    [[ $i != "$max_attempts" ]] && sleep 5
+    [[ $i != "$max_attempts" ]] && sleep 3
 done
 if [ "$wait_success" != "true" ]; then
     die "Failure waiting for OPC-UA proxy to be healthy"

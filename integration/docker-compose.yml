@@ -3,15 +3,13 @@ version: "3.4"
 services:
 
   opcua-server:
-    image: open62541/open62541:1.0
+    image: mcr.microsoft.com/iotedge/opc-plc:2.9
     command:
-      - /opt/open62541/build/bin/examples/server_ctt
-      - /pki/own/server_cert.der
-      - /pki/private/server_key.der
-      - --trustlistFolder
-      - /pki/own
+      - --plchostname=opcua-server
+      - --disableanonymousauth
+    user: ${OPCUA_SERVER_UID}:${OPCUA_SERVER_GID}
     volumes:
-      - ./pki:/pki:ro
+      - ./pki-server:/app/pki
 
   mongodb:
     image: mongo:7.0
@@ -37,8 +35,8 @@ services:
       - PARTNER_ID=integration-tests
       - CONFIG_API_URL=${CONFIG_API_URL}
       - PKI_DIR=/pki
-      - OPCUA_SERVER_URL=opc.tcp://opcua-server:4840
+      - OPCUA_SERVER_URL=opc.tcp://opcua-server:50000
       - OPCUA_USER=user1
       - OPCUA_PASSWORD=password
     volumes:
-      - ./pki:/pki:ro
+      - ./pki-client:/pki:ro

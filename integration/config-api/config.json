@@ -3,9 +3,9 @@
     "tags": [
       {
         "type": "tag",
-        "name": "theAnswerNoRead",
-        "namespaceUri": "urn:open62541.server.application",
-        "nodeIdentifier": "the.answer.no.read"
+        "name": "writeOnly",
+        "namespaceUri": "http://microsoft.com/Opc/OpcPlc/ReferenceTest",
+        "nodeIdentifier": "AccessRights_AccessAll_WO"
       }
     ]
   },
@@ -18,9 +18,9 @@
       },
       {
         "type": "tag",
-        "name": "theAnswer",
-        "namespaceUri": "urn:open62541.server.application",
-        "nodeIdentifier": "the.answer"
+        "name": "slowNumberOfUpdates",
+        "namespaceUri": "http://microsoft.com/Opc/OpcPlc/",
+        "nodeIdentifier": "SlowNumberOfUpdates"
       }
     ]
   }
