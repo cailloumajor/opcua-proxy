@@ -8,7 +8,7 @@ result = db.data.findOne(
     { _id: "integration-tests" },
     {
         state: "$val.State",
-        theAnswer: "$val.theAnswer",
+        slowNumberOfUpdates: "$val.slowNumberOfUpdates",
         timeDiff: {
             $abs: {
                 $subtract: [
@@ -31,7 +31,7 @@ print(EJSON.stringify(result));
 
 assert.equal(result.state, 0);
 
-assert.equal(result.theAnswer, 42);
+assert.equal(result.slowNumberOfUpdates, -1);
 
 assert.ok(result.timeDiff > 0);
 

@@ -1,6 +1,6 @@
 use opcua::types::{Array, Variant as OpcUaVariant};
 use serde::ser::{Serialize, Serializer};
-use tracing::{error, instrument};
+use tracing::{instrument, warn};
 
 struct Bytes(Vec<u8>);
 
@@ -55,7 +55,7 @@ impl Serialize for Variant {
             OpcUaVariant::Array(ref v) => serialize_array(v, serializer),
             _ => {
                 let type_id = self.0.type_id();
-                error!(kind = "unimplemented serialization", ?type_id);
+                warn!(kind = "unimplemented serialization", ?type_id);
                 serializer.serialize_unit()
             }
         }
@@ -67,7 +67,7 @@ where
     S: Serializer,
 {
     if array.has_dimensions() {
-        error!(kind = "unimplemented serialization for multi-dimensional arrays");
+        warn!(kind = "unimplemented serialization for multi-dimensional arrays");
         serializer.serialize_unit()
     } else {
         array
