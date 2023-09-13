@@ -17,6 +17,11 @@
         "nodeIdentifier": 2256
       },
       {
+        "type": "container",
+        "namespaceUri": "http://microsoft.com/Opc/OpcPlc/",
+        "nodeIdentifier": "Basic"
+      },
+      {
         "type": "tag",
         "name": "slowNumberOfUpdates",
         "namespaceUri": "http://microsoft.com/Opc/OpcPlc/",

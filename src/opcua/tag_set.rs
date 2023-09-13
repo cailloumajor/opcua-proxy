@@ -56,13 +56,16 @@ impl TagSet {
                         .get(&namespace_uri)
                         .with_context(|| format!("namespace `{namespace_uri}` not found"))?;
                     let node_id = NodeId::new(*namespace, node_identifier);
+                    let result_mask = (BrowseDescriptionResultMask::RESULT_MASK_DISPLAY_NAME
+                        | BrowseDescriptionResultMask::RESULT_MASK_REFERENCE_TYPE)
+                        .bits();
                     let browse_description = BrowseDescription {
                         node_id: node_id.clone(),
                         browse_direction: BrowseDirection::Forward,
-                        reference_type_id: ReferenceTypeId::HasComponent.into(),
-                        include_subtypes: false,
+                        reference_type_id: ReferenceTypeId::HierarchicalReferences.into(),
+                        include_subtypes: true,
                         node_class_mask: NodeClassMask::VARIABLE.bits(),
-                        result_mask: BrowseDescriptionResultMask::RESULT_MASK_DISPLAY_NAME.bits(),
+                        result_mask,
                     };
                     let browse_result = session
                         .browse(&[browse_description])
@@ -85,8 +88,13 @@ impl TagSet {
                         node_id,
                         display_name,
                         ..
-                    } in references
-                    {
+                    } in references.into_iter().filter(|ref_description| {
+                        use ReferenceTypeId::*;
+                        matches!(
+                            ref_description.reference_type_id.as_reference_type_id(),
+                            Ok(HasComponent | Organizes)
+                        )
+                    }) {
                         tag_set.push(Tag {
                             name: display_name.to_string(),
                             node_id: node_id.node_id,
@@ -303,18 +311,25 @@ mod tests {
                 },
             ];
             let namespaces = HashMap::from([("urn:ns".to_string(), 1), ("urn:ns2".to_string(), 2)]);
-            let references = [VariableId::LocalTime, VariableId::Server_ServiceLevel]
-                .iter()
-                .map(|var| ReferenceDescription {
-                    reference_type_id: NodeId::null(),
-                    is_forward: true,
-                    node_id: NodeId::from(var).into(),
-                    browse_name: QualifiedName::null(),
-                    display_name: format!("{var:?}").into(),
-                    node_class: NodeClass::Unspecified,
-                    type_definition: ExpandedNodeId::null(),
-                })
-                .collect();
+            let references = [
+                (VariableId::LocalTime, ReferenceTypeId::HasComponent),
+                (VariableId::Server_ServiceLevel, ReferenceTypeId::Organizes),
+                (
+                    VariableId::Server_ServerStatus,
+                    ReferenceTypeId::HasEventSource,
+                ),
+            ]
+            .iter()
+            .map(|(variable_id, reference_type)| ReferenceDescription {
+                reference_type_id: reference_type.into(),
+                is_forward: true,
+                node_id: NodeId::from(variable_id).into(),
+                browse_name: QualifiedName::null(),
+                display_name: format!("{variable_id:?}").into(),
+                node_class: NodeClass::Unspecified,
+                type_definition: ExpandedNodeId::null(),
+            })
+            .collect();
             let session = ViewServiceMock {
                 browse_outcome: Ok(Some(vec![BrowseResult {
                     status_code: StatusCode::Good,
@@ -326,6 +341,7 @@ mod tests {
             let result = TagSet::from_config(config, &namespaces, &session)
                 .expect("result should not be an error");
 
+            assert_eq!(result.0.len(), 3);
             assert_eq!(result.0[0].name, "LocalTime");
             assert_eq!(result.0[0].node_id, VariableId::LocalTime.into());
             assert_eq!(result.0[1].name, "Server_ServiceLevel");
