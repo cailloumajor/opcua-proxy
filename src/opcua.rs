@@ -81,7 +81,7 @@ impl TagSet {
                         .with_context(|| format!("namespace `{namespace_uri}` not found"))?;
                     let node_id = NodeId::new(*namespace, node_identifier);
                     let browse_description = BrowseDescription {
-                        node_id,
+                        node_id: node_id.clone(),
                         browse_direction: BrowseDirection::Forward,
                         reference_type_id: ReferenceTypeId::HasComponent.into(),
                         include_subtypes: false,
@@ -102,11 +102,14 @@ impl TagSet {
                             "got a ContinuationPoint, handling it is unimplemented"
                         ));
                     }
+                    let references = browse_result
+                        .references
+                        .with_context(|| format!("NodeId `{node_id}` has no forward reference"))?;
                     for ReferenceDescription {
                         node_id,
                         display_name,
                         ..
-                    } in browse_result.references.unwrap()
+                    } in references
                     {
                         tag_set.push(Tag {
                             name: display_name.to_string(),
