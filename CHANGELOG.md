@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.3.1](https://github.com/cailloumajor/opcua-proxy/compare/v5.3.0...v5.3.1) (2023-09-13)
+
+
+### Bug Fixes
+
+* serialize null strings as empty strings ([850e42b](https://github.com/cailloumajor/opcua-proxy/commit/850e42b5e8bd54217fd7f8b53bde7528973e791c))
+
 ## [5.3.0](https://github.com/cailloumajor/opcua-proxy/compare/v5.2.9...v5.3.0) (2023-09-13)
 
 
