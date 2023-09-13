@@ -13,7 +13,7 @@ use tracing::{debug, error, info, info_span, instrument, Instrument};
 
 use opcua_proxy::{DATABASE, OPCUA_DATA_COLL, OPCUA_HEALTH_COLL};
 
-use crate::model::TagChange;
+use crate::opcua::TagChange;
 
 const VALUES_KEY: &str = "val";
 const TIMESTAMPS_KEY: &str = "ts";

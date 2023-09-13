@@ -1,8 +1,15 @@
 use anyhow::{anyhow, Context as _};
+use serde::Deserialize;
 use tracing::{debug, info, instrument};
 use url::Url;
 
-use crate::model::ConfigFromApi;
+use crate::opcua::TagsConfigGroup;
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ConfigFromApi {
+    pub(crate) tags: Vec<TagsConfigGroup>,
+}
 
 #[instrument(skip_all)]
 pub(crate) async fn fetch_config(api_url: &Url, partner_id: &str) -> anyhow::Result<ConfigFromApi> {
