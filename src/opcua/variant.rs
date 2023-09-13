@@ -42,16 +42,18 @@ impl Serialize for Variant {
             OpcUaVariant::UInt64(v) => serializer.serialize_u64(v),
             OpcUaVariant::Float(v) => serializer.serialize_f32(v),
             OpcUaVariant::Double(v) => serializer.serialize_f64(v),
-            OpcUaVariant::String(ref v) => v.value().serialize(serializer),
-            OpcUaVariant::LocalizedText(ref v) => v.text.value().serialize(serializer),
+            OpcUaVariant::String(ref v) => {
+                serializer.serialize_str(v.value().as_deref().unwrap_or_default())
+            }
+            OpcUaVariant::LocalizedText(ref v) => {
+                serializer.serialize_str(v.text.value().as_deref().unwrap_or_default())
+            }
             OpcUaVariant::DateTime(ref v) => v.as_chrono().serialize(serializer),
             OpcUaVariant::Guid(ref v) => v.serialize(serializer),
             OpcUaVariant::StatusCode(v) => v.serialize(serializer),
-            OpcUaVariant::ByteString(ref v) => v
-                .value
-                .as_ref()
-                .map(|v| Bytes(v.clone()))
-                .serialize(serializer),
+            OpcUaVariant::ByteString(ref v) => {
+                serializer.serialize_bytes(v.value.as_deref().unwrap_or_default())
+            }
             OpcUaVariant::Array(ref v) => serialize_array(v, serializer),
             _ => {
                 let type_id = self.0.type_id();
@@ -168,13 +170,19 @@ mod tests {
         #[test]
         fn null_string() {
             let s = Variant::from(OpcUaVariant::String(UAString::null()));
-            assert_ser_tokens(&s, &[Token::None]);
+            assert_ser_tokens(&s, &[Token::String("")]);
         }
 
         #[test]
         fn string() {
             let s = Variant::from(OpcUaVariant::String("test string".into()));
-            assert_ser_tokens(&s, &[Token::Some, Token::String("test string")]);
+            assert_ser_tokens(&s, &[Token::String("test string")]);
+        }
+
+        #[test]
+        fn null_localized_text() {
+            let s = Variant::from(OpcUaVariant::from(LocalizedText::null()));
+            assert_ser_tokens(&s, &[Token::String("")]);
         }
 
         #[test]
@@ -183,7 +191,7 @@ mod tests {
                 "somelocale",
                 "some text",
             )));
-            assert_ser_tokens(&s, &[Token::Some, Token::String("some text")]);
+            assert_ser_tokens(&s, &[Token::String("some text")]);
         }
 
         #[test]
@@ -207,13 +215,13 @@ mod tests {
         #[test]
         fn null_bytestring() {
             let s = Variant::from(OpcUaVariant::ByteString(ByteString::null()));
-            assert_ser_tokens(&s, &[Token::None]);
+            assert_ser_tokens(&s, &[Token::Bytes(&[])]);
         }
 
         #[test]
         fn bytestring() {
             let s = Variant::from(OpcUaVariant::ByteString((&[1, 2, 3, 4]).into()));
-            assert_ser_tokens(&s, &[Token::Some, Token::Bytes(&[1, 2, 3, 4])]);
+            assert_ser_tokens(&s, &[Token::Bytes(&[1, 2, 3, 4])]);
         }
 
         #[test]
