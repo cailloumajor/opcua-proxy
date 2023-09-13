@@ -15,9 +15,7 @@ use url::Url;
 mod config;
 mod db;
 mod level_filter;
-mod model;
 mod opcua;
-mod variant;
 
 use config::fetch_config;
 use db::MongoDBDatabase;

@@ -9,20 +9,22 @@ result = db.data.findOne(
     {
         state: "$val.State",
         slowNumberOfUpdates: "$val.slowNumberOfUpdates",
+        alternatingBoolean: "$val.AlternatingBoolean",
+        randomUnsignedInt32: "$val.RandomUnsignedInt32",
         timeDiff: {
             $abs: {
                 $subtract: [
                     { $dateFromString: { dateString: "$val.CurrentTime" } },
-                    { $dateFromString: { dateString: "$val.StartTime" } }
-                ]
-            }
+                    { $dateFromString: { dateString: "$val.StartTime" } },
+                ],
+            },
         },
         timestampDiff: {
             $dateDiff: {
                 startDate: "$ts.State",
                 endDate: "$$NOW",
-                unit: "millisecond"
-            }
+                unit: "millisecond",
+            },
         },
     }
 );
@@ -32,6 +34,10 @@ print(EJSON.stringify(result));
 assert.equal(result.state, 0);
 
 assert.equal(result.slowNumberOfUpdates, -1);
+
+assert.equal(typeof result.alternatingBoolean, "boolean");
+
+assert.ok(result.randomUnsignedInt32 > 0);
 
 assert.ok(result.timeDiff > 0);
 
