@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.3.0](https://github.com/cailloumajor/opcua-proxy/compare/v5.2.9...v5.3.0) (2023-09-13)
+
+
+### Features
+
+* accept `Organizes` tag set container nodes ([9aed8ea](https://github.com/cailloumajor/opcua-proxy/commit/9aed8eaf388284261bab303cbe623bb5443cedbe))
+
 ## [5.2.9](https://github.com/cailloumajor/opcua-proxy/compare/v5.2.8...v5.2.9) (2023-09-13)
 
 
