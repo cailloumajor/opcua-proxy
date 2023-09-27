@@ -12,7 +12,7 @@ arcstr = "1.1.5"
 clap-verbosity-flag = "2.0.1"
 env_logger = { version = "0.10.0", default-features = false }
 futures-util = "0.3.28"
-mongodb = "2.6.1"
+mongodb = "2.7.0"
 serde = { version = "1.0.188", features = [ "derive" ] }
 signal-hook = { version = "0.3.17", default-features = false }
 signal-hook-tokio = { version = "0.3.1", features = [ "futures-v0_3" ] }
