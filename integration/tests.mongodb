@@ -2,8 +2,6 @@ const assert = require("node:assert/strict");
 
 db = connect("mongodb://localhost/opcua");
 
-db.disableFreeMonitoring();
-
 result = db.data.findOne(
     { _id: "integration-tests" },
     {
