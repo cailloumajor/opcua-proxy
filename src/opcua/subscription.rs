@@ -1,11 +1,18 @@
-use anyhow::{anyhow, Context as _};
+use std::sync::Arc;
+
+use arcstr::ArcStr;
 use opcua::client::prelude::*;
-use tokio::sync::mpsc;
-use tracing::{error, info, info_span, instrument, warn};
+use opcua::sync::RwLock;
+use tracing::{error, info_span, instrument, warn};
 
 use opcua_proxy::OPCUA_HEALTH_INTERVAL;
 
-use super::tag_set::TagSet;
+use crate::db::{
+    DataChangeChannel, DataChangeMessage, HealthChannel, HealthCommand, HealthMessage,
+};
+
+use super::session::SESSION_LOCK_TIMEOUT;
+use super::tag_set::Tag;
 
 #[derive(Debug)]
 pub(crate) struct TagChange {
@@ -14,24 +21,25 @@ pub(crate) struct TagChange {
     pub(crate) source_timestamp: i64,
 }
 
-#[instrument(skip_all)]
-pub(crate) fn subscribe_to_tags<T>(
-    session: &T,
-    tag_set: TagSet,
-) -> anyhow::Result<mpsc::Receiver<Vec<TagChange>>>
+#[instrument(skip_all, fields(partner_id))]
+pub(super) fn subscribe_to_tags<T>(
+    session: Arc<RwLock<T>>,
+    partner_id: ArcStr,
+    tag_set: Arc<Vec<Tag>>,
+    data_change_channel: DataChangeChannel,
+) -> Result<(), ()>
 where
     T: SubscriptionService + MonitoredItemService,
 {
-    let (sender, receiver) = mpsc::channel(1);
-    let cloned_tag_set = tag_set.clone().into_inner();
+    let shared_tag_set = Arc::clone(&tag_set);
     let data_change_callback = DataChangeCallback::new(move |monitored_items| {
-        let _entered = info_span!("tags_values_change_handler").entered();
-        let mut message = Vec::with_capacity(monitored_items.len());
+        let _entered = info_span!("tags_values_change_handler", %partner_id).entered();
+        let mut changes = Vec::with_capacity(monitored_items.len());
         for item in monitored_items {
             let node_id = &item.item_to_monitor().node_id;
             let client_handle = item.client_handle();
             let index = usize::try_from(client_handle).unwrap() - 1;
-            let Some(tag) = cloned_tag_set.get(index) else {
+            let Some(tag) = shared_tag_set.get(index) else {
                 error!(%node_id, client_handle, err="tag not found for client handle");
                 continue;
             };
@@ -47,60 +55,88 @@ where
                 error!(%node_id, err = "missing source timestamp");
                 continue;
             };
-            message.push(TagChange {
+            changes.push(TagChange {
                 tag_name: tag.name.clone(),
                 value: last_value.clone().into(),
                 source_timestamp,
             })
         }
-        if message.is_empty() {
+        if changes.is_empty() {
             warn!(msg = "discarded empty tags changes message");
             return;
         }
-        if let Err(err) = sender.try_send(message) {
+        let message = DataChangeMessage {
+            partner_id: partner_id.to_string(),
+            changes,
+        };
+        if let Err(err) = data_change_channel.try_send(message) {
             error!(when = "sending message to channel", %err);
         }
     });
 
+    let subscription_id = {
+        let session = session
+            .try_read_for(SESSION_LOCK_TIMEOUT)
+            .ok_or_else(|| error!(kind = "session lock timeout"))?;
+        session
+            .create_subscription(1000.0, 50, 10, 0, 0, true, data_change_callback)
+            .map_err(|err| {
+                error!(kind = "subscription creation", %err);
+            })?
+    };
+
     let items_to_create = tag_set
-        .monitored_items()
-        .context("error creating monitored items create requests")?;
+        .iter()
+        .zip(1..)
+        .map(|(tag, client_handle)| {
+            MonitoredItemCreateRequest::new(
+                tag.node_id.clone().into(),
+                MonitoringMode::Reporting,
+                MonitoringParameters {
+                    client_handle,
+                    ..Default::default()
+                },
+            )
+        })
+        .collect::<Vec<_>>();
 
-    let subscription_id = session
-        .create_subscription(1000.0, 50, 10, 0, 0, true, data_change_callback)
-        .context("error creating subscription")?;
-
-    let results = session
-        .create_monitored_items(
-            subscription_id,
-            TimestampsToReturn::Source,
-            &items_to_create,
-        )
-        .context("error creating monitored items")?;
+    let results = {
+        let session = session
+            .try_read_for(SESSION_LOCK_TIMEOUT)
+            .ok_or_else(|| error!(kind = "session lock timeout"))?;
+        session
+            .create_monitored_items(
+                subscription_id,
+                TimestampsToReturn::Source,
+                &items_to_create,
+            )
+            .map_err(|err| {
+                error!(kind = "monitored items creation", %err);
+            })?
+    };
 
     for (i, MonitoredItemCreateResult { status_code, .. }) in results.iter().enumerate() {
         if !status_code.is_good() {
             let node_id = &items_to_create[i].item_to_monitor.node_id;
-            return Err(anyhow!(
-                "error creating monitored item for {}: {}",
-                node_id,
-                status_code
-            ));
+            error!(kind = "monitored item status", %node_id, %status_code);
+            return Err(());
         }
     }
 
-    info!(status = "success");
-    Ok(receiver)
+    Ok(())
 }
 
-#[instrument(skip_all)]
-pub(crate) fn subscribe_to_health<T>(session: &T) -> anyhow::Result<mpsc::Receiver<i64>>
+#[instrument(skip_all, fields(partner_id))]
+pub(super) fn subscribe_to_health<T>(
+    session: Arc<RwLock<T>>,
+    partner_id: ArcStr,
+    health_channel: HealthChannel,
+) -> Result<(), ()>
 where
     T: SubscriptionService + MonitoredItemService,
 {
-    let (sender, receiver) = mpsc::channel(1);
     let data_change_callback = DataChangeCallback::new(move |monitored_items| {
-        let _entered = info_span!("health_value_change_handler").entered();
+        let _entered = info_span!("health_value_change_handler", %partner_id).entered();
         let Some(Variant::DateTime(server_time)) = monitored_items
             .get(0)
             .and_then(|item| item.last_value().value.as_ref())
@@ -108,41 +144,63 @@ where
             error!(?monitored_items, err = "unexpected monitored items");
             return;
         };
-        if let Err(err) = sender.try_send(server_time.as_chrono().timestamp_millis()) {
+        let server_timestamp = server_time.as_chrono().timestamp_millis();
+        let message = HealthMessage {
+            partner_id: partner_id.to_string(),
+            command: HealthCommand::Update(server_timestamp),
+        };
+        if let Err(err) = health_channel.try_send(message) {
             error!(when = "sending message to channel", %err);
         }
     });
 
-    let subscription_id = session
-        .create_subscription(
-            OPCUA_HEALTH_INTERVAL.into(),
-            50,
-            10,
-            1,
-            0,
-            true,
-            data_change_callback,
-        )
-        .context("error creating subscription")?;
+    let subscription_id = {
+        let session = session
+            .try_read_for(SESSION_LOCK_TIMEOUT)
+            .ok_or_else(|| error!(kind = "session lock timeout"))?;
+        session
+            .create_subscription(
+                OPCUA_HEALTH_INTERVAL.into(),
+                50,
+                10,
+                1,
+                0,
+                true,
+                data_change_callback,
+            )
+            .map_err(|err| {
+                error!(kind = "subscription creation", %err);
+            })?
+    };
 
     let server_time_node: NodeId = VariableId::Server_ServerStatus_CurrentTime.into();
 
-    let results = session
-        .create_monitored_items(
-            subscription_id,
-            TimestampsToReturn::Neither,
-            &[server_time_node.into()],
-        )
-        .context("error creating monitored item")?;
+    let results = {
+        let session = session
+            .try_read_for(SESSION_LOCK_TIMEOUT)
+            .ok_or_else(|| error!(kind = "session lock timeout"))?;
+        session
+            .create_monitored_items(
+                subscription_id,
+                TimestampsToReturn::Neither,
+                &[server_time_node.into()],
+            )
+            .map_err(|err| {
+                error!(kind = "monitored items creation", %err);
+            })?
+    };
 
-    let result = results
+    let status_code = results
         .get(0)
-        .ok_or_else(|| anyhow!("missing result for monitored item creation"))?;
+        .map(|result| result.status_code)
+        .ok_or_else(|| {
+            error!(kind = "misssing result for monitored item creation");
+        })?;
 
-    if !result.status_code.is_good() {
-        return Err(anyhow!("bad status code : {}", result.status_code));
+    if !status_code.is_good() {
+        error!(kind = "monitored item status", %status_code);
+        return Err(());
     }
 
-    info!(status = "success");
-    Ok(receiver)
+    Ok(())
 }

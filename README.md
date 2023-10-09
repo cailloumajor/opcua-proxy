@@ -14,20 +14,21 @@ See [DESIGN.md](DESIGN.md).
 
 PKI path is configured with a CLI option (see [Configuration](#configuration)).
 
-This service expects to find:
+### OPC-UA partners configuration
 
-- A certificate file at `<PKI_DIR>/own/opcua-proxy-<PARTNER_ID>-cert.der`;
-- A private key file at `<PKI_DIR>/private/opcua-proxy-<PARTNER_ID>-key.pem`.
+This service will periodically query the configuration API, to get the configuration for all OPC-UA partners as a JSON array of objects.
 
-### Tags configuration
+Each object is expected to have the following format.
 
-When starting, this service will query the configuration URL argument, joined with the partner ID argument, for tags to which it will subscribe on.
-
-The configuration API must return tags configuration in the form of a JSON object, as below.
-
-| Key    | Value type       | Description                  |
-| ------ | ---------------- | ---------------------------- |
-| `tags` | array of objects | Tags description (see below) |
+| Key              | Value type       | Description                                     |
+| ---------------- | ---------------- | ----------------------------------------------- |
+| `_id`            | string           | OPC-UA partner ID                               |
+| `serverUrl`      | string           | OPC-UA server URL                               |
+| `securityPolicy` | string           | OPC-UA security policy                          |
+| `securityMode`   | string           | OPC-UA security mode                            |
+| `user`           | string \| `null` | OPC-UA authentication username                  |
+| `password`       | string \| `null` | OPC-UA authentication password                  |
+| `tags`           | array of objects | Description of tags to subscribe on (see below) |
 
 Each element of `tags` array is an object with a `type` property and is of one of the following formats.
 
@@ -95,14 +96,14 @@ _\* identifier type will be inferred from JSON type._
 
 Queries to MongoDB will use following parameters:
 
-- database: `opcua`;
-- document primary key (`_id`): partner ID, from configuration flag.
+- database: as configured by service argument;
+- document primary key (`_id`): OPC-UA partner ID.
 
-When it starts, this service will delete the corresponding document in `data` collection.
+When it starts, this service will initialize all documents in `data` collection.
 
 ### OPC-UA data change
 
-For each data change notification received from the OPC-UA server, an update query will be issued to MongoDB on collection `data`, as a document comprising following fields:
+For each data change notification received from the OPC-UA servers, an update query will be issued to MongoDB on collection `data`, as a document comprising following fields:
 
 - `val`: mapping of tag names to their values;
 - `ts`: mapping of tag names to to the timestamp of last value change;
@@ -119,27 +120,29 @@ This service subscribes to OPC-UA server current time. Each time a data change n
 
 ```mermaid
 sequenceDiagram
-    participant OPCServer as OPC-UA server
-    participant Proxy as OPC-UA proxy
+    participant OPCServer as OPC-UA servers
+    participant opcua-proxy as OPC-UA proxy (this service)
     participant MongoDB
     participant ConfigAPI as Configuration API
-    critical
-        Proxy->>+ConfigAPI: Queries configuration data
-        ConfigAPI-->>-Proxy: Sends configuration data
-        Proxy->>+OPCServer: Connects
-        OPCServer-->>-Proxy: Connection success
-        Proxy->>+OPCServer: Creates subscription
-        OPCServer-->>-Proxy: Subscription created
-        Proxy->>+OPCServer: Creates monitored items
-        OPCServer-->>-Proxy: Monitored items created
+    loop At start and periodically
+    opcua-proxy->>+ConfigAPI: Queries configuration data
+    ConfigAPI-->>-opcua-proxy: Sends configuration data
+        loop For each OPC-UA partner not already handled
+            opcua-proxy->>+OPCServer: Connects
+            OPCServer-->>-opcua-proxy: Connection success
+            opcua-proxy->>+OPCServer: Creates subscription
+            OPCServer-->>-opcua-proxy: Subscription created
+            opcua-proxy->>+OPCServer: Creates monitored items
+            OPCServer-->>-opcua-proxy: Monitored items created
+        end
     end
     loop Current time changes
-        OPCServer-)+Proxy: Data change notification
-        Proxy-)-MongoDB: Updates health document
+        OPCServer-)+opcua-proxy: Data change notification
+        opcua-proxy-)-MongoDB: Updates health document
     end
     loop Tags values changes
-        OPCServer-)+Proxy: Data change notification
-        Proxy-)-MongoDB: Updates data document
+        OPCServer-)+opcua-proxy: Data change notification
+        opcua-proxy-)-MongoDB: Updates data document
     end
 ```
 
@@ -147,27 +150,17 @@ sequenceDiagram
 
 ```ShellSession
 $ opcua-proxy --help
-Usage: opcua-proxy [OPTIONS] --partner-id <PARTNER_ID> --config-api-url <CONFIG_API_URL> --pki-dir <PKI_DIR> --opcua-server-url <OPCUA_SERVER_URL>
+Usage: opcua-proxy [OPTIONS] --mongodb-database <MONGODB_DATABASE> --config-api-url <CONFIG_API_URL> --pki-dir <PKI_DIR>
 
 Options:
-      --partner-id <PARTNER_ID>
-          OPC-UA partner device ID [env: PARTNER_ID=]
       --mongodb-uri <MONGODB_URI>
-          URL of MongoDB database [env: MONGODB_URI=] [default: mongodb://mongodb]
+          URL of MongoDB server [env: MONGODB_URI=] [default: mongodb://mongodb]
+      --mongodb-database <MONGODB_DATABASE>
+          Name of the MongoDB database to use [env: MONGODB_DATABASE=]
       --config-api-url <CONFIG_API_URL>
           Base API URL to get configuration from [env: CONFIG_API_URL=]
       --pki-dir <PKI_DIR>
           Path of the PKI directory [env: PKI_DIR=]
-      --opcua-server-url <OPCUA_SERVER_URL>
-          URL of OPC-UA server to connect to [env: OPCUA_SERVER_URL=]
-      --opcua-security-policy <OPCUA_SECURITY_POLICY>
-          OPC-UA security policy [env: OPCUA_SECURITY_POLICY=] [default: Basic256Sha256]
-      --opcua-security-mode <OPCUA_SECURITY_MODE>
-          OPC-UA security mode [env: OPCUA_SECURITY_MODE=] [default: SignAndEncrypt]
-      --opcua-user <OPCUA_USER>
-          OPC-UA authentication username (optional) [env: OPCUA_USER=]
-      --opcua-password <OPCUA_PASSWORD>
-          OPC-UA authentication password (optional) [env: OPCUA_PASSWORD=]
   -v, --verbose...
           More output per occurrence
   -q, --quiet...

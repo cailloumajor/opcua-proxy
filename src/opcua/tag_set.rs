@@ -1,10 +1,13 @@
-use anyhow::{anyhow, Context as _};
+use std::sync::Arc;
+
 use opcua::client::prelude::*;
+use opcua::sync::RwLock;
 use serde::Deserialize;
-use tracing::{info, instrument};
+use tracing::{error, instrument};
 
 use super::namespaces::Namespaces;
 use super::node_identifier::NodeIdentifier;
+use super::session::SESSION_LOCK_TIMEOUT;
 
 #[derive(Debug, Clone, Deserialize)]
 pub(super) struct Tag {
@@ -12,18 +15,9 @@ pub(super) struct Tag {
     pub(super) node_id: NodeId,
 }
 
-#[derive(Clone, Debug)]
-pub(crate) struct TagSet(Vec<Tag>);
-
-impl TagSet {
-    pub(super) fn into_inner(self) -> Vec<Tag> {
-        self.0
-    }
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Eq, Hash, PartialEq)]
 #[serde(rename_all = "camelCase", tag = "type")]
-pub(crate) enum TagsConfigGroup {
+pub(super) enum TagsConfigGroup {
     #[serde(rename_all = "camelCase")]
     Container {
         namespace_uri: String,
@@ -37,112 +31,107 @@ pub(crate) enum TagsConfigGroup {
     },
 }
 
-impl TagSet {
-    #[instrument(name = "tag_set_from_config", skip_all)]
-    pub(crate) fn from_config(
-        config: Vec<TagsConfigGroup>,
-        namespaces: &Namespaces,
-        session: &impl ViewService,
-    ) -> anyhow::Result<Self> {
-        let mut tag_set: Vec<Tag> = Vec::new();
+#[instrument(skip_all)]
+pub(super) fn tag_set_from_config_groups<T>(
+    config: &[TagsConfigGroup],
+    namespaces: &Namespaces,
+    session: Arc<RwLock<T>>,
+) -> Result<Vec<Tag>, ()>
+where
+    T: ViewService,
+{
+    let mut tag_set: Vec<Tag> = Vec::new();
 
-        for config_group in config {
-            match config_group {
-                TagsConfigGroup::Container {
-                    namespace_uri,
-                    node_identifier,
-                } => {
-                    let namespace = namespaces
-                        .get(&namespace_uri)
-                        .with_context(|| format!("namespace `{namespace_uri}` not found"))?;
-                    let node_id = NodeId::new(*namespace, node_identifier);
-                    let result_mask = (BrowseDescriptionResultMask::RESULT_MASK_DISPLAY_NAME
-                        | BrowseDescriptionResultMask::RESULT_MASK_REFERENCE_TYPE)
-                        .bits();
-                    let browse_description = BrowseDescription {
-                        node_id: node_id.clone(),
-                        browse_direction: BrowseDirection::Forward,
-                        reference_type_id: ReferenceTypeId::HierarchicalReferences.into(),
-                        include_subtypes: true,
-                        node_class_mask: NodeClassMask::VARIABLE.bits(),
-                        result_mask,
-                    };
-                    let browse_result = session
+    for config_group in config {
+        match config_group {
+            TagsConfigGroup::Container {
+                namespace_uri,
+                node_identifier,
+            } => {
+                let namespace = namespaces.get(namespace_uri).ok_or_else(|| {
+                    error!(kind = "namespace not found", namespace_uri);
+                })?;
+                let node_id = NodeId::new(*namespace, node_identifier.clone());
+                let result_mask = (BrowseDescriptionResultMask::RESULT_MASK_DISPLAY_NAME
+                    | BrowseDescriptionResultMask::RESULT_MASK_REFERENCE_TYPE)
+                    .bits();
+                let browse_description = BrowseDescription {
+                    node_id: node_id.clone(),
+                    browse_direction: BrowseDirection::Forward,
+                    reference_type_id: ReferenceTypeId::HierarchicalReferences.into(),
+                    include_subtypes: true,
+                    node_class_mask: NodeClassMask::VARIABLE.bits(),
+                    result_mask,
+                };
+                let browse_result = {
+                    let session = session.try_read_for(SESSION_LOCK_TIMEOUT).ok_or_else(|| {
+                        error!(kind = "session lock timeout");
+                    })?;
+                    session
                         .browse(&[browse_description])
-                        .context("Browse error")?
+                        .map_err(|err| {
+                            error!(kind="Browse request", %err);
+                        })?
                         .unwrap()
                         .pop()
-                        .context("empty Browse results")?;
-                    if !browse_result.status_code.is_good() {
-                        return Err(anyhow!("BrowseResult error: {}", browse_result.status_code));
-                    }
-                    if !browse_result.continuation_point.is_null() {
-                        return Err(anyhow!(
-                            "got a ContinuationPoint, handling it is unimplemented"
-                        ));
-                    }
-                    let references = browse_result
-                        .references
-                        .with_context(|| format!("NodeId `{node_id}` has no forward reference"))?;
-                    for ReferenceDescription {
-                        node_id,
-                        display_name,
-                        ..
-                    } in references.into_iter().filter(|ref_description| {
-                        use ReferenceTypeId::*;
-                        matches!(
-                            ref_description.reference_type_id.as_reference_type_id(),
-                            Ok(HasComponent | Organizes)
-                        )
-                    }) {
-                        tag_set.push(Tag {
-                            name: display_name.to_string(),
-                            node_id: node_id.node_id,
-                        });
-                    }
+                        .ok_or_else(|| {
+                            error!(kind = "empty Browse results");
+                        })?
+                };
+                if !browse_result.status_code.is_good() {
+                    let status_code = browse_result.status_code;
+                    error!(kind = "BrowseResult", %status_code);
+                    return Err(());
                 }
-                TagsConfigGroup::Tag {
-                    name,
-                    namespace_uri,
-                    node_identifier,
-                } => {
-                    let namespace = namespaces
-                        .get(&namespace_uri)
-                        .with_context(|| format!("namespace `{namespace_uri}` not found"))?;
-                    let node_id = NodeId::new(*namespace, node_identifier);
-                    tag_set.push(Tag { name, node_id })
+                if !browse_result.continuation_point.is_null() {
+                    error!(kind = "unimplemented ContinuationPoint");
+                    return Err(());
+                }
+                let references = browse_result.references.ok_or_else(|| {
+                    error!(kind = "NodeId is missing forward reference", %node_id);
+                })?;
+                for ReferenceDescription {
+                    node_id,
+                    display_name,
+                    ..
+                } in references.into_iter().filter(|ref_description| {
+                    use ReferenceTypeId::*;
+                    matches!(
+                        ref_description.reference_type_id.as_reference_type_id(),
+                        Ok(HasComponent | Organizes)
+                    )
+                }) {
+                    tag_set.push(Tag {
+                        name: display_name.to_string(),
+                        node_id: node_id.node_id,
+                    });
                 }
             }
+            TagsConfigGroup::Tag {
+                name,
+                namespace_uri,
+                node_identifier,
+            } => {
+                let namespace = namespaces.get(namespace_uri).ok_or_else(|| {
+                    error!(kind = "namespace not found", namespace_uri);
+                })?;
+                let node_id = NodeId::new(*namespace, node_identifier.clone());
+                tag_set.push(Tag {
+                    name: name.clone(),
+                    node_id,
+                })
+            }
         }
-
-        info!(status = "success");
-        Ok(Self(tag_set))
     }
 
-    pub(super) fn monitored_items(&self) -> anyhow::Result<Vec<MonitoredItemCreateRequest>> {
-        self.0
-            .iter()
-            .zip(1..)
-            .map(|(tag, client_handle)| {
-                let create_request = MonitoredItemCreateRequest::new(
-                    tag.node_id.clone().into(),
-                    MonitoringMode::Reporting,
-                    MonitoringParameters {
-                        client_handle,
-                        ..Default::default()
-                    },
-                );
-                Ok(create_request)
-            })
-            .collect()
-    }
+    Ok(tag_set)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    mod from_config {
+    mod tag_set_from_config_groups {
         use std::collections::HashMap;
 
         use super::*;
@@ -214,92 +203,92 @@ mod tests {
 
         #[test]
         fn container_namespace_not_found() {
-            let config = vec![TagsConfigGroup::Container {
+            let config = &[TagsConfigGroup::Container {
                 namespace_uri: "nonexistent".to_string(),
                 node_identifier: NodeIdentifier::Numeric(0),
             }];
             let namespaces = HashMap::new();
-            let session = ViewServiceMock {
+            let session = Arc::new(RwLock::new(ViewServiceMock {
                 browse_outcome: Ok(Some(vec![])),
-            };
+            }));
 
-            let result = TagSet::from_config(config, &namespaces, &session);
+            let result = tag_set_from_config_groups(config, &namespaces, session);
 
             assert!(result.is_err());
         }
 
         #[test]
         fn browse_error() {
-            let config = vec![TagsConfigGroup::Container {
+            let config = &[TagsConfigGroup::Container {
                 namespace_uri: "urn:ns".to_string(),
                 node_identifier: NodeIdentifier::Numeric(0),
             }];
             let namespaces = HashMap::from([("urn:ns".to_string(), 1)]);
-            let session = ViewServiceMock {
+            let session = Arc::new(RwLock::new(ViewServiceMock {
                 browse_outcome: Err(StatusCode::BadInternalError),
-            };
+            }));
 
-            let result = TagSet::from_config(config, &namespaces, &session);
+            let result = tag_set_from_config_groups(config, &namespaces, session);
 
             assert!(result.is_err());
         }
 
         #[test]
         fn empty_browse_results() {
-            let config = vec![TagsConfigGroup::Container {
+            let config = &[TagsConfigGroup::Container {
                 namespace_uri: "urn:ns".to_string(),
                 node_identifier: NodeIdentifier::Numeric(0),
             }];
             let namespaces = HashMap::from([("urn:ns".to_string(), 1)]);
-            let session = ViewServiceMock {
+            let session = Arc::new(RwLock::new(ViewServiceMock {
                 browse_outcome: Ok(Some(vec![])),
-            };
+            }));
 
-            let result = TagSet::from_config(config, &namespaces, &session);
+            let result = tag_set_from_config_groups(config, &namespaces, session);
 
             assert!(result.is_err());
         }
 
         #[test]
         fn continuation_point() {
-            let config = vec![TagsConfigGroup::Container {
+            let config = &[TagsConfigGroup::Container {
                 namespace_uri: "urn:ns".to_string(),
                 node_identifier: NodeIdentifier::Numeric(0),
             }];
             let namespaces = HashMap::from([("urn:ns".to_string(), 1)]);
-            let session = ViewServiceMock {
+            let session = Arc::new(RwLock::new(ViewServiceMock {
                 browse_outcome: Ok(Some(vec![BrowseResult {
                     status_code: StatusCode::Good,
                     continuation_point: "deadbeef".into(),
                     references: Some(vec![]),
                 }])),
-            };
+            }));
 
-            let result = TagSet::from_config(config, &namespaces, &session);
+            let result = tag_set_from_config_groups(config, &namespaces, session);
 
             assert!(result.is_err());
         }
 
         #[test]
         fn tag_namespace_not_found() {
-            let config = vec![TagsConfigGroup::Tag {
+            let config = &[TagsConfigGroup::Tag {
                 name: "somename".to_string(),
                 namespace_uri: "nonexistent".to_string(),
                 node_identifier: NodeIdentifier::Numeric(0),
             }];
             let namespaces = HashMap::new();
-            let session = ViewServiceMock {
+            let session = Arc::new(RwLock::new(ViewServiceMock {
                 browse_outcome: Ok(Some(vec![])),
-            };
+            }));
 
-            let result = TagSet::from_config(config, &namespaces, &session);
+            let result = tag_set_from_config_groups(config, &namespaces, session);
 
             assert!(result.is_err());
         }
 
         #[test]
         fn success() {
-            let config = vec![
+            let config = &[
                 TagsConfigGroup::Container {
                     namespace_uri: "urn:ns".to_string(),
                     node_identifier: NodeIdentifier::Numeric(0),
@@ -330,25 +319,25 @@ mod tests {
                 type_definition: ExpandedNodeId::null(),
             })
             .collect();
-            let session = ViewServiceMock {
+            let session = Arc::new(RwLock::new(ViewServiceMock {
                 browse_outcome: Ok(Some(vec![BrowseResult {
                     status_code: StatusCode::Good,
                     continuation_point: ByteString::null(),
                     references: Some(references),
                 }])),
-            };
+            }));
 
-            let result = TagSet::from_config(config, &namespaces, &session)
+            let result = tag_set_from_config_groups(config, &namespaces, session)
                 .expect("result should not be an error");
 
-            assert_eq!(result.0.len(), 3);
-            assert_eq!(result.0[0].name, "LocalTime");
-            assert_eq!(result.0[0].node_id, VariableId::LocalTime.into());
-            assert_eq!(result.0[1].name, "Server_ServiceLevel");
-            assert_eq!(result.0[1].node_id, VariableId::Server_ServiceLevel.into());
-            assert_eq!(result.0[2].name, "somename");
+            assert_eq!(result.len(), 3);
+            assert_eq!(result[0].name, "LocalTime");
+            assert_eq!(result[0].node_id, VariableId::LocalTime.into());
+            assert_eq!(result[1].name, "Server_ServiceLevel");
+            assert_eq!(result[1].node_id, VariableId::Server_ServiceLevel.into());
+            assert_eq!(result[2].name, "somename");
             assert_eq!(
-                result.0[2].node_id,
+                result[2].node_id,
                 NodeId::new(2, NodeIdentifier::String("some_node_id".to_string()))
             )
         }

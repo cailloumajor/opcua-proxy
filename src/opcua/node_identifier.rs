@@ -1,7 +1,7 @@
 use opcua::types::Identifier;
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Eq, Hash, PartialEq)]
 #[serde(untagged)]
 pub(crate) enum NodeIdentifier {
     Numeric(u32),

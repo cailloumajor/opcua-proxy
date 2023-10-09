@@ -1,4 +1,6 @@
-use opcua::types::{Array, Variant as OpcUaVariant};
+use mongodb::bson::spec::BinarySubtype;
+use mongodb::bson::{self, Bson};
+use opcua::types::Variant as OpcUaVariant;
 use serde::ser::{Serialize, Serializer};
 use tracing::{instrument, warn};
 
@@ -23,62 +25,56 @@ impl From<OpcUaVariant> for Variant {
     }
 }
 
-impl Serialize for Variant {
-    #[instrument(name = "serialize_variant", skip_all)]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match self.0 {
-            OpcUaVariant::Empty => serializer.serialize_unit(),
-            OpcUaVariant::Boolean(v) => serializer.serialize_bool(v),
-            OpcUaVariant::SByte(v) => serializer.serialize_i8(v),
-            OpcUaVariant::Byte(v) => serializer.serialize_u8(v),
-            OpcUaVariant::Int16(v) => serializer.serialize_i16(v),
-            OpcUaVariant::UInt16(v) => serializer.serialize_u16(v),
-            OpcUaVariant::Int32(v) => serializer.serialize_i32(v),
-            OpcUaVariant::UInt32(v) => serializer.serialize_u32(v),
-            OpcUaVariant::Int64(v) => serializer.serialize_i64(v),
-            OpcUaVariant::UInt64(v) => serializer.serialize_u64(v),
-            OpcUaVariant::Float(v) => serializer.serialize_f32(v),
-            OpcUaVariant::Double(v) => serializer.serialize_f64(v),
-            OpcUaVariant::String(ref v) => {
-                serializer.serialize_str(v.value().as_deref().unwrap_or_default())
+impl From<Variant> for Bson {
+    #[instrument(name = "variant_to_bson")]
+    fn from(value: Variant) -> Self {
+        match value.0 {
+            OpcUaVariant::Empty => Bson::Null,
+            OpcUaVariant::Boolean(v) => Bson::Boolean(v),
+            OpcUaVariant::SByte(v) => Bson::Int32(v.into()),
+            OpcUaVariant::Byte(v) => Bson::Int32(v.into()),
+            OpcUaVariant::Int16(v) => Bson::Int32(v.into()),
+            OpcUaVariant::UInt16(v) => Bson::Int32(v.into()),
+            OpcUaVariant::Int32(v) => Bson::Int32(v),
+            OpcUaVariant::UInt32(v) => Bson::Int64(v.into()),
+            OpcUaVariant::Int64(v) => Bson::Int64(v),
+            OpcUaVariant::UInt64(v) => match i64::try_from(v) {
+                Ok(val) => Bson::Int64(val),
+                Err(err) => {
+                    warn!(kind = "conversion", %err);
+                    Bson::Null
+                }
+            },
+            OpcUaVariant::Float(v) => Bson::Double(v.into()),
+            OpcUaVariant::Double(v) => Bson::Double(v),
+            OpcUaVariant::String(v) => Bson::String(v.into()),
+            OpcUaVariant::LocalizedText(v) => Bson::String(v.text.into()),
+            OpcUaVariant::DateTime(v) => Bson::String(format!("{:?}", v.as_chrono())),
+            OpcUaVariant::Guid(v) => Bson::String(v.to_string()),
+            OpcUaVariant::StatusCode(v) => Bson::Int64(v.bits().into()),
+            OpcUaVariant::ByteString(v) => Bson::Binary(bson::Binary {
+                subtype: BinarySubtype::Generic,
+                bytes: v.value.unwrap_or_default(),
+            }),
+            OpcUaVariant::Array(v) => {
+                if v.has_dimensions() {
+                    warn!(kind = "unimplemented serialization for multi-dimensional arrays");
+                    Bson::Null
+                } else {
+                    Bson::Array(
+                        v.values
+                            .into_iter()
+                            .map(|val| Variant(val).into())
+                            .collect(),
+                    )
+                }
             }
-            OpcUaVariant::LocalizedText(ref v) => {
-                serializer.serialize_str(v.text.value().as_deref().unwrap_or_default())
-            }
-            OpcUaVariant::DateTime(ref v) => v.as_chrono().serialize(serializer),
-            OpcUaVariant::Guid(ref v) => v.serialize(serializer),
-            OpcUaVariant::StatusCode(v) => v.serialize(serializer),
-            OpcUaVariant::ByteString(ref v) => {
-                serializer.serialize_bytes(v.value.as_deref().unwrap_or_default())
-            }
-            OpcUaVariant::Array(ref v) => serialize_array(v, serializer),
             _ => {
-                let type_id = self.0.type_id();
+                let type_id = value.0.type_id();
                 warn!(kind = "unimplemented serialization", ?type_id);
-                serializer.serialize_unit()
+                Bson::Null
             }
         }
-    }
-}
-
-fn serialize_array<S>(array: &Array, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    if array.has_dimensions() {
-        warn!(kind = "unimplemented serialization for multi-dimensional arrays");
-        serializer.serialize_unit()
-    } else {
-        array
-            .values
-            .iter()
-            .cloned()
-            .map(Variant::from)
-            .collect::<Vec<_>>()
-            .serialize(serializer)
     }
 }
 
@@ -86,169 +82,210 @@ where
 mod tests {
     use super::*;
 
-    mod serialize {
+    mod variant_into_bson {
         use opcua::types::{
             Array, ByteString, DateTime, DiagnosticInfo, Guid, LocalizedText, StatusCode, UAString,
             VariantTypeId,
         };
-        use serde_test::{assert_ser_tokens, Token};
 
         use super::*;
 
         #[test]
         fn empty() {
-            let s = Variant::from(OpcUaVariant::Empty);
-            assert_ser_tokens(&s, &[Token::Unit]);
+            let variant = Variant(OpcUaVariant::Empty);
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Null);
         }
 
         #[test]
         fn boolean() {
-            let s = Variant::from(OpcUaVariant::Boolean(true));
-            assert_ser_tokens(&s, &[Token::Bool(true)]);
+            let variant = Variant(OpcUaVariant::Boolean(true));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Boolean(true));
         }
 
         #[test]
         fn sbyte() {
-            let s = Variant::from(OpcUaVariant::SByte(i8::MIN));
-            assert_ser_tokens(&s, &[Token::I8(i8::MIN)]);
+            let variant = Variant(OpcUaVariant::SByte(i8::MIN));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Int32(-128));
         }
 
         #[test]
         fn byte() {
-            let s = Variant::from(OpcUaVariant::Byte(u8::MAX));
-            assert_ser_tokens(&s, &[Token::U8(u8::MAX)]);
+            let variant = Variant(OpcUaVariant::Byte(u8::MAX));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Int32(255));
         }
 
         #[test]
         fn int16() {
-            let s = Variant::from(OpcUaVariant::Int16(i16::MIN));
-            assert_ser_tokens(&s, &[Token::I16(i16::MIN)]);
+            let variant = Variant(OpcUaVariant::Int16(i16::MIN));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Int32(-32768));
         }
 
         #[test]
         fn uint16() {
-            let s = Variant::from(OpcUaVariant::UInt16(u16::MAX));
-            assert_ser_tokens(&s, &[Token::U16(u16::MAX)]);
+            let variant = Variant(OpcUaVariant::UInt16(u16::MAX));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Int32(65535));
         }
 
         #[test]
         fn int32() {
-            let s = Variant::from(OpcUaVariant::Int32(i32::MIN));
-            assert_ser_tokens(&s, &[Token::I32(i32::MIN)]);
+            let variant = Variant(OpcUaVariant::Int32(i32::MIN));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Int32(-2147483648));
         }
 
         #[test]
         fn uint32() {
-            let s = Variant::from(OpcUaVariant::UInt32(u32::MAX));
-            assert_ser_tokens(&s, &[Token::U32(u32::MAX)]);
+            let variant = Variant(OpcUaVariant::UInt32(u32::MAX));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Int64(4294967295));
         }
 
         #[test]
         fn int64() {
-            let s = Variant::from(OpcUaVariant::Int64(i64::MIN));
-            assert_ser_tokens(&s, &[Token::I64(i64::MIN)]);
+            let variant = Variant(OpcUaVariant::Int64(i64::MIN));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Int64(-9223372036854775808));
         }
 
         #[test]
         fn uint64() {
-            let s = Variant::from(OpcUaVariant::UInt64(u64::MAX));
-            assert_ser_tokens(&s, &[Token::U64(u64::MAX)]);
+            let variant = Variant(OpcUaVariant::UInt64(u32::MAX.into()));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Int64(4294967295));
+        }
+
+        #[test]
+        fn uint64_overflowing() {
+            let variant = Variant(OpcUaVariant::UInt64(u64::MAX));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Null);
         }
 
         #[test]
         fn float() {
-            let s = Variant::from(OpcUaVariant::Float(42.0));
-            assert_ser_tokens(&s, &[Token::F32(42.0)]);
+            let variant = Variant(OpcUaVariant::Float(42.0));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Double(42.0));
         }
 
         #[test]
         fn double() {
-            let s = Variant::from(OpcUaVariant::Double(456.54));
-            assert_ser_tokens(&s, &[Token::F64(456.54)]);
+            let variant = Variant(OpcUaVariant::Double(456.54));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Double(456.54));
         }
 
         #[test]
         fn null_string() {
-            let s = Variant::from(OpcUaVariant::String(UAString::null()));
-            assert_ser_tokens(&s, &[Token::String("")]);
+            let variant = Variant(OpcUaVariant::String(UAString::null()));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::String("".to_string()));
         }
 
         #[test]
         fn string() {
-            let s = Variant::from(OpcUaVariant::String("test string".into()));
-            assert_ser_tokens(&s, &[Token::String("test string")]);
+            let variant = Variant(OpcUaVariant::String("test string".into()));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::String("test string".to_string()));
         }
 
         #[test]
         fn null_localized_text() {
-            let s = Variant::from(OpcUaVariant::from(LocalizedText::null()));
-            assert_ser_tokens(&s, &[Token::String("")]);
+            let variant = Variant(OpcUaVariant::from(LocalizedText::null()));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::String("".to_string()));
         }
 
         #[test]
         fn localized_text() {
-            let s = Variant::from(OpcUaVariant::from(LocalizedText::new(
+            let variant = Variant(OpcUaVariant::from(LocalizedText::new(
                 "somelocale",
                 "some text",
             )));
-            assert_ser_tokens(&s, &[Token::String("some text")]);
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::String("some text".to_string()));
         }
 
         #[test]
         fn datetime() {
-            let s = Variant::from(OpcUaVariant::DateTime(Box::new(DateTime::epoch())));
-            assert_ser_tokens(&s, &[Token::Str("1601-01-01T00:00:00Z")]);
+            let variant = Variant(OpcUaVariant::DateTime(Box::new(DateTime::epoch())));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::String("1601-01-01T00:00:00Z".to_string()));
         }
 
         #[test]
         fn guid() {
-            let s = Variant::from(OpcUaVariant::Guid(Box::new(Guid::null())));
-            assert_ser_tokens(&s, &[Token::Str("00000000-0000-0000-0000-000000000000")]);
+            let variant = Variant(OpcUaVariant::Guid(Box::new(Guid::null())));
+            let bson = Bson::from(variant);
+            assert_eq!(
+                bson,
+                Bson::String("00000000-0000-0000-0000-000000000000".to_string())
+            );
         }
 
         #[test]
         fn statuscode() {
-            let s = Variant::from(OpcUaVariant::StatusCode(StatusCode::BadUnexpectedError));
-            assert_ser_tokens(&s, &[Token::U32(0x8001_0000)]);
+            let variant = Variant(OpcUaVariant::StatusCode(StatusCode::BadUnexpectedError));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Int64(2147549184));
         }
 
         #[test]
         fn null_bytestring() {
-            let s = Variant::from(OpcUaVariant::ByteString(ByteString::null()));
-            assert_ser_tokens(&s, &[Token::Bytes(&[])]);
+            let variant = Variant(OpcUaVariant::ByteString(ByteString::null()));
+            let bson = Bson::from(variant);
+            assert_eq!(
+                bson,
+                Bson::Binary(bson::Binary {
+                    subtype: BinarySubtype::Generic,
+                    bytes: vec![]
+                })
+            );
         }
 
         #[test]
         fn bytestring() {
-            let s = Variant::from(OpcUaVariant::ByteString((&[1, 2, 3, 4]).into()));
-            assert_ser_tokens(&s, &[Token::Bytes(&[1, 2, 3, 4])]);
+            let variant = Variant(OpcUaVariant::ByteString((&[1, 2, 3, 4]).into()));
+            let bson = Bson::from(variant);
+            assert_eq!(
+                bson,
+                Bson::Binary(bson::Binary {
+                    subtype: BinarySubtype::Generic,
+                    bytes: vec![1, 2, 3, 4]
+                })
+            );
         }
 
         #[test]
         fn one_dimension_array() {
-            let s = Variant::from(OpcUaVariant::Array(Box::new(
+            let variant = Variant(OpcUaVariant::Array(Box::new(
                 Array::new_single(
                     VariantTypeId::Byte,
                     (1u8..=4u8).map(OpcUaVariant::from).collect::<Vec<_>>(),
                 )
                 .unwrap(),
             )));
-            assert_ser_tokens(
-                &s,
-                &[
-                    Token::Seq { len: Some(4) },
-                    Token::U8(1),
-                    Token::U8(2),
-                    Token::U8(3),
-                    Token::U8(4),
-                    Token::SeqEnd,
-                ],
+            let bson = Bson::from(variant);
+            assert_eq!(
+                bson,
+                Bson::Array(vec![
+                    Bson::Int32(1),
+                    Bson::Int32(2),
+                    Bson::Int32(3),
+                    Bson::Int32(4),
+                ])
             );
         }
 
         #[test]
         fn multi_dimension_array() {
-            let s = Variant::from(OpcUaVariant::Array(Box::new(
+            let variant = Variant(OpcUaVariant::Array(Box::new(
                 Array::new_multi(
                     VariantTypeId::Byte,
                     (1u8..=4u8).map(OpcUaVariant::from).collect::<Vec<_>>(),
@@ -256,13 +293,15 @@ mod tests {
                 )
                 .unwrap(),
             )));
-            assert_ser_tokens(&s, &[Token::Unit]);
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Null);
         }
 
         #[test]
         fn unimplemented() {
-            let s = Variant::from(OpcUaVariant::from(DiagnosticInfo::null()));
-            assert_ser_tokens(&s, &[Token::Unit]);
+            let variant = Variant(OpcUaVariant::from(DiagnosticInfo::null()));
+            let bson = Bson::from(variant);
+            assert_eq!(bson, Bson::Null);
         }
     }
 }

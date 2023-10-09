@@ -6,6 +6,6 @@
     "json-server": "0.17"
   },
   "scripts": {
-    "start": "json-server --host 0.0.0.0 --read-only --routes routes.json config.json"
+    "start": "json-server --host 0.0.0.0 --read-only config.json"
   }
 }
