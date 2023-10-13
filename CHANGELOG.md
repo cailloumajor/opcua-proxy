@@ -1,5 +1,25 @@
 # Changelog
 
+## [6.0.0](https://github.com/cailloumajor/opcua-proxy/compare/v5.3.3...v6.0.0) (2023-10-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* implement multi-session management
+
+### Features
+
+* implement multi-session management ([e499d47](https://github.com/cailloumajor/opcua-proxy/commit/e499d4702760c23d6a219bb624fd59853e492a1f))
+
+
+### Bug Fixes
+
+* **deps:** update rust crate reqwest to 0.11.21 ([098a053](https://github.com/cailloumajor/opcua-proxy/commit/098a0539c42b3df467d10fa569bffa7934e181be))
+* **deps:** update rust crate reqwest to 0.11.22 ([38d1978](https://github.com/cailloumajor/opcua-proxy/commit/38d1978a0d1da0e9929d09c240fe110ec3818a51))
+* **deps:** update rust crate serde to 1.0.189 ([3d1f799](https://github.com/cailloumajor/opcua-proxy/commit/3d1f7992c6a57da86178007520ad51bdc1e7c5b9))
+* **deps:** update rust crate tokio to 1.33.0 ([8fa4264](https://github.com/cailloumajor/opcua-proxy/commit/8fa426444aff72ba97fc7fc6fffdf03ddd7b4dbf))
+* **deps:** update rust docker tag to v1.73.0 ([59acd9f](https://github.com/cailloumajor/opcua-proxy/commit/59acd9f6d61494e5a19ddcaab523b8ceb94477c8))
+
 ## [5.3.3](https://github.com/cailloumajor/opcua-proxy/compare/v5.3.2...v5.3.3) (2023-10-02)
 
 
