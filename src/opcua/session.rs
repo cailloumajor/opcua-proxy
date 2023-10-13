@@ -1,73 +1,88 @@
 use std::sync::Arc;
+use std::time::Duration;
 
-use anyhow::Context as _;
+use arcstr::ArcStr;
 use opcua::client::prelude::*;
 use opcua::sync::RwLock;
-use tracing::{info, info_span, instrument};
+use serde::Deserialize;
+use tracing::{debug, error, info, info_span, instrument};
+use url::Url;
 
-use super::Config;
+use super::tag_set::TagsConfigGroup;
+
+pub(super) const SESSION_LOCK_TIMEOUT: Duration = Duration::from_millis(50);
+
+#[derive(Debug, Deserialize, Eq, Hash, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct PartnerConfig {
+    #[serde(rename = "_id")]
+    pub(super) partner_id: String,
+    pub(super) server_url: String,
+    pub(super) security_policy: String,
+    pub(super) security_mode: String,
+    pub(super) user: Option<String>,
+    pub(super) password: Option<String>,
+    pub(super) tags: Vec<TagsConfigGroup>,
+}
 
 #[instrument(skip_all)]
-pub(crate) fn create_session(
-    config: &Config,
-    partner_id: &str,
-) -> anyhow::Result<Arc<RwLock<Session>>> {
-    const PRODUCT_URI: &str = concat!("urn:", env!("CARGO_PKG_NAME"));
+pub(super) async fn fetch_partners_config(
+    api_url: Url,
+) -> Result<Vec<PartnerConfig>, reqwest::Error> {
+    let config = reqwest::get(api_url)
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
 
-    let (user_token_id, user_identity_token) =
-        if let (Some(user), Some(pass)) = (&config.opcua_user, &config.opcua_password) {
-            ("default", Some(ClientUserToken::user_pass(user, pass)))
-        } else {
-            (ANONYMOUS_USER_TOKEN_ID, None)
-        };
+    debug!(?config);
 
-    let default_endpoint = ClientEndpoint {
-        url: config.opcua_server_url.clone(),
-        security_policy: config.opcua_security_policy.clone(),
-        security_mode: config.opcua_security_mode.clone(),
-        user_token_id: user_token_id.to_owned(),
+    Ok(config)
+}
+
+#[instrument(skip_all)]
+pub(super) fn create_session(
+    client: &mut Client,
+    config: &PartnerConfig,
+) -> Result<Arc<RwLock<Session>>, ()> {
+    let user_identity_token = if let (Some(user), Some(pass)) = (&config.user, &config.password) {
+        IdentityToken::UserName(user.clone(), pass.clone())
+    } else {
+        IdentityToken::Anonymous
     };
 
-    let cert_key_prefix = format!("{}-{}", env!("CARGO_PKG_NAME"), partner_id);
+    let endpoint: EndpointDescription = (
+        config.server_url.as_str(),
+        config.security_policy.as_str(),
+        MessageSecurityMode::from(config.security_mode.as_str()),
+    )
+        .into();
 
-    let mut client_builder = ClientBuilder::new()
-        .application_name(env!("CARGO_PKG_DESCRIPTION"))
-        .product_uri(PRODUCT_URI)
-        .application_uri(format!("{PRODUCT_URI}:{partner_id}"))
-        .pki_dir(config.pki_dir.clone())
-        .certificate_path(format!("own/{cert_key_prefix}-cert.der"))
-        .private_key_path(format!("private/{cert_key_prefix}-key.pem"))
-        .endpoint("default", default_endpoint)
-        .default_endpoint("default")
-        .session_retry_interval(2000)
-        .session_retry_limit(10)
-        .session_timeout(1_200_000)
-        .multi_threaded_executor();
-
-    if let Some(token) = user_identity_token {
-        client_builder = client_builder.user_token(user_token_id, token);
-    }
-
-    let mut client = client_builder
-        .client()
-        .context("error building the client")?;
-
-    let session = client
-        .connect_to_endpoint_id(None)
-        .context("error establishing session")?;
+    let session = match client.connect_to_endpoint(endpoint, user_identity_token) {
+        Ok(session) => session,
+        Err(err) => {
+            error!(kind = "endpoint connection", %err);
+            return Err(());
+        }
+    };
 
     {
-        let mut session = session.write();
-        session.set_connection_status_callback(ConnectionStatusCallback::new(|connected| {
+        let mut session = session.try_write_for(SESSION_LOCK_TIMEOUT).ok_or_else(|| {
+            error!(kind = "session lock timeout");
+        })?;
+        let partner_arc = ArcStr::from(&config.partner_id);
+        let partner_id = partner_arc.clone();
+        session.set_connection_status_callback(ConnectionStatusCallback::new(move |connected| {
             let _entered = info_span!("connection status callback").entered();
-            info!(msg = "connection status changed", connected);
+            info!(msg = "connection status changed", connected, %partner_id);
         }));
-        session.set_session_closed_callback(SessionClosedCallback::new(|status_code| {
+        let partner_id = partner_arc;
+        session.set_session_closed_callback(SessionClosedCallback::new(move |status_code| {
             let _entered = info_span!("session closed callback").entered();
-            info!(msg = "session has been closed", %status_code);
+            let partner_id = partner_id.clone();
+            info!(msg = "session has been closed", %status_code, %partner_id);
         }))
     }
 
-    info!(status = "success");
     Ok(session)
 }

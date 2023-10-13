@@ -1,15 +1,14 @@
 use std::time::Duration;
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
 use clap::Parser;
-use mongodb::{
-    bson::{doc, DateTime},
-    options::{ClientOptions, FindOneOptions},
-    Client,
-};
+use futures_util::TryStreamExt;
+use mongodb::bson::doc;
+use mongodb::options::{ClientOptions, FindOptions};
+use mongodb::Client;
 use serde::Deserialize;
 
-use opcua_proxy::{CommonArgs, DATABASE, OPCUA_HEALTH_COLL, OPCUA_HEALTH_INTERVAL};
+use opcua_proxy::{CommonArgs, OPCUA_HEALTH_COLL, OPCUA_HEALTH_INTERVAL};
 
 const SERVER_SELECTION_TIMEOUT: Duration = Duration::from_secs(1);
 
@@ -22,24 +21,22 @@ struct Args {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Health {
-    updated_at: DateTime,
+    #[serde(rename = "_id")]
+    id: String,
     updated_since: i64,
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let app_name = format!("OPC-UA proxy healtheck ({})", args.common.partner_id);
-
     let mut options = ClientOptions::parse(args.common.mongodb_uri).await?;
-    options.app_name = app_name.into();
+    options.app_name = env!("CARGO_PKG_NAME").to_string().into();
     options.server_selection_timeout = SERVER_SELECTION_TIMEOUT.into();
 
     let client = Client::with_options(options)?;
-    let db = client.database(DATABASE);
+    let db = client.database(&args.common.mongodb_database);
     let collection = db.collection::<Health>(OPCUA_HEALTH_COLL);
-    let query = doc! { "_id": &args.common.partner_id };
     let projection = doc! {
         "updatedAt": true,
         "updatedSince" : {
@@ -50,15 +47,32 @@ async fn main() -> Result<()> {
             },
         },
     };
-    let options = FindOneOptions::builder().projection(projection).build();
+    let options = FindOptions::builder().projection(projection).build();
 
-    let health = collection
-        .find_one(query, options)
+    let health_documents = collection
+        .find(None, options)
         .await?
-        .ok_or_else(|| anyhow!("document was not found"))?;
+        .try_collect::<Vec<_>>()
+        .await?;
 
-    if health.updated_since > OPCUA_HEALTH_INTERVAL.into() {
-        return Err(anyhow!("outdated health data: {}", health.updated_at));
+    if health_documents.is_empty() {
+        return Err(anyhow!("health collection is empty or does not exist"));
+    }
+
+    let outdated_ids = health_documents
+        .into_iter()
+        .filter_map(|doc| {
+            if doc.updated_since > OPCUA_HEALTH_INTERVAL.into() {
+                Some(doc.id)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+
+    if !outdated_ids.is_empty() {
+        let ids = outdated_ids.join(", ");
+        return Err(anyhow!("outdated health for ids: {ids}"));
     }
 
     Ok(())

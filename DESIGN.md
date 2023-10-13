@@ -2,7 +2,7 @@
 
 ## Architecture
 
-Implementation follows [option 3](#option-3-one-opc-ua-proxy-per-opc-ua-server-with-mongodb).
+Implementation follows [option 4](#option-4-one-service-for-all-opc-ua-servers-with-mongodb).
 
 ### Option 1: unique OPC-UA proxy (with Centrifugo)
 
@@ -71,5 +71,20 @@ flowchart LR
         proxy1 & proxy2 & proxy3 -- updates document --> MongoDB
         proxy4 -. replaces document .-> MongoDB
         TSDB -- scrapes --> MongoDB
+    end
+```
+
+### Option 4: one service for all OPC-UA servers (with MongoDB)
+
+```mermaid
+flowchart LR
+    classDef dashed stroke-dasharray: 3 3
+    opc1[OPC Server] <-- "🡰 subscribes\nnotifies 🡲" --> opcua-proxy[OPC-UA proxy]
+    opc2[OPC Server] <-- "🡰 subscribes\nnotifies 🡲" --> opcua-proxy[OPC-UA proxy]
+    opc3[OPC Server] <-- "🡰 subscribes\nnotifies 🡲" --> opcua-proxy[OPC-UA proxy]
+    opc4[OPC Server] <-. "🡰 subscribes\nnotifies 🡲" .-> opcua-proxy[OPC-UA proxy]
+    class opc4 dashed
+    subgraph internal
+        opcua-proxy[OPC-UA proxy] -- updates documents --> MongoDB
     end
 ```

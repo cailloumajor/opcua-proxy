@@ -2,10 +2,19 @@ version: "3.4"
 
 services:
 
-  opcua-server:
+  opcua-server-first:
     image: mcr.microsoft.com/iotedge/opc-plc:2.9
     command:
-      - --plchostname=opcua-server
+      - --plchostname=opcua-server-first
+      - --unsecuretransport
+    user: ${OPCUA_SERVER_UID}:${OPCUA_SERVER_GID}
+    volumes:
+      - ./pki-server:/app/pki
+
+  opcua-server-second:
+    image: mcr.microsoft.com/iotedge/opc-plc:2.9
+    command:
+      - --plchostname=opcua-server-second
       - --disableanonymousauth
     user: ${OPCUA_SERVER_UID}:${OPCUA_SERVER_GID}
     volumes:
@@ -15,7 +24,6 @@ services:
     image: mongo:7.0
     volumes:
       - ./initial-data.mongodb:/usr/src/initial-data.mongodb
-      - ./tests-nodata.mongodb:/usr/src/tests-nodata.mongodb
       - ./tests.mongodb:/usr/src/tests.mongodb:ro
 
   config-api:
@@ -24,7 +32,6 @@ services:
       - 3000:3000
     volumes:
       - ./config-api/config.json:/usr/src/config.json:ro
-      - ./config-api/routes.json:/usr/src/routes.json:ro
 
   opcua-proxy:
     build: ..
@@ -32,11 +39,8 @@ services:
       - /usr/local/bin/opcua-proxy
       - --verbose
     environment:
-      - PARTNER_ID=integration-tests
-      - CONFIG_API_URL=${CONFIG_API_URL}
+      - MONGODB_DATABASE=opcua
+      - CONFIG_API_URL=http://config-api:3000/config
       - PKI_DIR=/pki
-      - OPCUA_SERVER_URL=opc.tcp://opcua-server:50000
-      - OPCUA_USER=user1
-      - OPCUA_PASSWORD=password
     volumes:
       - ./pki-client:/pki:ro

@@ -2,129 +2,126 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use anyhow::Context as _;
-use arcstr::ArcStr;
-use mongodb::bson::{self, doc, DateTime, Document};
-use mongodb::options::{ClientOptions, ReplaceOptions, UpdateOptions};
+use mongodb::bson::{self, doc, Bson, DateTime, Document};
+use mongodb::options::{ClientOptions, UpdateOptions};
 use mongodb::{Client, Database};
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, info_span, instrument, Instrument};
 
-use opcua_proxy::{DATABASE, OPCUA_DATA_COLL, OPCUA_HEALTH_COLL};
+use opcua_proxy::{CommonArgs, OPCUA_DATA_COLL, OPCUA_HEALTH_COLL};
 
 use crate::opcua::TagChange;
 
+const MESSAGE_QUEUE_CAPACITY: usize = 20;
 const VALUES_KEY: &str = "val";
 const TIMESTAMPS_KEY: &str = "ts";
 
-#[derive(Clone)]
-pub(crate) struct MongoDBDatabase {
-    partner_id: ArcStr,
-    db: Database,
+#[derive(Debug)]
+pub(crate) struct DataChangeMessage {
+    pub(crate) partner_id: String,
+    pub(crate) changes: Vec<TagChange>,
 }
 
-impl MongoDBDatabase {
+pub(crate) type DataChangeChannel = mpsc::Sender<DataChangeMessage>;
+
+#[derive(Debug)]
+pub(crate) enum HealthCommand {
+    Update(i64),
+    Remove,
+}
+
+#[derive(Debug)]
+pub(crate) struct HealthMessage {
+    pub(crate) partner_id: String,
+    pub(crate) command: HealthCommand,
+}
+
+pub(crate) type HealthChannel = mpsc::Sender<HealthMessage>;
+
+#[derive(Clone)]
+pub(crate) struct MongoDB(Database);
+
+impl MongoDB {
     #[instrument(skip_all)]
-    async fn delete_health_collection(&self) {
-        let query = doc! { "_id": self.partner_id.as_str() };
-        match self
-            .db
+    async fn drop_health_collection(&self) {
+        if let Err(err) = self
+            .0
             .collection::<Document>(OPCUA_HEALTH_COLL)
-            .delete_one(query, None)
+            .drop(None)
             .await
         {
-            Ok(delete_result) if delete_result.deleted_count > 0 => {
-                info!(msg = "deleted health collection");
-            }
-            Ok(_) => {}
-            Err(err) => {
-                error!(when = "deleting health collection", %err);
-            }
+            error!(when = "dropping health collection", %err);
+        } else {
+            info!(msg = "dropped health collection");
         }
     }
 
     #[instrument(name = "create_mongodb_database", skip_all)]
-    pub(crate) async fn create(uri: &str, partner_id: &str) -> anyhow::Result<Self> {
+    pub(crate) async fn create(uri: &str, config: &CommonArgs) -> anyhow::Result<Self> {
         let mut options = ClientOptions::parse(uri)
             .await
             .context("error parsing connection string URI")?;
-        let app_name = format!("OPC-UA proxy ({partner_id})");
-        options.app_name = app_name.into();
+        options.app_name = env!("CARGO_PKG_NAME").to_string().into();
         options.server_selection_timeout = Duration::from_secs(2).into();
         let client = Client::with_options(options).context("error creating the client")?;
 
         info!(status = "success");
-        Ok(Self {
-            partner_id: ArcStr::from(partner_id),
-            db: client.database(DATABASE),
-        })
-    }
-
-    #[instrument(skip_all)]
-    pub(crate) async fn initialize_data_collection(&self) -> anyhow::Result<()> {
-        let collection = self.db.collection::<Document>(OPCUA_DATA_COLL);
-        let query = doc! { "_id": self.partner_id.as_str() };
-        let options = ReplaceOptions::builder().upsert(true).build();
-        let replacement = doc! {
-            "val": {},
-            "ts": {},
-            "updatedAt": DateTime::from_millis(-1000),
-        };
-        collection.replace_one(query, replacement, options).await?;
-
-        info!(status = "success");
-        Ok(())
+        Ok(Self(client.database(&config.mongodb_database)))
     }
 
     pub(crate) fn handle_data_change(
         &self,
         runtime: &Runtime,
-        mut messages: mpsc::Receiver<Vec<TagChange>>,
-    ) -> JoinHandle<()> {
-        let collection = self.db.collection::<Document>(OPCUA_DATA_COLL);
-        let query = doc! { "_id": self.partner_id.as_str() };
+    ) -> (DataChangeChannel, JoinHandle<()>) {
+        let (tx, mut rx) = mpsc::channel::<DataChangeMessage>(MESSAGE_QUEUE_CAPACITY);
+        let collection = self.0.collection::<Document>(OPCUA_DATA_COLL);
         let options = UpdateOptions::builder().upsert(true).build();
 
-        runtime.spawn(
+        let task = runtime.spawn(
             async move {
                 info!(status = "starting");
 
-                while let Some(message) = messages.recv().await {
+                while let Some(message) = rx.recv().await {
                     debug!(event = "message received", ?message);
-                    let mut values_map = HashMap::with_capacity(message.len());
-                    let mut timestamps_map = HashMap::with_capacity(message.len());
+                    let mut updates_map: HashMap<String, Bson> =
+                        HashMap::with_capacity(message.changes.len());
                     for TagChange {
                         tag_name,
                         value,
                         source_timestamp,
-                    } in message
+                    } in message.changes
                     {
-                        values_map.insert(format!("{VALUES_KEY}.{tag_name}"), value);
-                        timestamps_map.insert(
+                        updates_map.insert(format!("{VALUES_KEY}.{tag_name}"), value.into());
+                        updates_map.insert(
                             format!("{TIMESTAMPS_KEY}.{tag_name}"),
-                            DateTime::from_millis(source_timestamp),
+                            DateTime::from_millis(source_timestamp).into(),
                         );
                     }
-                    let values_doc = match bson::to_document(&values_map) {
-                        Ok(doc) => doc,
-                        Err(err) => {
-                            error!(when = "encoding values document", %err);
-                            continue;
+                    let updates_doc = if updates_map.is_empty() {
+                        doc! { VALUES_KEY: {}, TIMESTAMPS_KEY: {} }
+                    } else {
+                        match bson::to_document(&updates_map) {
+                            Ok(doc) => doc,
+                            Err(err) => {
+                                error!(when = "encoding updates document", %err);
+                                continue;
+                            }
                         }
                     };
-                    let timestamps_doc = match bson::to_document(&timestamps_map) {
-                        Ok(doc) => doc,
-                        Err(err) => {
-                            error!(when = "encoding timestamps document", %err);
-                            continue;
+                    let updated_at = if updates_map.is_empty() {
+                        doc! {
+                            "updatedAt": DateTime::from_millis(-1000)
                         }
+                    } else {
+                        doc! { "updatedAt": "$$NOW" }
                     };
                     let update = vec![
-                        doc! { "$addFields": { "updatedAt": "$$NOW" } },
-                        doc! { "$addFields": values_doc },
-                        doc! { "$addFields": timestamps_doc },
+                        doc! { "$addFields": updated_at },
+                        doc! { "$addFields": updates_doc },
                     ];
+                    let query = doc! { "_id": message.partner_id };
                     if let Err(err) = collection
                         .update_one(query.clone(), update, options.clone())
                         .await
@@ -136,44 +133,54 @@ impl MongoDBDatabase {
                 info!(status = "terminating");
             }
             .instrument(info_span!("mongodb_data_change_handler")),
-        )
+        );
+
+        (tx, task)
     }
 
-    pub(crate) fn handle_health(
-        &self,
-        runtime: &Runtime,
-        mut messages: mpsc::Receiver<i64>,
-    ) -> JoinHandle<()> {
-        let collection = self.db.collection::<Document>(OPCUA_HEALTH_COLL);
-        let query = doc! { "_id": self.partner_id.as_str() };
+    pub(crate) fn handle_health(&self, runtime: &Runtime) -> (HealthChannel, JoinHandle<()>) {
+        let (tx, mut rx) = mpsc::channel::<HealthMessage>(MESSAGE_QUEUE_CAPACITY);
+        let collection = self.0.collection::<Document>(OPCUA_HEALTH_COLL);
         let options = UpdateOptions::builder().upsert(true).build();
         let cloned_self = self.clone();
 
-        runtime.spawn(
+        let task = runtime.spawn(
             async move {
                 info!(status = "starting");
 
-                cloned_self.delete_health_collection().await;
+                cloned_self.drop_health_collection().await;
 
-                while let Some(message) = messages.recv().await {
-                    debug!(event="message received", %message);
-                    let update = doc! {
-                        "$set": { "serverDateTime": message },
-                        "$currentDate": { "updatedAt": true },
+                while let Some(message) = rx.recv().await {
+                    debug!(event = "message received", ?message);
+                    let query = doc! { "_id": message.partner_id };
+                    match message.command {
+                        HealthCommand::Update(server_timestamp) => {
+                            let update = doc! {
+                                "$set": { "serverDateTime": server_timestamp },
+                                "$currentDate": { "updatedAt": true },
+                            };
+                            if let Err(err) = collection
+                                .update_one(query.clone(), update, options.clone())
+                                .await
+                            {
+                                error!(when="updating document", %err);
+                            }
+                        }
+                        HealthCommand::Remove => {
+                            if let Err(err) = collection.delete_one(query, None).await {
+                                error!(when="deleting document", %err);
+                            }
+                        }
                     };
-                    if let Err(err) = collection
-                        .update_one(query.clone(), update, options.clone())
-                        .await
-                    {
-                        error!(when="updating document", %err);
-                    }
                 }
 
-                cloned_self.delete_health_collection().await;
+                cloned_self.drop_health_collection().await;
 
                 info!(status = "terminating");
             }
             .instrument(info_span!("mongodb_health_handler")),
-        )
+        );
+
+        (tx, task)
     }
 }

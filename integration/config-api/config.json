@@ -1,32 +1,46 @@
 {
-  "novalue": {
-    "tags": [
-      {
-        "type": "tag",
-        "name": "writeOnly",
-        "namespaceUri": "http://microsoft.com/Opc/OpcPlc/ReferenceTest",
-        "nodeIdentifier": "AccessRights_AccessAll_WO"
-      }
-    ]
-  },
-  "normal": {
-    "tags": [
-      {
-        "type": "container",
-        "namespaceUri": "http://opcfoundation.org/UA/",
-        "nodeIdentifier": 2256
-      },
-      {
-        "type": "container",
-        "namespaceUri": "http://microsoft.com/Opc/OpcPlc/",
-        "nodeIdentifier": "Basic"
-      },
-      {
-        "type": "tag",
-        "name": "slowNumberOfUpdates",
-        "namespaceUri": "http://microsoft.com/Opc/OpcPlc/",
-        "nodeIdentifier": "SlowNumberOfUpdates"
-      }
-    ]
-  }
+  "config": [
+    {
+      "_id": "novalue",
+      "serverUrl": "opc.tcp://opcua-server-first:50000",
+      "securityPolicy": "None",
+      "securityMode": "None",
+      "user": null,
+      "password": null,
+      "tags": [
+        {
+          "type": "tag",
+          "name": "writeOnly",
+          "namespaceUri": "http://microsoft.com/Opc/OpcPlc/ReferenceTest",
+          "nodeIdentifier": "AccessRights_AccessAll_WO"
+        }
+      ]
+    },
+    {
+      "_id": "integration-tests",
+      "serverUrl": "opc.tcp://opcua-server-second:50000",
+      "securityPolicy": "Basic256Sha256",
+      "securityMode": "SignAndEncrypt",
+      "user": "user1",
+      "password": "password",
+      "tags": [
+        {
+          "type": "container",
+          "namespaceUri": "http://opcfoundation.org/UA/",
+          "nodeIdentifier": 2256
+        },
+        {
+          "type": "container",
+          "namespaceUri": "http://microsoft.com/Opc/OpcPlc/",
+          "nodeIdentifier": "Basic"
+        },
+        {
+          "type": "tag",
+          "name": "slowNumberOfUpdates",
+          "namespaceUri": "http://microsoft.com/Opc/OpcPlc/",
+          "nodeIdentifier": "SlowNumberOfUpdates"
+        }
+      ]
+    }
+  ]
 }
