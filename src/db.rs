@@ -122,10 +122,7 @@ impl MongoDB {
                         doc! { "$addFields": updates_doc },
                     ];
                     let query = doc! { "_id": message.partner_id };
-                    if let Err(err) = collection
-                        .update_one(query.clone(), update, options.clone())
-                        .await
-                    {
+                    if let Err(err) = collection.update_one(query, update, options.clone()).await {
                         error!(when = "updating document", %err);
                     }
                 }

@@ -104,15 +104,17 @@ where
         let session = session
             .try_read_for(SESSION_LOCK_TIMEOUT)
             .ok_or_else(|| error!(kind = "session lock timeout"))?;
-        session
-            .create_monitored_items(
-                subscription_id,
-                TimestampsToReturn::Source,
-                &items_to_create,
-            )
-            .map_err(|err| {
-                error!(kind = "monitored items creation", %err);
-            })?
+        let mut create_results = Vec::with_capacity(items_to_create.len());
+        for (chunk_index, items_chunk) in items_to_create.chunks(50).enumerate() {
+            let results = session
+                .create_monitored_items(subscription_id, TimestampsToReturn::Source, items_chunk)
+                .map_err(|err| {
+                    let chunk_size = items_chunk.len();
+                    error!(kind = "monitored items creation", %err, chunk_index, chunk_size);
+                })?;
+            create_results.extend(results);
+        }
+        create_results
     };
 
     for (i, MonitoredItemCreateResult { status_code, .. }) in results.iter().enumerate() {
