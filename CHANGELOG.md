@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.0.1](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.0...v6.0.1) (2023-10-19)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate tracing to 0.1.39 ([e5f69f1](https://github.com/cailloumajor/opcua-proxy/commit/e5f69f1511978cdaad57470fdba53f1b56dccd10))
+* **deps:** update rust crate tracing to 0.1.40 ([0dc0a3a](https://github.com/cailloumajor/opcua-proxy/commit/0dc0a3adc45c68552a9e3e0c57ce9d407b4e9639))
+* **deps:** update tonistiigi/xx docker tag to v1.3.0 ([569582c](https://github.com/cailloumajor/opcua-proxy/commit/569582c6837a61c0eeb0d2967284967d347b7674))
+
 ## [6.0.0](https://github.com/cailloumajor/opcua-proxy/compare/v5.3.3...v6.0.0) (2023-10-13)
 
 
