@@ -11,7 +11,7 @@ anyhow = "1.0.75"
 arcstr = "1.1.5"
 clap-verbosity-flag = "2.0.1"
 env_logger = { version = "0.10.0", default-features = false }
-futures-util = "0.3.28"
+futures-util = "0.3.30"
 mongodb = "2.7.0"
 serde = { version = "1.0.189", features = [ "derive" ] }
 signal-hook = { version = "0.3.17", default-features = false }
