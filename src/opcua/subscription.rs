@@ -138,7 +138,7 @@ where
     let data_change_callback = DataChangeCallback::new(move |monitored_items| {
         let _entered = info_span!("health_value_change_handler", %partner_id).entered();
         let Some(Variant::DateTime(server_time)) = monitored_items
-            .get(0)
+            .first()
             .and_then(|item| item.last_value().value.as_ref())
         else {
             error!(?monitored_items, err = "unexpected monitored items");
@@ -191,7 +191,7 @@ where
     };
 
     let status_code = results
-        .get(0)
+        .first()
         .map(|result| result.status_code)
         .ok_or_else(|| {
             error!(kind = "misssing result for monitored item creation");

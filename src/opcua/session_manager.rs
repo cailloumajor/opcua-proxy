@@ -219,8 +219,8 @@ impl SessionManager {
             };
             expected_sessions
                 .iter()
+                .filter(|&config| !session_tasks.contains_key(config))
                 .cloned()
-                .filter(|config| !session_tasks.contains_key(config))
                 .collect::<Vec<_>>()
         };
         let start_tasks_iter = to_start.into_iter().map(|session_config| {
