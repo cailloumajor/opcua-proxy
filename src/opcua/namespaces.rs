@@ -29,7 +29,7 @@ where
                 error!(kind = "reading nodes", %err);
             })?
     };
-    let data_value = read_results.get(0).ok_or_else(|| {
+    let data_value = read_results.first().ok_or_else(|| {
         error!(kind = "missing namespace array");
     })?;
     let result_variant = data_value.value.as_ref().ok_or_else(|| {
