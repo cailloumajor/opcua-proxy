@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use arcstr::ArcStr;
 use opcua::client::prelude::*;
 use opcua::sync::RwLock;
 use tracing::{error, info_span, instrument, warn};
@@ -24,7 +23,7 @@ pub(crate) struct TagChange {
 #[instrument(skip_all, fields(partner_id))]
 pub(super) fn subscribe_to_tags<T>(
     session: Arc<RwLock<T>>,
-    partner_id: ArcStr,
+    partner_id: Arc<str>,
     tag_set: Arc<Vec<Tag>>,
     data_change_channel: DataChangeChannel,
 ) -> Result<(), ()>
@@ -129,7 +128,7 @@ where
 #[instrument(skip_all, fields(partner_id))]
 pub(super) fn subscribe_to_health<T>(
     session: Arc<RwLock<T>>,
-    partner_id: ArcStr,
+    partner_id: Arc<str>,
     health_channel: HealthChannel,
 ) -> Result<(), ()>
 where
