@@ -1,5 +1,31 @@
 # Changelog
 
+## [6.0.2](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.1...v6.0.2) (2024-05-24)
+
+
+### Bug Fixes
+
+* changes in Array API (opcua 0.12.0) ([5363efd](https://github.com/cailloumajor/opcua-proxy/commit/5363efd63dbf1255d19e6cbe71610b67233c3aab))
+* **deps:** update rust crate anyhow to v1.0.86 ([45af502](https://github.com/cailloumajor/opcua-proxy/commit/45af502ae62e702680d08e8bbbfbcaed51b4bda6))
+* **deps:** update rust crate clap to 4.5.4 ([f19bd44](https://github.com/cailloumajor/opcua-proxy/commit/f19bd44c1068783519084b3a215f6b165892d44e))
+* **deps:** update rust crate clap-verbosity-flag to v2.2.0 ([04745bc](https://github.com/cailloumajor/opcua-proxy/commit/04745bc12d9642cc1a6c978c5af9771e92d31395))
+* **deps:** update rust crate env_logger to 0.11.0 ([fcaaf14](https://github.com/cailloumajor/opcua-proxy/commit/fcaaf14e0d821f32c5206dd6567f4a5e409d1c33))
+* **deps:** update rust crate futures-util to 0.3.30 ([b61f4db](https://github.com/cailloumajor/opcua-proxy/commit/b61f4dbf5be68e998c7a7ee412a99f751c5d2a2e))
+* **deps:** update rust crate mongodb to v2.8.2 ([b1631e3](https://github.com/cailloumajor/opcua-proxy/commit/b1631e377f1defa7a260679778eb0681dc364824))
+* **deps:** update rust crate opcua to 0.12.0 ([b5d2984](https://github.com/cailloumajor/opcua-proxy/commit/b5d298415918a3279a86023cdd1a1caf22078284))
+* **deps:** update rust crate reqwest to 0.12.0 ([c3349bf](https://github.com/cailloumajor/opcua-proxy/commit/c3349bf3214ee08988e57d7c98eeca2fd64f4d43))
+* **deps:** update rust crate serde to 1.0.198 ([c60f137](https://github.com/cailloumajor/opcua-proxy/commit/c60f137d8f599f93bd862f08d471c9aa29e97870))
+* **deps:** update rust crate serde to v1.0.202 ([ce1eefa](https://github.com/cailloumajor/opcua-proxy/commit/ce1eefac4a72b38ef0da9b498499a7edbfd97e88))
+* **deps:** update rust crate tokio to 1.37.0 ([aadb6bb](https://github.com/cailloumajor/opcua-proxy/commit/aadb6bb7c1f78dd32b52db87e997f295068361b2))
+* **deps:** update rust crate tokio-util to 0.7.10 ([ea7a55d](https://github.com/cailloumajor/opcua-proxy/commit/ea7a55d96433cb37ab6ab02d021cf80d21d8fc50))
+* **deps:** update rust crate tokio-util to v0.7.11 ([cf56da0](https://github.com/cailloumajor/opcua-proxy/commit/cf56da07453b35decd2c3f1724a9f0e39090cfed))
+* **deps:** update rust crate url to v2.5.0 ([df86bbe](https://github.com/cailloumajor/opcua-proxy/commit/df86bbed9c78b0a549e61f2778faa7c30a6ed1ab))
+* **deps:** update rust docker tag to v1.77.2 ([14613e2](https://github.com/cailloumajor/opcua-proxy/commit/14613e2d23283d371e24d97d756a40e1fe7d6298))
+* **deps:** update rust docker tag to v1.78.0 ([719e38f](https://github.com/cailloumajor/opcua-proxy/commit/719e38fb81edb61072ce807e5e1e10eeb912b2b4))
+* **deps:** update tokio-tracing monorepo ([2a13064](https://github.com/cailloumajor/opcua-proxy/commit/2a130648eda833c5e4fc7289aa0b8a70ee6a4f1a))
+* **deps:** update tonistiigi/xx docker tag to v1.4.0 ([188739b](https://github.com/cailloumajor/opcua-proxy/commit/188739b922943d81035322bdeefd065a933f809e))
+* remove usage of arcstr ([96f8b0a](https://github.com/cailloumajor/opcua-proxy/commit/96f8b0afad6863b8f6c7ed6787b565fe54fd3f88))
+
 ## [6.0.1](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.0...v6.0.1) (2023-10-19)
 
 
