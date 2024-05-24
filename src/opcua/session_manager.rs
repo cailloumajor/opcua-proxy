@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use arcstr::ArcStr;
 use futures_util::future::join_all;
 use opcua::client::prelude::{Client, Session, SessionCommand};
 use opcua::sync::RwLock;
@@ -123,7 +122,7 @@ impl SessionManager {
         }?;
         let namespaces = get_namespaces(session.clone())?;
         let tag_set = tag_set_from_config_groups(&config.tags, &namespaces, session.clone())?;
-        let arc_partner_id = ArcStr::from(&config.partner_id);
+        let arc_partner_id: Arc<str> = Arc::from(config.partner_id.as_str());
         let arc_tag_set = Arc::new(tag_set);
         subscribe_to_tags(
             session.clone(),
@@ -224,7 +223,7 @@ impl SessionManager {
                 .collect::<Vec<_>>()
         };
         let start_tasks_iter = to_start.into_iter().map(|session_config| {
-            let partner_id = ArcStr::from(&session_config.partner_id);
+            let partner_id: Arc<str> = Arc::from(session_config.partner_id.as_str());
             let cloned_self = self.clone();
             async move {
                 info!(msg = "starting required session", %partner_id);
@@ -244,7 +243,7 @@ impl SessionManager {
         }
         let start_tasks_iter = to_restart.into_iter().map(|session_config| {
             self.session_senders.lock().unwrap().remove(&session_config);
-            let partner_id = ArcStr::from(&session_config.partner_id);
+            let partner_id: Arc<str> = Arc::from(session_config.partner_id.as_str());
             let cloned_self = self.clone();
             async move {
                 info!(msg = "restarting failed session", %partner_id);

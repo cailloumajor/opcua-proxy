@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use arcstr::ArcStr;
 use opcua::client::prelude::*;
 use opcua::sync::RwLock;
 use serde::Deserialize;
@@ -70,7 +69,7 @@ pub(super) fn create_session(
         let mut session = session.try_write_for(SESSION_LOCK_TIMEOUT).ok_or_else(|| {
             error!(kind = "session lock timeout");
         })?;
-        let partner_arc = ArcStr::from(&config.partner_id);
+        let partner_arc: Arc<str> = Arc::from(config.partner_id.as_str());
         let partner_id = partner_arc.clone();
         session.set_connection_status_callback(ConnectionStatusCallback::new(move |connected| {
             let _entered = info_span!("connection status callback").entered();
