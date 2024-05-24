@@ -45,7 +45,7 @@ impl From<Variant> for Bson {
                 bytes: v.value.unwrap_or_default(),
             }),
             OpcUaVariant::Array(v) => {
-                if v.has_dimensions() {
+                if v.dimensions.is_some_and(|d| !d.is_empty()) {
                     warn!(kind = "unimplemented serialization for multi-dimensional arrays");
                     Bson::Null
                 } else {
@@ -253,7 +253,7 @@ mod tests {
         #[test]
         fn one_dimension_array() {
             let variant = Variant(OpcUaVariant::Array(Box::new(
-                Array::new_single(
+                Array::new(
                     VariantTypeId::Byte,
                     (1u8..=4u8).map(OpcUaVariant::from).collect::<Vec<_>>(),
                 )
