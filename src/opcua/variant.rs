@@ -1,19 +1,7 @@
 use mongodb::bson::spec::BinarySubtype;
 use mongodb::bson::{self, Bson};
 use opcua::types::Variant as OpcUaVariant;
-use serde::ser::{Serialize, Serializer};
 use tracing::{instrument, warn};
-
-struct Bytes(Vec<u8>);
-
-impl Serialize for Bytes {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_bytes(&self.0)
-    }
-}
 
 /// Wraps [opcua::types::Variant] to provide custom, seamless serializing.
 #[derive(Debug, Clone)]
