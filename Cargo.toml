@@ -26,7 +26,7 @@ default-features = false
 features = [ "std", "help", "usage", "error-context", "derive", "env" ]
 
 [dependencies.opcua]
-version = "0.11.0"
+version = "0.12.0"
 default-features = false
 features = [ "client", "vendored-openssl" ]
 
