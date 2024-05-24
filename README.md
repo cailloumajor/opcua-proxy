@@ -162,9 +162,9 @@ Options:
       --pki-dir <PKI_DIR>
           Path of the PKI directory [env: PKI_DIR=]
   -v, --verbose...
-          More output per occurrence
+          Increase logging verbosity
   -q, --quiet...
-          Less output per occurrence
+          Decrease logging verbosity
   -h, --help
           Print help
 ```
