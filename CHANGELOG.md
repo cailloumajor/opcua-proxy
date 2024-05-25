@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.0.3](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.2...v6.0.3) (2024-05-25)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate url to v2.5.0 ([51723c1](https://github.com/cailloumajor/opcua-proxy/commit/51723c1a51a1d0375afe7e621549167125b44039))
+
 ## [6.0.2](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.1...v6.0.2) (2024-05-24)
 
 
