@@ -34,7 +34,7 @@ Each element of `tags` array is an object with a `type` property and is of one o
 
 #### Nodes container
 
-This format allows to collect tags from an OPC-UA container node which has [`HasComponent`][hascomponent] forward reference(s). Each referenced node will be added to the tag set to monitor, with its [`DisplayName`][displayname] as tag name.
+This format allows to recursively collect tags from an OPC-UA container node which has [`HasComponent`][hascomponent] or [`Organizes`][organizes] forward reference(s). Each referenced node will be added to the tag set to monitor, with its [`DisplayName`][displayname] as tag name. In case of recursion, the tag name will be a chain of the `DisplayName`s, joined with dots.
 
 ```jsonc
 {
@@ -89,6 +89,7 @@ This format directly refers to a single tag.
 _\* identifier type will be inferred from JSON type._
 
 [hascomponent]: https://reference.opcfoundation.org/Core/Part3/v105/docs/7.7
+[organizes]: https://reference.opcfoundation.org/Core/Part3/docs/7.11
 [displayname]: https://reference.opcfoundation.org/Core/Part3/5.2.5/
 [nodeid]: https://reference.opcfoundation.org/v104/Core/docs/Part3/8.2.1/
 

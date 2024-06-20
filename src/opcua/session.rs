@@ -57,13 +57,11 @@ pub(super) fn create_session(
     )
         .into();
 
-    let session = match client.connect_to_endpoint(endpoint, user_identity_token) {
-        Ok(session) => session,
-        Err(err) => {
+    let session = client
+        .connect_to_endpoint(endpoint, user_identity_token)
+        .map_err(|err| {
             error!(kind = "endpoint connection", %err);
-            return Err(());
-        }
-    };
+        })?;
 
     {
         let mut session = session.try_write_for(SESSION_LOCK_TIMEOUT).ok_or_else(|| {

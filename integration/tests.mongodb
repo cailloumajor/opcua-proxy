@@ -1,54 +1,40 @@
 const assert = require("node:assert/strict");
 
-db = connect("mongodb://localhost/opcua");
+const db = connect("mongodb://localhost/opcua");
 
-result = db.data.findOne({ _id: "novalue" });
+(function testNoValue() {
+    const result = db.data.findOne({ _id: "novalue" });
 
-print(EJSON.stringify(result));
+    print(EJSON.stringify(result));
 
-assert.ok(!Object.hasOwn(result, "alreadyPresent"));
+    assert.equal(Object.keys(result.val).length, 0);
 
-assert.equal(Object.keys(result.val).length, 0);
+    assert.equal(Object.keys(result.ts).length, 0);
 
-assert.equal(Object.keys(result.ts).length, 0);
+    assert.equal(result.updatedAt.toISOString(), "1969-12-31T23:59:59.000Z");
+})();
 
-assert.equal(result.updatedAt.toISOString(), "1969-12-31T23:59:59.000Z");
+(function testIntegration() {
+    const result = db.data.findOne({ _id: "integration-tests" });
 
-result = db.data.findOne(
-    { _id: "integration-tests" },
-    {
-        state: "$val.State",
-        slowNumberOfUpdates: "$val.slowNumberOfUpdates",
-        alternatingBoolean: "$val.AlternatingBoolean",
-        randomUnsignedInt32: "$val.RandomUnsignedInt32",
-        timeDiff: {
-            $abs: {
-                $subtract: [
-                    { $dateFromString: { dateString: "$val.CurrentTime" } },
-                    { $dateFromString: { dateString: "$val.StartTime" } },
-                ],
-            },
-        },
-        timestampDiff: {
-            $dateDiff: {
-                startDate: "$ts.State",
-                endDate: "$$NOW",
-                unit: "millisecond",
-            },
-        },
-    }
-);
+    print(EJSON.stringify(result));
 
-print(EJSON.stringify(result));
+    assert.equal(result.val.State, 0);
 
-assert.equal(result.state, 0);
+    assert.equal(result.val.slowNumberOfUpdates, -1);
 
-assert.equal(result.slowNumberOfUpdates, -1);
+    assert.equal(typeof result.val.AlternatingBoolean, "boolean");
 
-assert.equal(typeof result.alternatingBoolean, "boolean");
+    assert.ok(result.val.RandomUnsignedInt32 > 0, "RandomUnsignedInt32");
 
-assert.ok(result.randomUnsignedInt32 > 0);
+    const timeDiff =
+        Date.parse(result.val.CurrentTime) - Date.parse(result.val.StartTime);
+    assert.ok(timeDiff > 0, `timeDiff = ${timeDiff}`);
 
-assert.ok(result.timeDiff > 0);
+    const timestampDiff = Date.now() - result.ts.State;
+    assert.ok(timestampDiff > 0, `timestampDiff = ${timestampDiff}`);
 
-assert.ok(result.timestampDiff > 0);
+    assert.equal(result.val.ParameterSet.BaseTemperature, 10)
+
+    assert.equal(result.val.ParameterSet.TargetTemperature, 80)
+})();

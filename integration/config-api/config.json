@@ -39,6 +39,11 @@
           "name": "slowNumberOfUpdates",
           "namespaceUri": "http://microsoft.com/Opc/OpcPlc/",
           "nodeIdentifier": "SlowNumberOfUpdates"
+        },
+        {
+          "type": "container",
+          "namespaceUri": "http://microsoft.com/Opc/OpcPlc/Boiler",
+          "nodeIdentifier": 5017
         }
       ]
     }
