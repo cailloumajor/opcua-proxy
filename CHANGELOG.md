@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.0.4](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.3...v6.0.4) (2024-08-05)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate tokio to v1.38.0 ([9219406](https://github.com/cailloumajor/opcua-proxy/commit/921940635d1375f0d82cbb4ba9f29e72203b564b))
+
 ## [6.0.3](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.2...v6.0.3) (2024-05-25)
 
 
