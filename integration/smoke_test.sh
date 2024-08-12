@@ -109,7 +109,7 @@ fi
 
 # Start OPC-UA servers
 docker compose up -d --quiet-pull opcua-server-first opcua-server-second
-max_attempts=3
+max_attempts=5
 wait_success=
 for i in $(seq 1 $max_attempts); do
     if [[ $(find pki-server/own/certs -name "*.der" | wc -l) -eq 2 ]]; then
