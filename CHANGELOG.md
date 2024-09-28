@@ -1,5 +1,16 @@
 # Changelog
 
+## [6.0.4](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.3...v6.0.4) (2024-09-28)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate tokio to v1.38.0 ([9219406](https://github.com/cailloumajor/opcua-proxy/commit/921940635d1375f0d82cbb4ba9f29e72203b564b))
+* **deps:** update rust docker tag to v1.80.1 ([9828422](https://github.com/cailloumajor/opcua-proxy/commit/9828422571db47bbb0ff29ab4ebd111852566f66))
+* **deps:** update rust docker tag to v1.81.0 ([d166211](https://github.com/cailloumajor/opcua-proxy/commit/d166211fb33f52512cd67f971d560e0addee4f5f))
+* **deps:** update tonistiigi/xx docker tag to v1.5.0 ([fc8f964](https://github.com/cailloumajor/opcua-proxy/commit/fc8f964a30472dc1a4ed0d8075eaacf861f3f156))
+* **deps:** upgrade Rust docker tag to bookworm ([a7ebac9](https://github.com/cailloumajor/opcua-proxy/commit/a7ebac9d628ad92b70cc4a5e2a71fe7dd11cd1be))
+
 ## [6.0.3](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.2...v6.0.3) (2024-05-25)
 
 
