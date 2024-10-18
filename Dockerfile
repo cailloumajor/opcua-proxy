@@ -2,7 +2,7 @@
 
 FROM --platform=$BUILDPLATFORM tonistiigi/xx:1.5.0 AS xx
 
-FROM --platform=$BUILDPLATFORM rust:1.81.0-bookworm AS builder
+FROM --platform=$BUILDPLATFORM rust:1.82.0-bookworm AS builder
 
 COPY --from=xx / /
 
