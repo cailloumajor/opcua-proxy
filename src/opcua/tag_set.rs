@@ -52,60 +52,8 @@ where
                     error!(kind = "namespace not found", namespace_uri);
                 })?;
                 let node_id = NodeId::new(*namespace, node_identifier.clone());
-                let result_mask = (BrowseDescriptionResultMask::RESULT_MASK_DISPLAY_NAME
-                    | BrowseDescriptionResultMask::RESULT_MASK_REFERENCE_TYPE)
-                    .bits();
-                let browse_description = BrowseDescription {
-                    node_id: node_id.clone(),
-                    browse_direction: BrowseDirection::Forward,
-                    reference_type_id: ReferenceTypeId::HierarchicalReferences.into(),
-                    include_subtypes: true,
-                    node_class_mask: NodeClassMask::VARIABLE.bits(),
-                    result_mask,
-                };
-                let browse_result = {
-                    let session = session.try_read_for(SESSION_LOCK_TIMEOUT).ok_or_else(|| {
-                        error!(kind = "session lock timeout");
-                    })?;
-                    session
-                        .browse(&[browse_description])
-                        .map_err(|err| {
-                            error!(kind="Browse request", %err);
-                        })?
-                        .unwrap()
-                        .pop()
-                        .ok_or_else(|| {
-                            error!(kind = "empty Browse results");
-                        })?
-                };
-                if !browse_result.status_code.is_good() {
-                    let status_code = browse_result.status_code;
-                    error!(kind = "BrowseResult", %status_code);
-                    return Err(());
-                }
-                if !browse_result.continuation_point.is_null() {
-                    error!(kind = "unimplemented ContinuationPoint");
-                    return Err(());
-                }
-                let references = browse_result.references.ok_or_else(|| {
-                    error!(kind = "NodeId is missing forward reference", %node_id);
-                })?;
-                for ReferenceDescription {
-                    node_id,
-                    display_name,
-                    ..
-                } in references.into_iter().filter(|ref_description| {
-                    use ReferenceTypeId::*;
-                    matches!(
-                        ref_description.reference_type_id.as_reference_type_id(),
-                        Ok(HasComponent | Organizes)
-                    )
-                }) {
-                    tag_set.push(Tag {
-                        name: display_name.to_string(),
-                        node_id: node_id.node_id,
-                    });
-                }
+                let cloned_session = Arc::clone(&session);
+                add_browsed_nodes(&mut tag_set, cloned_session, node_id, "")?;
             }
             TagsConfigGroup::Tag {
                 name,
@@ -125,6 +73,85 @@ where
     }
 
     Ok(tag_set)
+}
+
+fn add_browsed_nodes<T>(
+    tag_set: &mut Vec<Tag>,
+    session: Arc<RwLock<T>>,
+    node_id: NodeId,
+    name_chain: &str,
+) -> Result<(), ()>
+where
+    T: ViewService,
+{
+    const NODE_CLASS_MASK: u32 = NodeClassMask::VARIABLE.bits() | NodeClassMask::OBJECT.bits();
+    const RESULT_MASK: u32 = BrowseDescriptionResultMask::RESULT_MASK_DISPLAY_NAME.bits()
+        | BrowseDescriptionResultMask::RESULT_MASK_REFERENCE_TYPE.bits()
+        | BrowseDescriptionResultMask::RESULT_MASK_TYPE_DEFINITION.bits();
+    let browse_description = BrowseDescription {
+        node_id: node_id.clone(),
+        browse_direction: BrowseDirection::Forward,
+        reference_type_id: ReferenceTypeId::HierarchicalReferences.into(),
+        include_subtypes: true,
+        node_class_mask: NODE_CLASS_MASK,
+        result_mask: RESULT_MASK,
+    };
+    let browse_result = {
+        let session = session.try_read_for(SESSION_LOCK_TIMEOUT).ok_or_else(|| {
+            error!(kind = "session lock timeout");
+        })?;
+        session
+            .browse(&[browse_description])
+            .map_err(|err| {
+                error!(kind="Browse request", %err);
+            })?
+            .unwrap()
+            .pop()
+            .ok_or_else(|| {
+                error!(kind = "empty Browse results");
+            })?
+    };
+    if !browse_result.status_code.is_good() {
+        let status_code = browse_result.status_code;
+        error!(kind = "BrowseResult", %status_code);
+        return Err(());
+    }
+    if !browse_result.continuation_point.is_null() {
+        error!(kind = "unimplemented ContinuationPoint");
+        return Err(());
+    }
+    let references = browse_result.references.ok_or_else(|| {
+        error!(kind = "NodeId is missing forward reference", %node_id);
+    })?;
+    for ReferenceDescription {
+        node_id,
+        display_name,
+        type_definition,
+        ..
+    } in references.into_iter().filter(|ref_description| {
+        use ReferenceTypeId::*;
+        matches!(
+            ref_description.reference_type_id.as_reference_type_id(),
+            Ok(HasComponent | Organizes)
+        )
+    }) {
+        let new_name_chain = if name_chain.is_empty() {
+            display_name.to_string()
+        } else {
+            format!("{name_chain}.{display_name}")
+        };
+        if type_definition.node_id == VariableTypeId::BaseDataVariableType.into() {
+            tag_set.push(Tag {
+                name: new_name_chain,
+                node_id: node_id.node_id,
+            });
+        } else {
+            let cloned_session = Arc::clone(&session);
+            add_browsed_nodes(tag_set, cloned_session, node_id.node_id, &new_name_chain)?;
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
