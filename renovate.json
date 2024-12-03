@@ -18,6 +18,11 @@
     {
       "matchDepTypes": ["dev-dependencies", "devDependencies"],
       "automerge": true
+    },
+    {
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
     }
   ]
 }
