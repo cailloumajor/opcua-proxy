@@ -22,7 +22,7 @@
     {
       "matchDepTypes": ["dependencies"],
       "matchUpdateTypes": ["patch"],
-      "automerge": true,
+      "automerge": true
     }
   ]
 }
