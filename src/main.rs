@@ -14,10 +14,7 @@ use tracing_log::format_trace;
 use url::Url;
 
 mod db;
-mod level_filter;
 mod opcua;
-
-use level_filter::VerbosityLevelFilter;
 
 #[derive(Parser)]
 struct Args {
@@ -50,7 +47,7 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     tracing_subscriber::fmt()
-        .with_max_level(VerbosityLevelFilter::from(&args.verbose))
+        .with_max_level(args.verbose.tracing_level())
         .init();
     env_logger::Builder::from_env(Env::default().default_filter_or("info,opcua=warn"))
         .format(|_, record| format_trace(record))
