@@ -1,5 +1,31 @@
 # Changelog
 
+## [6.0.5](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.4...v6.0.5) (2024-12-30)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate anyhow to v1.0.94 ([#533](https://github.com/cailloumajor/opcua-proxy/issues/533)) ([ba48253](https://github.com/cailloumajor/opcua-proxy/commit/ba48253bc30317129e42608771859e577116c0ce))
+* **deps:** update rust crate anyhow to v1.0.95 ([#547](https://github.com/cailloumajor/opcua-proxy/issues/547)) ([6ec3588](https://github.com/cailloumajor/opcua-proxy/commit/6ec3588e865a2b28121178617f60ceac434f10b2))
+* **deps:** update rust crate clap to v4.5.22 ([#534](https://github.com/cailloumajor/opcua-proxy/issues/534)) ([fbff7c8](https://github.com/cailloumajor/opcua-proxy/commit/fbff7c8219e0146cc774dcc18daa8e4d88519bc1))
+* **deps:** update rust crate clap-verbosity-flag to v3 ([4d836df](https://github.com/cailloumajor/opcua-proxy/commit/4d836df78e4e6ce69a68425e2f8bde6810cf24ae))
+* **deps:** update rust crate clap-verbosity-flag to v3 ([522a742](https://github.com/cailloumajor/opcua-proxy/commit/522a7426c7d1fd3e0464faca7a29da49b8875933))
+* **deps:** update rust crate clap-verbosity-flag to v3.0.2 ([#552](https://github.com/cailloumajor/opcua-proxy/issues/552)) ([b5f8593](https://github.com/cailloumajor/opcua-proxy/commit/b5f8593e0b054d565577526bac78750e8075ac4b))
+* **deps:** update rust crate env_logger to v0.11.6 ([#546](https://github.com/cailloumajor/opcua-proxy/issues/546)) ([8474a4c](https://github.com/cailloumajor/opcua-proxy/commit/8474a4c7dadb040ab2201590ebe39dacc1dd94b8))
+* **deps:** update rust crate reqwest to v0.12.10 ([#549](https://github.com/cailloumajor/opcua-proxy/issues/549)) ([9c45117](https://github.com/cailloumajor/opcua-proxy/commit/9c451170cf56d4fd793f6b0691fbe66c522d987a))
+* **deps:** update rust crate reqwest to v0.12.11 ([#550](https://github.com/cailloumajor/opcua-proxy/issues/550)) ([3ee6e6d](https://github.com/cailloumajor/opcua-proxy/commit/3ee6e6dc066e509087e74dff2d6878f17ec0bc9d))
+* **deps:** update rust crate serde to v1.0.216 ([#542](https://github.com/cailloumajor/opcua-proxy/issues/542)) ([8661ba8](https://github.com/cailloumajor/opcua-proxy/commit/8661ba89710e305bc4630c19953aaa7ff2344382))
+* **deps:** update rust crate serde to v1.0.217 ([#551](https://github.com/cailloumajor/opcua-proxy/issues/551)) ([38459bd](https://github.com/cailloumajor/opcua-proxy/commit/38459bd960f8395697d0ebb30fa5690e1ea2e20b))
+* **deps:** update rust crate tokio to v1.42.0 ([4889d11](https://github.com/cailloumajor/opcua-proxy/commit/4889d11bfac9c7a5d83d207572029ae47a3a0a1a))
+* **deps:** update rust crate tokio to v1.42.0 ([7da9141](https://github.com/cailloumajor/opcua-proxy/commit/7da91416f46dca55d1eb2f5f736861de92f4b136))
+* **deps:** update rust crate tokio-util to v0.7.13 ([#536](https://github.com/cailloumajor/opcua-proxy/issues/536)) ([1b9894b](https://github.com/cailloumajor/opcua-proxy/commit/1b9894bab30d39df2d87e2cb5b68d593e241b9fc))
+* **deps:** update rust docker tag to v1.82.0 ([793ad52](https://github.com/cailloumajor/opcua-proxy/commit/793ad525134e80133125dba196444ffac3045b06))
+* **deps:** update rust docker tag to v1.82.0 ([4400230](https://github.com/cailloumajor/opcua-proxy/commit/44002301cad53ab8578424d5fd2d7dc565bfd901))
+* **deps:** update rust docker tag to v1.83.0 ([81c62fc](https://github.com/cailloumajor/opcua-proxy/commit/81c62fc3935e4f4e4c2188c40e3c2dc814beca47))
+* **deps:** update rust docker tag to v1.83.0 ([25172e5](https://github.com/cailloumajor/opcua-proxy/commit/25172e5ea23489c461f1c7c1e030ed53e4f617b8))
+* **deps:** update tonistiigi/xx docker tag to v1.6.1 ([7ec048e](https://github.com/cailloumajor/opcua-proxy/commit/7ec048eac0f3433e791079e9c59c5d74dea75648))
+* **deps:** update tonistiigi/xx docker tag to v1.6.1 ([aebaa4e](https://github.com/cailloumajor/opcua-proxy/commit/aebaa4e3ec56634ba14ba6204533a44767b80096))
+
 ## [6.0.4](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.3...v6.0.4) (2024-09-28)
 
 
