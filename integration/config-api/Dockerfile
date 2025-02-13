@@ -1,4 +1,4 @@
-FROM node:22.13-alpine
+FROM node:22.14-alpine
 
 WORKDIR /usr/src
 
