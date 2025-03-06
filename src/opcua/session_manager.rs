@@ -7,7 +7,7 @@ use opcua::client::prelude::{Client, Session, SessionCommand};
 use opcua::sync::RwLock;
 use tokio::sync::oneshot;
 use tokio::task::spawn_blocking;
-use tokio::time::{interval, MissedTickBehavior};
+use tokio::time::{MissedTickBehavior, interval};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, instrument, warn};
 use url::Url;
@@ -17,7 +17,7 @@ use crate::db::{
 };
 
 use super::namespaces::get_namespaces;
-use super::session::{create_session, fetch_partners_config, PartnerConfig};
+use super::session::{PartnerConfig, create_session, fetch_partners_config};
 use super::subscription::{subscribe_to_health, subscribe_to_tags};
 use super::tag_set::tag_set_from_config_groups;
 
