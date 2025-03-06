@@ -3,9 +3,9 @@ use std::time::Duration;
 use anyhow::anyhow;
 use clap::Parser;
 use futures_util::TryStreamExt;
+use mongodb::Client;
 use mongodb::bson::doc;
 use mongodb::options::{ClientOptions, FindOptions};
-use mongodb::Client;
 use serde::Deserialize;
 
 use opcua_proxy::{CommonArgs, OPCUA_HEALTH_COLL, OPCUA_HEALTH_INTERVAL};
@@ -50,7 +50,8 @@ async fn main() -> anyhow::Result<()> {
     let options = FindOptions::builder().projection(projection).build();
 
     let health_documents = collection
-        .find(None, options)
+        .find(doc! {})
+        .with_options(options)
         .await?
         .try_collect::<Vec<_>>()
         .await?;

@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use anyhow::Context as _;
-use mongodb::bson::{self, doc, Bson, DateTime, Document};
+use mongodb::bson::{self, Bson, DateTime, Document, doc};
 use mongodb::options::{ClientOptions, UpdateOptions};
 use mongodb::{Client, Database};
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
-use tracing::{debug, error, info, info_span, instrument, Instrument};
+use tracing::{Instrument, debug, error, info, info_span, instrument};
 
 use opcua_proxy::{CommonArgs, OPCUA_DATA_COLL, OPCUA_HEALTH_COLL};
 
@@ -49,7 +49,7 @@ impl MongoDB {
         if let Err(err) = self
             .0
             .collection::<Document>(OPCUA_HEALTH_COLL)
-            .drop(None)
+            .drop()
             .await
         {
             error!(when = "dropping health collection", %err);
@@ -123,7 +123,8 @@ impl MongoDB {
                     ];
                     let query = doc! { "_id": message.partner_id };
                     if let Err(err) = collection
-                        .update_one(query.clone(), update, options.clone())
+                        .update_one(query.clone(), update)
+                        .with_options(options.clone())
                         .await
                     {
                         error!(when = "updating document", %err);
@@ -160,14 +161,15 @@ impl MongoDB {
                                 "$currentDate": { "updatedAt": true },
                             };
                             if let Err(err) = collection
-                                .update_one(query.clone(), update, options.clone())
+                                .update_one(query.clone(), update)
+                                .with_options(options.clone())
                                 .await
                             {
                                 error!(when="updating document", %err);
                             }
                         }
                         HealthCommand::Remove => {
-                            if let Err(err) = collection.delete_one(query, None).await {
+                            if let Err(err) = collection.delete_one(query).await {
                                 error!(when="deleting document", %err);
                             }
                         }

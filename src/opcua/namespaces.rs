@@ -116,11 +116,10 @@ mod tests {
                     TestCases::NoValue => Ok(vec![DataValue::null()]),
                     TestCases::NotAnArray => Ok(vec![Variant::from(false).into()]),
                     TestCases::BadMemberType => Ok(vec![Variant::from(vec![false]).into()]),
-                    TestCases::Success => Ok(vec![Variant::from(vec![
-                        "urn:ns:ns1".to_string(),
-                        "urn:ns:ns2".to_string(),
-                    ])
-                    .into()]),
+                    TestCases::Success => Ok(vec![
+                        Variant::from(vec!["urn:ns:ns1".to_string(), "urn:ns:ns2".to_string()])
+                            .into(),
+                    ]),
                 }
             }
 
