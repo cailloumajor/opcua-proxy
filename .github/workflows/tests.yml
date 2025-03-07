@@ -42,7 +42,7 @@ jobs:
           toolchain: ${{ steps.get-rust-version.outputs.RUST_VERSION }}
           components: rustfmt, clippy, llvm-tools-preview
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.7
+        uses: mozilla-actions/sccache-action@v0.0.8
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
       - name: Lint code with Clippy
