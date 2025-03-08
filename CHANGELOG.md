@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.0.6](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.5...v6.0.6) (2025-03-08)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate mongodb to v3.2.2 ([#585](https://github.com/cailloumajor/opcua-proxy/issues/585)) ([6cc070b](https://github.com/cailloumajor/opcua-proxy/commit/6cc070b07d19babfd686ec8e494bfb4ae04d17ab))
+* **deps:** update rust crate tokio to v1.44.0 ([#589](https://github.com/cailloumajor/opcua-proxy/issues/589)) ([aaaf70d](https://github.com/cailloumajor/opcua-proxy/commit/aaaf70d7c055708a79a7ccbe4dd2d277bcf1b65f))
+
 ## [6.0.5](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.4...v6.0.5) (2025-03-06)
 
 
