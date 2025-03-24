@@ -63,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
     let outdated_ids = health_documents
         .into_iter()
         .filter_map(|doc| {
-            if doc.updated_since > OPCUA_HEALTH_INTERVAL.into() {
+            if doc.updated_since > i64::from(OPCUA_HEALTH_INTERVAL) {
                 Some(doc.id)
             } else {
                 None
