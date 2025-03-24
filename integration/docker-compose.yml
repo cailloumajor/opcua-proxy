@@ -1,7 +1,7 @@
 services:
 
   opcua-server-first:
-    image: mcr.microsoft.com/iotedge/opc-plc:2.12.30
+    image: mcr.microsoft.com/iotedge/opc-plc:2.12.31
     command:
       - --plchostname=opcua-server-first
       - --unsecuretransport
@@ -10,7 +10,7 @@ services:
       - ./pki-server:/app/pki
 
   opcua-server-second:
-    image: mcr.microsoft.com/iotedge/opc-plc:2.12.30
+    image: mcr.microsoft.com/iotedge/opc-plc:2.12.31
     command:
       - --plchostname=opcua-server-second
       - --disableanonymousauth
