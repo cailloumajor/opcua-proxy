@@ -26,10 +26,6 @@ services:
 
   config-api:
     build: ./config-api
-    ports:
-      - 3000:3000
-    volumes:
-      - ./config-api/config.json:/usr/src/config.json:ro
 
   opcua-proxy:
     build: ..

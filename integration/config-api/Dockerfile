@@ -1,11 +1,8 @@
-FROM node:22.14-alpine
+FROM denoland/deno:distroless-2.2.6
 
-WORKDIR /usr/src
+WORKDIR /app
 
-COPY package.json ./
-
-# hadolint ignore=DL3060
-RUN yarn install --no-lockfile
+COPY main.ts check.ts ./
 
 EXPOSE 3000
-CMD ["yarn", "start"]
+CMD ["run", "--allow-net", "main.ts"]
