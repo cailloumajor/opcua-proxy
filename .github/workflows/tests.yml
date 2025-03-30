@@ -91,4 +91,5 @@ jobs:
         run: ./smoke_test.sh --log-file ${{ runner.temp }}/integration_tests.log
         working-directory: integration
       - name: Print service logs
+        if: ${{ !cancelled() }}
         run: cat ${{ runner.temp }}/integration_tests.log

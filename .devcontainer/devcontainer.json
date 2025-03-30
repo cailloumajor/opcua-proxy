@@ -17,6 +17,7 @@
 
     "features": {
         "ghcr.io/devcontainers/features/common-utils:2": {},
+        "ghcr.io/devcontainers-community/features/deno:1": {},
         "ghcr.io/devcontainers/features/rust:1": {
             "version": "none"
         }
@@ -31,6 +32,14 @@
                 "[toml][rust]": {
                     "editor.formatOnSave": true
                 },
+                "[typescript]": {
+                    "editor.formatOnSave": true,
+                    "editor.defaultFormatter": "denoland.vscode-deno"
+                },
+                "editor.defaultFormatter": null, // Cancel deno feature behavior.
+                "deno.enablePaths": [
+                    "./integration/config-api"
+                ],
                 "rust-analyzer.check.command": "clippy"
             },
             // Add the IDs of extensions you want installed when the container is created.
