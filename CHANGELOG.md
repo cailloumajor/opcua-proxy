@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.0.7](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.6...v6.0.7) (2025-04-07)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate clap to v4.5.35 ([#611](https://github.com/cailloumajor/opcua-proxy/issues/611)) ([f2dbc7c](https://github.com/cailloumajor/opcua-proxy/commit/f2dbc7c6a14bcfa31b6555cfcbb7f40aeb98583f))
+* **deps:** update rust crate env_logger to v0.11.8 ([#612](https://github.com/cailloumajor/opcua-proxy/issues/612)) ([88a63f4](https://github.com/cailloumajor/opcua-proxy/commit/88a63f46cd9c36cfb97189fdc18696417d3d6d19))
+* **deps:** update rust crate tokio to v1.44.2 ([#616](https://github.com/cailloumajor/opcua-proxy/issues/616)) ([81d5c93](https://github.com/cailloumajor/opcua-proxy/commit/81d5c93ff9556b546883a4b56b54d00ee0edc99d))
+
 ## [6.0.6](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.5...v6.0.6) (2025-03-30)
 
 
