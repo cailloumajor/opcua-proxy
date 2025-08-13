@@ -1,14 +1,34 @@
-name: Automated delivery
+name: Automated release and publish
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
 
 jobs:
-  docker-release:
-    name: Build and release Docker image
+  release-please:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release-please.outputs.release_created }}
+    steps:
+      - id: release-please
+        uses: googleapis/release-please-action@v4
+        with:
+          # Token permissions: read access to metadata, read and write access to
+          # actions, code and pull requests.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+
+  publish:
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+    needs: release-please
+    if: needs.release-please.outputs.release_created
+    permissions:
+      contents: read
+      id-token: write # The OIDC ID token is used for authentication with JSR.
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
