@@ -47,3 +47,6 @@ features = [ "std" ]
 version = "0.3"
 default-features = false
 features = [ "ansi", "fmt", "parking_lot", "smallvec", "std" ]
+
+[dev-dependencies]
+trycmd = "0.15.10"

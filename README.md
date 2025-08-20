@@ -148,7 +148,7 @@ sequenceDiagram
 
 ## Configuration
 
-```ShellSession
+```console
 $ opcua-proxy --help
 Usage: opcua-proxy [OPTIONS] --mongodb-database <MONGODB_DATABASE> --config-api-url <CONFIG_API_URL> --pki-dir <PKI_DIR>
 
@@ -167,4 +167,5 @@ Options:
           Decrease logging verbosity
   -h, --help
           Print help
+
 ```
