@@ -1,5 +1,15 @@
 # Changelog
 
+## [6.0.9](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.8...v6.0.9) (2025-08-25)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate clap-verbosity-flag to v3.0.4 ([#682](https://github.com/cailloumajor/opcua-proxy/issues/682)) ([61e7c48](https://github.com/cailloumajor/opcua-proxy/commit/61e7c48f93a3f550feef3e9b53b72bdca55a9299))
+* **deps:** update rust crate mongodb to v3.2.5 ([#687](https://github.com/cailloumajor/opcua-proxy/issues/687)) ([88cc2db](https://github.com/cailloumajor/opcua-proxy/commit/88cc2db2cf429605f3a26351561af9a3352083c0))
+* **deps:** update rust crate url to v2.5.6 ([#686](https://github.com/cailloumajor/opcua-proxy/issues/686)) ([b596567](https://github.com/cailloumajor/opcua-proxy/commit/b596567c6c582d7baaf806f8e5473273241458cb))
+* **deps:** update rust crate url to v2.5.7 ([#688](https://github.com/cailloumajor/opcua-proxy/issues/688)) ([c74d017](https://github.com/cailloumajor/opcua-proxy/commit/c74d017f15591d9fa120017b2461b485c1e0535d))
+
 ## [6.0.8](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.7...v6.0.8) (2025-08-14)
 
 
