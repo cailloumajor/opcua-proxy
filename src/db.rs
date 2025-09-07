@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use anyhow::Context as _;
-use mongodb::bson::{self, Bson, DateTime, Document, doc};
+use mongodb::bson::{Bson, DateTime, Document, doc};
 use mongodb::options::{ClientOptions, UpdateOptions};
 use mongodb::{Client, Database};
 use tokio::runtime::Runtime;
@@ -99,18 +99,13 @@ impl MongoDB {
                             DateTime::from_millis(source_timestamp).into(),
                         );
                     }
-                    let updates_doc = if updates_map.is_empty() {
+                    let empty_updates_map = updates_map.is_empty();
+                    let updates_doc = if empty_updates_map {
                         doc! { VALUES_KEY: {}, TIMESTAMPS_KEY: {} }
                     } else {
-                        match bson::to_document(&updates_map) {
-                            Ok(doc) => doc,
-                            Err(err) => {
-                                error!(when = "encoding updates document", %err);
-                                continue;
-                            }
-                        }
+                        updates_map.into_iter().collect()
                     };
-                    let updated_at = if updates_map.is_empty() {
+                    let updated_at = if empty_updates_map {
                         doc! {
                             "updatedAt": DateTime::from_millis(-1000)
                         }
