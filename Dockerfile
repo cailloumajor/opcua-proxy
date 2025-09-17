@@ -2,7 +2,7 @@
 
 FROM --platform=$BUILDPLATFORM tonistiigi/xx:1.9.0 AS xx
 
-FROM --platform=$BUILDPLATFORM rust:1.92.0-bookworm AS builder
+FROM --platform=$BUILDPLATFORM rust:1.92.0-trixie AS builder
 
 COPY --from=xx / /
 
@@ -29,7 +29,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/git/db \
     xx-verify bin/*
 
 # hadolint ignore=DL3006
-FROM gcr.io/distroless/cc-debian12
+FROM gcr.io/distroless/cc-debian13
 
 WORKDIR /app
 
