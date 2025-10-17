@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM --platform=$BUILDPLATFORM tonistiigi/xx:1.7.0 AS xx
+FROM --platform=$BUILDPLATFORM tonistiigi/xx:1.8.0 AS xx
 
 FROM --platform=$BUILDPLATFORM rust:1.90.0-bookworm AS builder
 
