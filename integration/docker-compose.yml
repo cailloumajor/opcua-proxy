@@ -19,7 +19,7 @@ services:
       - ./pki-server:/app/pki
 
   mongodb:
-    image: mongo:7.0
+    image: mongo:8.2
     volumes:
       - ./initial-data.mongodb:/usr/src/initial-data.mongodb
       - ./tests.mongodb:/usr/src/tests.mongodb:ro
