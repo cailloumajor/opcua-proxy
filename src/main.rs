@@ -1,7 +1,6 @@
 use anyhow::Context as _;
 use clap::Parser;
 use clap_verbosity_flag::{InfoLevel, Verbosity};
-use env_logger::Env;
 use futures_util::StreamExt;
 use opcua::SessionManager;
 use opcua_proxy::CommonArgs;
@@ -9,8 +8,11 @@ use signal_hook::consts::TERM_SIGNALS;
 use signal_hook::low_level::signal_name;
 use signal_hook_tokio::Signals;
 use tokio_util::sync::CancellationToken;
+use tracing::level_filters::LevelFilter;
 use tracing::{info, instrument};
-use tracing_log::format_trace;
+use tracing_subscriber::filter::Targets;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 use url::Url;
 
 mod db;
@@ -29,8 +31,12 @@ struct Args {
     #[arg(env, long)]
     pki_dir: String,
 
+    /// The logging verbosity of opcua library
+    #[arg(env, long, default_value = "warn")]
+    opcua_verbosity: LevelFilter,
+
     #[command(flatten)]
-    verbose: Verbosity<InfoLevel>,
+    verbosity: Verbosity<InfoLevel>,
 }
 
 #[instrument(skip_all)]
@@ -46,11 +52,13 @@ async fn handle_signals(signals: Signals, shutdown_token: CancellationToken) {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    tracing_subscriber::fmt()
-        .with_max_level(args.verbose.tracing_level())
-        .init();
-    env_logger::Builder::from_env(Env::default().default_filter_or("info,opcua=warn"))
-        .format(|_, record| format_trace(record))
+    let filter = Targets::new()
+        .with_default(args.verbosity)
+        .with_target("opcua::", args.opcua_verbosity);
+
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
+        .with(filter)
         .init();
 
     let rt = tokio::runtime::Builder::new_multi_thread()

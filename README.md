@@ -161,6 +161,8 @@ Options:
           Base API URL to get configuration from [env: CONFIG_API_URL=]
       --pki-dir <PKI_DIR>
           Path of the PKI directory [env: PKI_DIR=]
+      --opcua-verbosity <OPCUA_VERBOSITY>
+          The logging verbosity of opcua library [env: OPCUA_VERBOSITY=] [default: warn]
   -v, --verbose...
           Increase logging verbosity
   -q, --quiet...
