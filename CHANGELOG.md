@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.0.10](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.9...v6.0.10) (2025-12-31)
+
+
+### Bug Fixes
+
+* **deps:** specify full dependencies versions ([0ed2f5e](https://github.com/cailloumajor/opcua-proxy/commit/0ed2f5e2a7e474f8fb01b669038ef9ea01dbc5f2))
+
 ## [6.0.9](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.8...v6.0.9) (2025-12-14)
 
 
