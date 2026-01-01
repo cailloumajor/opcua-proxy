@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.0.11](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.10...v6.0.11) (2026-01-01)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate signal-hook-tokio to 0.4.0 ([b25d341](https://github.com/cailloumajor/opcua-proxy/commit/b25d341440a06d527f871ae2d7de9b1ad63ede8c))
+
 ## [6.0.10](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.9...v6.0.10) (2025-12-31)
 
 
