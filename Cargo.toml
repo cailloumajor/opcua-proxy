@@ -40,4 +40,4 @@ version = "1.48.0"
 features = ["macros", "rt-multi-thread", "sync"]
 
 [dev-dependencies]
-trycmd = "0.15.11"
+trycmd = "1.0.0"
