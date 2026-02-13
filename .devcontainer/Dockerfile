@@ -1,4 +1,4 @@
-FROM rust:1.93.0-trixie
+FROM rust:1.93.1-trixie
 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     # Remove imagemagick due to https://security-tracker.debian.org/tracker/CVE-2019-10131
