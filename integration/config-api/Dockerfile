@@ -1,4 +1,4 @@
-FROM denoland/deno:distroless-2.6.10
+FROM denoland/deno:distroless-2.7.0
 
 WORKDIR /app
 
