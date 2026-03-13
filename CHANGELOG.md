@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.0.12](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.11...v6.0.12) (2026-03-13)
+
+
+### Bug Fixes
+
+* **deps:** update rust docker tag to v1.93.0 ([a539fce](https://github.com/cailloumajor/opcua-proxy/commit/a539fcef227d278e00802ee8d074d6cf28483169))
+* **deps:** update rust docker tag to v1.93.1 ([4f84d1d](https://github.com/cailloumajor/opcua-proxy/commit/4f84d1d3e76595af20d49ca95f0cd3e6ed2c86ec))
+* **deps:** update rust docker tag to v1.94.0 ([5c341f5](https://github.com/cailloumajor/opcua-proxy/commit/5c341f59b2395de3be02935acd812f3e68487442))
+
 ## [6.0.11](https://github.com/cailloumajor/opcua-proxy/compare/v6.0.10...v6.0.11) (2026-01-01)
 
 
