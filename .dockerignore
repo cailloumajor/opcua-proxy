@@ -3,4 +3,5 @@
 !Cargo.toml
 !Cargo.lock
 !cross-compile.sh
+!crates/
 !src/

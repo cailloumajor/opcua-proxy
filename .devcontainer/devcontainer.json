@@ -38,7 +38,7 @@
                 },
                 "editor.defaultFormatter": null, // Cancel deno feature behavior.
                 "deno.enablePaths": [
-                    "./integration/config-api"
+                    "./integration/deno"
                 ],
                 "rust-analyzer.check.command": "clippy"
             },

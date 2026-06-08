@@ -1,0 +1,15 @@
+{
+  "lock": false,
+  "tasks": {
+    "dev": "deno run --allow-net --watch main.ts"
+  },
+  "fmt": {
+    "lineWidth": 100,
+    "semiColons": false
+  },
+  "imports": {
+    "@std/assert": "jsr:@std/assert@1.0.18",
+    "centrifuge": "npm:centrifuge@5.5.3",
+    "zod": "npm:zod@4.3.6"
+  }
+}

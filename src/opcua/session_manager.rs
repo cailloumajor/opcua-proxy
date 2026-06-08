@@ -1,255 +1,202 @@
-use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
+use anyhow::Context as _;
+use futures_util::FutureExt;
 use futures_util::future::join_all;
-use opcua::client::prelude::{Client, Session, SessionCommand};
-use opcua::sync::RwLock;
-use tokio::sync::oneshot;
-use tokio::task::spawn_blocking;
+use opcua::client::Client;
+use parking_lot::Mutex;
+use tokio::sync::{mpsc, oneshot};
+use tokio::task::JoinHandle;
 use tokio::time::{MissedTickBehavior, interval};
-use tokio_util::sync::CancellationToken;
-use tracing::{error, info, instrument, warn};
+use tracing::{Instrument, debug, error, info, info_span, instrument};
 use url::Url;
 
-use crate::db::{
-    DataChangeChannel, DataChangeMessage, HealthChannel, HealthCommand, HealthMessage,
-};
+use crate::centrifugo::{CurrentTagValuesChannel, TagChangeMessage};
+use crate::channel::roundtrip_channel;
+use crate::opcua::config::{ConfigFetchService, PartnerConfig};
+use crate::opcua::session::OpcUaSession;
 
-use super::namespaces::get_namespaces;
-use super::session::{PartnerConfig, create_session, fetch_partners_config};
-use super::subscription::{subscribe_to_health, subscribe_to_tags};
-use super::tag_set::tag_set_from_config_groups;
+/// The time interval for fetching the OPC-UA partners configuration.
+const CONFIG_REFRESH_PERIOD: Duration = Duration::from_mins(1);
 
-const CHANNEL_SEND_TIMEOUT: Duration = Duration::from_millis(100);
+/// The capacity of the current partner data message channel.
+const MESSAGE_QUEUE_CAPACITY: usize = 20;
 
-#[derive(Clone)]
+/// Represents a manager of OPC-UA sessions.
 pub(crate) struct SessionManager {
-    config_api_url: Url,
-    opcua_client: Arc<Mutex<Client>>,
-    shutdown_token: CancellationToken,
-    data_change_channel: DataChangeChannel,
-    health_channel: HealthChannel,
-    partners_config: Arc<Mutex<Option<HashSet<Arc<PartnerConfig>>>>>,
-    session_senders: Arc<Mutex<HashMap<Arc<PartnerConfig>, oneshot::Sender<SessionCommand>>>>,
+    /// Shareable OPC-UA client.
+    opcua_client: Arc<Client>,
+    data_change_channel: mpsc::Sender<TagChangeMessage>,
+    config_fetcher: ConfigFetchService,
+    /// A mapping of partner ID to session object.
+    sessions: Arc<Mutex<HashMap<String, OpcUaSession>>>,
 }
 
 impl SessionManager {
+    /// Create a new [`SessionManager`].
     pub(crate) fn new(
         config_api_url: Url,
-        opcua_client: Client,
-        shutdown_token: CancellationToken,
-        data_change_channel: DataChangeChannel,
-        health_channel: HealthChannel,
-    ) -> Self {
-        let opcua_client = Arc::new(Mutex::new(opcua_client));
-        let sessions_config = Default::default();
-        let session_senders = Default::default();
-        Self {
-            config_api_url,
+        opcua_client: Arc<Client>,
+        data_change_channel: mpsc::Sender<TagChangeMessage>,
+    ) -> anyhow::Result<Self> {
+        let config_fetcher =
+            ConfigFetchService::new(config_api_url).context("Failed to build fetch service")?;
+
+        Ok(Self {
             opcua_client,
-            shutdown_token,
             data_change_channel,
-            health_channel,
-            partners_config: sessions_config,
-            session_senders,
-        }
+            config_fetcher,
+            sessions: Default::default(),
+        })
     }
 
-    #[instrument(skip_all, name = "session_manager_run")]
-    pub(crate) async fn run(self) {
-        info!(status = "started");
-        let mut config_refresh_timer = interval(Duration::from_secs(60));
-        config_refresh_timer.set_missed_tick_behavior(MissedTickBehavior::Delay);
-        let mut ensure_running_timer = interval(Duration::from_secs(1));
-        ensure_running_timer.set_missed_tick_behavior(MissedTickBehavior::Delay);
-        loop {
-            tokio::select! {
-                biased;
-                _ = self.shutdown_token.cancelled() => {
-                    info!(msg = "shutdown signal received", reaction = "exiting");
-                    self.stop();
-                    break;
-                }
-                _ = config_refresh_timer.tick() => {
-                    if self.refresh_config().await.is_ok() {
-                        self.cleanup_sessions().await;
-                    } else {
-                        config_refresh_timer.reset_after(Duration::from_secs(5));
+    /// Spawn the manager main loop, returning a channel to request current data, and a handle to the task.
+    ///
+    /// This method consumes the [`SessionManager`].
+    pub(crate) fn spawn(
+        mut self,
+        healthy: Arc<AtomicBool>,
+    ) -> (CurrentTagValuesChannel, JoinHandle<()>) {
+        let (current_data_tx, mut current_data_rx) =
+            roundtrip_channel::<String, _>(MESSAGE_QUEUE_CAPACITY);
+
+        let task = tokio::spawn(
+            async move {
+                info!(status = "started");
+
+                let mut config_refresh_timer = interval(CONFIG_REFRESH_PERIOD);
+                config_refresh_timer.set_missed_tick_behavior(MissedTickBehavior::Delay);
+
+                loop {
+                    tokio::select! {
+                        biased;
+
+                        _ = config_refresh_timer.tick() => {
+                            if self.refresh_config().await {
+                                healthy.store(true, Ordering::Relaxed);
+                            } else {
+                                healthy.store(false, Ordering::Relaxed);
+                                // Retry configuration refresh sooner if it failed.
+                                config_refresh_timer.reset_after(Duration::from_secs(5));
+                            }
+
+                        }
+
+                        received = current_data_rx.recv() => {
+                            if let Some((partner_id,tx)) = received {
+                                self.send_partner_current_values(&partner_id, tx);
+                            } else {
+                                info!(msg = "current values channel closed");
+                                self.stop().await;
+                                break;
+                            }
+                        }
                     }
                 }
-                _ = ensure_running_timer.tick() => {
-                    self.start_missing_sessions().await;
-                    self.restart_stopped().await;
-                }
+
+                info!(status = "terminating");
             }
-        }
+            .instrument(info_span!("session_manager")),
+        );
+
+        (current_data_tx, task)
     }
 
-    #[instrument(skip_all)]
-    fn stop(&self) {
-        self.session_senders
-            .lock()
-            .unwrap()
-            .drain()
-            .for_each(|(config, sender)| {
-                if sender.send(SessionCommand::Stop).is_err() {
-                    let partner_id = &config.partner_id;
-                    error!(kind = "sending session stop command", partner_id);
-                }
-            });
+    /// Stop this [`SessionManager`], asking all managed sessions to stop and waiting for the operation to complete.
+    async fn stop(&self) {
+        // Pull out all managed sessions.
+        let to_stop = self.sessions.lock_arc().drain().collect();
+
+        self.stop_sessions(to_stop).await;
     }
 
+    /// Fetch the partners configuration, start sessions that do not already exist and stop sessions
+    /// for which there is no configuration anymore.
+    ///
+    /// Return a boolean indicating if configuration fetching succeeded.
     #[instrument(skip_all)]
-    async fn refresh_config(&self) -> Result<(), ()> {
-        let fetched_config = fetch_partners_config(self.config_api_url.clone())
-            .await
-            .map_err(|err| {
-                error!(during = "fetching partners config", %err);
-            })?
+    async fn refresh_config(&self) -> bool {
+        let partners_configs = match self.config_fetcher.fetch().await {
+            Ok(c) => c,
+            Err(err) => {
+                error!(during = "OPC-UA partners configuration fetching", %err);
+                return false;
+            }
+        };
+
+        debug!(?partners_configs);
+
+        // Clone the keys to keep the lock as shortly as possible.
+        let already_spawned = self.sessions.lock_arc().keys().cloned().collect::<Vec<_>>();
+        let (to_retain, to_spawn): (Vec<PartnerConfig>, Vec<PartnerConfig>) = partners_configs
             .into_iter()
-            .map(Arc::new)
-            .collect::<HashSet<_>>();
-        self.partners_config.lock().unwrap().replace(fetched_config);
-        Ok(())
-    }
+            .partition(|p| already_spawned.contains(&p.partner_id));
 
-    #[instrument(skip_all)]
-    fn initialize_session(&self, config: Arc<PartnerConfig>) -> Result<Arc<RwLock<Session>>, ()> {
-        let session = {
-            let mut client = self.opcua_client.lock().unwrap();
-            create_session(&mut client, &config)
-        }?;
-        let namespaces = get_namespaces(session.clone())?;
-        let tag_set = tag_set_from_config_groups(&config.tags, &namespaces, session.clone())?;
-        let arc_partner_id: Arc<str> = Arc::from(config.partner_id.as_str());
-        let arc_tag_set = Arc::new(tag_set);
-        subscribe_to_tags(
-            session.clone(),
-            arc_partner_id.clone(),
-            arc_tag_set,
-            self.data_change_channel.clone(),
-        )?;
-        subscribe_to_health(session.clone(), arc_partner_id, self.health_channel.clone())?;
-        Ok(session)
-    }
+        let to_stop = self
+            .sessions
+            .lock_arc()
+            .extract_if(|partner_id, _| !to_retain.iter().any(|p| *partner_id == p.partner_id))
+            .collect();
 
-    #[instrument(skip_all, fields(partner_id = config.partner_id))]
-    async fn start_session(&self, config: Arc<PartnerConfig>) {
-        let empty_request = DataChangeMessage {
-            changes: vec![],
-            partner_id: config.partner_id.clone(),
-        };
-        if let Err(err) = self
-            .data_change_channel
-            .send_timeout(empty_request, CHANNEL_SEND_TIMEOUT)
-            .await
-        {
-            error!(kind = "sending initialization data change to channel", %err);
-        }
-        let cloned_self = self.clone();
-        let cloned_config = Arc::clone(&config);
-        let Ok(Ok(session)) = spawn_blocking(move || cloned_self.initialize_session(cloned_config))
-            .await
-            .map_err(|err| error!(kind = "joining session creation task", %err))
-        else {
-            return;
-        };
-        let session_sender = Session::run_async(session);
-        self.session_senders
-            .lock()
-            .unwrap()
-            .insert(config, session_sender);
-    }
-
-    #[instrument(skip_all)]
-    async fn cleanup_sessions(&self) {
-        let to_stop = {
-            let sessions_config_lock = self.partners_config.lock().unwrap();
-            let Some(expected_sessions) = sessions_config_lock.as_ref() else {
-                warn!(kind = "sessions config not populated");
-                return;
-            };
-            self.session_senders
-                .lock()
-                .unwrap()
-                .keys()
-                .filter(|config| !expected_sessions.contains(*config))
-                .cloned()
-                .collect::<Vec<_>>()
-        };
-        for config in to_stop {
-            let partner_id = &config.partner_id;
-            info!(
-                msg = "stopping session not expected in the configuration",
-                partner_id
+        for config in to_spawn {
+            OpcUaSession::spawn(
+                Arc::clone(&self.opcua_client),
+                config,
+                self.data_change_channel.clone(),
+                Arc::clone(&self.sessions),
             );
-            let health_message = HealthMessage {
-                partner_id: partner_id.clone(),
-                command: HealthCommand::Remove,
-            };
-            if let Err(err) = self
-                .health_channel
-                .send_timeout(health_message, CHANNEL_SEND_TIMEOUT)
-                .await
-            {
-                error!(kind = "sending remove command to health channel", %err);
-            }
-            let session_sender = self
-                .session_senders
-                .lock()
-                .unwrap()
-                .remove(&config)
-                .unwrap();
-            if session_sender.send(SessionCommand::Stop).is_err() {
-                error!(kind = "sending session stop command", partner_id);
+        }
+
+        self.stop_sessions(to_stop).await;
+
+        true
+    }
+
+    /// Stop sessions from provided collection of partner ID and [`OpcUaSession`].
+    #[instrument(skip_all)]
+    async fn stop_sessions(&self, to_stop: Vec<(String, OpcUaSession)>) {
+        let session_stop_handles = to_stop.into_iter().map(|(partner_id, session)| async move {
+            info!(msg = "stopping session", partner_id);
+
+            session.stop().map(|result| (partner_id, result)).await
+        });
+
+        for (partner_id, result) in join_all(session_stop_handles).await {
+            if let Err(status_code) = result {
+                error!(during = "stopping OPC-UA session", partner_id, %status_code);
             }
         }
     }
 
-    #[instrument(skip_all)]
-    async fn start_missing_sessions(&self) {
-        let to_start = {
-            let session_tasks = self.session_senders.lock().unwrap();
-            let sessions_config_lock = self.partners_config.lock().unwrap();
-            let Some(expected_sessions) = sessions_config_lock.as_ref() else {
-                warn!(kind = "sessions config not populated");
+    /// Get the current tag values, encoded in JSON, for the provided partner ID, and send it via the provided channel.
+    ///
+    /// Return whether sending was successful.
+    #[instrument(skip(self, tx))]
+    fn send_partner_current_values(
+        &mut self,
+        partner_id: &str,
+        tx: oneshot::Sender<Option<Vec<u8>>>,
+    ) {
+        let data = match self
+            .sessions
+            .lock_arc()
+            .get(partner_id)
+            .map(|s| s.current_values_json())
+            .transpose()
+        {
+            Ok(d) => d,
+            Err(err) => {
+                error!(during = "encoding current values to JSON", %err);
+                // Channel sender will be dropped, thus aborting the request.
                 return;
-            };
-            expected_sessions
-                .iter()
-                .filter(|&config| !session_tasks.contains_key(config))
-                .cloned()
-                .collect::<Vec<_>>()
+            }
         };
-        let start_tasks_iter = to_start.into_iter().map(|session_config| {
-            let partner_id: Arc<str> = Arc::from(session_config.partner_id.as_str());
-            let cloned_self = self.clone();
-            async move {
-                info!(msg = "starting required session", %partner_id);
-                cloned_self.start_session(session_config).await;
-            }
-        });
-        join_all(start_tasks_iter).await;
-    }
 
-    #[instrument(skip_all)]
-    async fn restart_stopped(&self) {
-        let mut to_restart = Vec::new();
-        for (config, session_sender) in self.session_senders.lock().unwrap().iter_mut() {
-            if session_sender.is_closed() {
-                to_restart.push(Arc::clone(config));
-            }
+        if tx.send(data).is_err() {
+            error!(during = "sending current values to proxy server");
         }
-        let start_tasks_iter = to_restart.into_iter().map(|session_config| {
-            self.session_senders.lock().unwrap().remove(&session_config);
-            let partner_id: Arc<str> = Arc::from(session_config.partner_id.as_str());
-            let cloned_self = self.clone();
-            async move {
-                info!(msg = "restarting failed session", %partner_id);
-                cloned_self.start_session(session_config).await;
-            }
-        });
-        join_all(start_tasks_iter).await;
     }
 }

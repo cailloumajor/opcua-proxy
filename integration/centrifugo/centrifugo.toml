@@ -1,0 +1,21 @@
+[client]
+allow_anonymous_connect_without_token = true
+
+[log]
+level = "debug"
+
+[health]
+enabled = true
+
+[grpc_api]
+enabled = true
+key = "_KVYg9XcxidaiOJrYR5igP-MlY3VJ8Vz6BjaCQcvgb_XF98E_R8Ohv0cjHscp9GBEEjvvOlCDYurZlQgSTqBuA"
+
+[[proxies]]
+name = "subscribe-tests"
+endpoint = "grpc://opcua-proxy:50051"
+
+[[channel.namespaces]]
+name = "integration.tests"
+subscribe_proxy_enabled = true
+subscribe_proxy_name = "subscribe-tests"

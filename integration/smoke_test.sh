@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
-me="$0"
+set -eu -o pipefail
+
+readonly me="$0"
 log_file=
 
-generate_self_signed () {
+function generate_self_signed {
     openssl req \
         -x509 \
         -config ./openssl.conf \
@@ -14,7 +16,7 @@ generate_self_signed () {
         "$@"
 }
 
-teardown () {
+function teardown {
     if [ "$log_file" ]; then
         docker compose stop
         docker compose logs --timestamps > "$log_file"
@@ -22,14 +24,12 @@ teardown () {
     docker compose down --volumes
 }
 
-die () {
-    echo "$me: $1" >&2
-    teardown
-    exit 1
+function log {
+    echo >&2 "${me}:" "$@"
 }
 
 while :; do
-    case $1 in
+    case ${1-} in
         -h|--help)
             echo "Usage: $me [--log-file path]"
             exit 2
@@ -40,10 +40,12 @@ while :; do
                     log_file=$2
                     shift
                 else
-                    die "log file error"
+                    log "log file error"
+                    exit 1
                 fi
             else
-                die '"--log-file" requires a non-empty option argument'
+                log '"--log-file" requires a non-empty option argument'
+                exit 1
             fi
             ;;
         *)
@@ -51,106 +53,48 @@ while :; do
     esac
 done
 
-set -eux
-
-# Create a fresh pki tree
-rm -r pki-server pki-client || true
-mkdir -p pki-server/{own,trusted}/certs
+log "Creating fresh PKI tree"
+rm -r pki-server-first pki-server-second pki-client || true
+mkdir -p pki-server-first/{own,trusted}/certs
+mkdir -p pki-server-second/{own,trusted}/certs
 mkdir -p pki-client/{own,private,rejected,trusted}
 
-# Create self-signed certificate and private key for client
+log "Creating client certificate and private key"
 generate_self_signed \
     -keyout pki-client/private/opcua-proxy-key.pem \
     -out pki-client/own/opcua-proxy-cert.der \
     -subj "/C=FR/L=Testing Land/O=Testing Corp./CN=OPC-UA proxy" \
     -addext "subjectAltName=URI:urn:opcua-proxy"
 chmod +r pki-client/private/opcua-proxy-key.pem
-cp pki-client/own/opcua-proxy-cert.der pki-server/trusted/certs/
+cp pki-client/own/opcua-proxy-cert.der pki-server-first/trusted/certs/
+cp pki-client/own/opcua-proxy-cert.der pki-server-second/trusted/certs/
 
 # Set required variables for Docker Compose
 OPCUA_SERVER_UID="$(id -u)"
 OPCUA_SERVER_GID="$(id -g)"
 export OPCUA_SERVER_UID OPCUA_SERVER_GID
 
-# Build services images
+log "Pulling images"
+docker compose pull --quiet
+
+log "Building service images"
 docker compose build
 
-# Add MongoDB initial data
-docker compose up -d --quiet-pull mongodb
-max_attempts=3
-try_success=
-for i in $(seq 1 $max_attempts); do
-    if docker compose exec mongodb mongosh --norc --quiet /usr/src/initial-data.mongodb; then
-        try_success="true"
-        break
-    fi
-    echo "$me: MongoDB initialization: try #$i failed" >&2
-    [[ $i != "$max_attempts" ]] && sleep 5
-done
-if [ "$try_success" != "true" ]; then
-    die "failure trying to initialize MongoDB"
-fi
+trap teardown EXIT
 
-# Start config API
-docker compose up -d --quiet-pull config-api
-max_attempts=5
-wait_success=
-for i in $(seq 1 $max_attempts); do
-    if docker compose exec config-api deno run --allow-net check.ts; then
-        wait_success="true"
-        break
-    fi
-    echo "$me: waiting for config API to be healthy: try #$i failed" >&2
-    [[ $i != "$max_attempts" ]] && sleep 3
-done
-if [ "$wait_success" != "true" ]; then
-    die "failure waiting for config API to be healthy"
-fi
+log "Starting dependency services"
+docker compose up -d --wait --wait-timeout 30 centrifugo deno opcua-server-first opcua-server-second
 
-# Start OPC-UA servers
-docker compose up -d --quiet-pull opcua-server-first opcua-server-second
-max_attempts=5
-wait_success=
-for i in $(seq 1 $max_attempts); do
-    if [[ $(find pki-server/own/certs -name "*.der" | wc -l) -eq 2 ]]; then
-        wait_success="true"
-        break
-    fi
-    echo "$me: waiting for OPC-UA server certificate creation: try #$i failed" >&2
-    [[ $i != "$max_attempts" ]] && sleep 3
-done
-if [ "$wait_success" != "true" ]; then
-    die "failure waiting for OPC-UA server certificate creation"
-fi
-
-# Add OPC-UA servers certificates to opcua-proxy trusted
-for f in pki-server/own/certs/*.der; do
-    filename=$(basename "$f" | sed -r 's/(.*\[)([^]]*)(.*)/\1\L\2\E\3/')
-    cp "$f" "pki-client/trusted/$filename"
+log "Adding OPC-UA servers certificates to opcua-proxy trusted"
+for f in pki-server-{first,second}/own/certs/*.der; do
+    filename=$(basename "${f}" | sed -r 's/(.*\[)([^]]*)(.*)/CN=\1\L\2\E\3/')
+    cp "${f}" "pki-client/trusted/${filename}"
 done
 
-# Start opcua-proxy (no-value configuration)
-docker compose up -d opcua-proxy
+log "Starting opcua-proxy"
+docker compose up -d --wait --wait-timeout 30 opcua-proxy
 
-# Wait for OPC-UA proxy to be ready
-max_attempts=8
-wait_success=
-for i in $(seq 1 $max_attempts); do
-    if docker compose exec opcua-proxy /usr/local/bin/healthcheck; then
-        wait_success="true"
-        break
-    fi
-    echo "$me: waiting for OPC-UA proxy to be healthy: try #$i failed" >&2
-    [[ $i != "$max_attempts" ]] && sleep 3
-done
-if [ "$wait_success" != "true" ]; then
-    die "failure waiting for OPC-UA proxy to be healthy"
-fi
-
-# Run tests on MongoDB instance
-if ! docker compose exec mongodb mongosh /usr/src/tests.mongodb --quiet --nodb --norc; then
-    die "MongoDB tests (normal configuration) failed"
-fi
+log "Running Centrifuge client tests"
+docker compose exec deno deno run --allow-net --no-lock /app/centrifuge-test.ts
 
 echo "$me: success 🎉"
-teardown

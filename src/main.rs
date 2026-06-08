@@ -1,21 +1,26 @@
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+
 use anyhow::Context as _;
 use clap::Parser;
 use clap_verbosity_flag::{InfoLevel, Verbosity};
 use futures_util::StreamExt;
-use opcua::SessionManager;
 use opcua_proxy::CommonArgs;
 use signal_hook::consts::TERM_SIGNALS;
 use signal_hook::low_level::signal_name;
 use signal_hook_tokio::Signals;
-use tokio_util::sync::CancellationToken;
 use tracing::level_filters::LevelFilter;
-use tracing::{info, instrument};
+use tracing::{info, instrument, warn};
 use tracing_subscriber::filter::Targets;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use url::Url;
 
-mod db;
+use self::centrifugo::{CentrifugoClient, CentrifugoConfig, run_centrifugo_proxy_server};
+use self::opcua::{SessionManager, create_client};
+
+mod centrifugo;
+mod channel;
 mod opcua;
 
 #[derive(Parser)]
@@ -31,6 +36,9 @@ struct Args {
     #[arg(env, long)]
     pki_dir: String,
 
+    #[command(flatten)]
+    centrifugo_config: CentrifugoConfig,
+
     /// The logging verbosity of opcua library
     #[arg(env, long, default_value = "warn")]
     opcua_verbosity: LevelFilter,
@@ -40,16 +48,18 @@ struct Args {
 }
 
 #[instrument(skip_all)]
-async fn handle_signals(signals: Signals, shutdown_token: CancellationToken) {
+async fn handle_signals(signals: Signals) {
     let mut signals_stream = signals.map(|signal| signal_name(signal).unwrap_or("unknown"));
     info!(status = "started");
-    while let Some(signal) = signals_stream.next().await {
-        info!(msg = "received signal", reaction = "shutting down", signal);
-        shutdown_token.cancel();
-    }
+    let Some(signal) = signals_stream.next().await else {
+        warn!(msg = "signals stream exhausted");
+        return;
+    };
+    info!(msg = "received signal", reaction = "shutting down", signal);
 }
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let filter = Targets::new()
@@ -61,51 +71,38 @@ fn main() -> anyhow::Result<()> {
         .with(filter)
         .init();
 
-    let rt = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .context("error building async runtime")?;
+    let tag_change_channel = CentrifugoClient::new(&args.centrifugo_config).handle_tag_changes();
 
-    let shutdown_token = CancellationToken::new();
+    let opcua_client = create_client(args.pki_dir).context("Failed to create OPC-UA client")?;
 
-    let database = rt
-        .block_on(db::MongoDB::create(&args.common.mongodb_uri, &args.common))
-        .context("error creating MongoDB database handle")?;
-    let (data_change_channel, data_change_task) = database.handle_data_change(&rt);
-    let (health_channel, health_task) = database.handle_health(&rt);
+    let healthy = Arc::new(AtomicBool::new(false));
 
-    let opcua_client = opcua::ClientBuilder::new()
-        .application_name(env!("CARGO_PKG_DESCRIPTION"))
-        .product_uri(concat!("urn:", env!("CARGO_PKG_NAME")))
-        .application_uri(concat!("urn:", env!("CARGO_PKG_NAME")))
-        .pki_dir(args.pki_dir)
-        .certificate_path(concat!("own/", env!("CARGO_PKG_NAME"), "-cert.der"))
-        .private_key_path(concat!("private/", env!("CARGO_PKG_NAME"), "-key.pem"))
-        .session_retry_limit(0)
-        .session_timeout(1_200_000)
-        .multi_threaded_executor()
-        .client()
-        .context("error building OPC-UA client")?;
-
-    let signals = rt
-        .block_on(async { Signals::new(TERM_SIGNALS) })
-        .context("error registering termination signals")?;
-    let signals_handle = signals.handle();
-    let signals_task = rt.spawn(handle_signals(signals, shutdown_token.clone()));
-
-    let manager = SessionManager::new(
+    let session_manager = SessionManager::new(
         args.config_api_url,
-        opcua_client,
-        shutdown_token,
-        data_change_channel,
-        health_channel,
-    );
-    rt.block_on(manager.run());
+        Arc::new(opcua_client),
+        tag_change_channel,
+    )
+    .context("Failed to create OPC-UA session manager")?;
+    let (current_data_channel, session_manager_task) = session_manager.spawn(Arc::clone(&healthy));
+
+    let signals = Signals::new(TERM_SIGNALS).context("Failed to register termination signals")?;
+    let signals_handle = signals.handle();
+
+    run_centrifugo_proxy_server(
+        args.common.centrifugo_proxy_listen_address,
+        &args.centrifugo_config.centrifugo_namespace,
+        handle_signals(signals),
+        current_data_channel,
+        healthy,
+    )
+    .await
+    .context("Fail to run Centrifugo proxy server")?;
 
     signals_handle.close();
 
-    rt.block_on(async { tokio::try_join!(data_change_task, health_task, signals_task) })
-        .context("error joining data change and/or health tasks")?;
+    session_manager_task
+        .await
+        .context("Failed to join session manager task")?;
 
     Ok(())
 }

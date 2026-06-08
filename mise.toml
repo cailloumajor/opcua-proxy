@@ -1,0 +1,6 @@
+[settings]
+env_shell_expand = true
+
+[env]
+OPCUA_SERVER_UID = "{{ exec(command='id -u') }}"
+OPCUA_SERVER_GID = "{{ exec(command='id -g') }}"

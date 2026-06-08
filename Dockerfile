@@ -9,9 +9,10 @@ COPY --from=xx / /
 WORKDIR /usr/src/app
 
 # hadolint ignore=DL3008
-RUN apt-get update && apt-get install -y --no-install-recommends clang lld
+RUN apt-get update && apt-get install -y --no-install-recommends clang lld protobuf-compiler
 
 COPY Cargo.lock Cargo.toml cross-compile.sh ./
+COPY crates ./crates
 COPY src ./src
 
 RUN --mount=type=cache,target=/usr/local/cargo/git/db \
@@ -24,6 +25,7 @@ ARG TARGETPLATFORM
 RUN --mount=type=cache,target=/usr/local/cargo/git/db \
     --mount=type=cache,target=/usr/local/cargo/registry/index \
     --mount=type=cache,target=/usr/local/cargo/registry/cache \
+    --mount=type=cache,target=/usr/src/app/target \
     . ./cross-compile.sh && \
     xx-cargo install --locked --path . --root . && \
     xx-verify bin/*

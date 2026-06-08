@@ -5,27 +5,55 @@ services:
     command:
       - --plchostname=opcua-server-first
       - --unsecuretransport
-    user: ${OPCUA_SERVER_UID}:${OPCUA_SERVER_GID}
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - find /app/pki/own/certs -mindepth 1 -maxdepth 1 | read
+      interval: 5s
+      timeout: 5s
+    user: ${OPCUA_SERVER_UID:?}:${OPCUA_SERVER_GID:?}
     volumes:
-      - ./pki-server:/app/pki
+      - ./pki-server-first:/app/pki
 
   opcua-server-second:
     image: mcr.microsoft.com/iotedge/opc-plc:2.14.1
     command:
       - --plchostname=opcua-server-second
       - --disableanonymousauth
-    user: ${OPCUA_SERVER_UID}:${OPCUA_SERVER_GID}
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - find /app/pki/own/certs -mindepth 1 -maxdepth 1 | read
+      interval: 5s
+      timeout: 5s
+    user: ${OPCUA_SERVER_UID:?}:${OPCUA_SERVER_GID:?}
     volumes:
-      - ./pki-server:/app/pki
+      - ./pki-server-second:/app/pki
 
-  mongodb:
-    image: mongo:7.0
+  centrifugo:
+    image: centrifugo/centrifugo:v6.6
+    command:
+      - centrifugo
+      - --config
+      - config.toml
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --spider
+        - http://127.0.0.1:8000/health
+      interval: 5s
+      timeout: 5s
     volumes:
-      - ./initial-data.mongodb:/usr/src/initial-data.mongodb
-      - ./tests.mongodb:/usr/src/tests.mongodb:ro
+      - ./centrifugo/centrifugo.toml:/centrifugo/config.toml
 
-  config-api:
-    build: ./config-api
+  deno:
+    build: ./deno
 
   opcua-proxy:
     build: ..
@@ -33,8 +61,14 @@ services:
       - /usr/local/bin/opcua-proxy
       - --verbose
     environment:
-      - MONGODB_DATABASE=opcua
-      - CONFIG_API_URL=http://config-api:3000/config
+      - CENTRIFUGO_SERVER_URI=http://centrifugo:10000
+      - CENTRIFUGO_API_KEY=_KVYg9XcxidaiOJrYR5igP-MlY3VJ8Vz6BjaCQcvgb_XF98E_R8Ohv0cjHscp9GBEEjvvOlCDYurZlQgSTqBuA
+      - CENTRIFUGO_NAMESPACE=integration.tests
+      - CONFIG_API_URL=http://deno:3000/config
       - PKI_DIR=/pki
+    healthcheck:
+      interval: 5s
+      timeout: 5s
+    mem_limit: 2g
     volumes:
       - ./pki-client:/pki:ro

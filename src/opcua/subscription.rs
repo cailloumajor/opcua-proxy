@@ -1,205 +1,150 @@
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
-use opcua::client::prelude::*;
-use opcua::sync::RwLock;
-use tracing::{error, info_span, instrument, warn};
-
-use opcua_proxy::OPCUA_HEALTH_INTERVAL;
-
-use crate::db::{
-    DataChangeChannel, DataChangeMessage, HealthChannel, HealthCommand, HealthMessage,
+use opcua::client::{MonitoredItem, OnSubscriptionNotification, Session};
+use opcua::types::{
+    DataValue, DateTime, Error as OpcUaError, MonitoredItemCreateRequest, MonitoringMode,
+    MonitoringParameters, TimestampsToReturn, Variant,
 };
+use parking_lot::Mutex;
+use tokio::sync::mpsc;
+use tracing::{error, info_span, warn};
 
-use super::session::SESSION_LOCK_TIMEOUT;
+use crate::centrifugo::TagChangeMessage;
+use crate::opcua::utils::encode_tag_changes;
+
 use super::tag_set::Tag;
 
-#[derive(Debug)]
-pub(crate) struct TagChange {
-    pub(crate) tag_name: String,
-    pub(crate) value: super::variant::Variant,
-    pub(crate) source_timestamp: i64,
+/// A subscriber for OPC-UA changes notification that signals changes to Centrifugo.
+pub(super) struct CentrifugoSubscriber {
+    /// The OPC-UA session.
+    session: Arc<Session>,
+    /// The ID of the OPC-UA remote partner.
+    partner_id: String,
+    /// The set of tags to monitor.
+    tag_set: Vec<Tag>,
+    /// Storage for current tag values.
+    values_map: Arc<Mutex<HashMap<String, (Variant, DateTime)>>>,
+    /// The channel to send tag changes.
+    tag_change_channel: mpsc::Sender<TagChangeMessage>,
 }
 
-#[instrument(skip_all, fields(partner_id))]
-pub(super) fn subscribe_to_tags<T>(
-    session: Arc<RwLock<T>>,
-    partner_id: Arc<str>,
-    tag_set: Arc<Vec<Tag>>,
-    data_change_channel: DataChangeChannel,
-) -> Result<(), ()>
-where
-    T: SubscriptionService + MonitoredItemService,
-{
-    let shared_tag_set = Arc::clone(&tag_set);
-    let data_change_callback = DataChangeCallback::new(move |monitored_items| {
-        let _entered = info_span!("tags_values_change_handler", %partner_id).entered();
-        let mut changes = Vec::with_capacity(monitored_items.len());
-        for item in monitored_items {
-            let node_id = &item.item_to_monitor().node_id;
-            let client_handle = item.client_handle();
-            let index = usize::try_from(client_handle).unwrap() - 1;
-            let Some(tag) = shared_tag_set.get(index) else {
-                error!(%node_id, client_handle, err="tag not found for client handle");
-                continue;
-            };
-            let Some(last_value) = &item.last_value().value else {
-                warn!(%node_id, msg = "missing value");
-                continue;
-            };
-            let Some(source_timestamp) = item
-                .last_value()
-                .source_timestamp
-                .map(|dt| dt.as_chrono().timestamp_millis())
-            else {
-                error!(%node_id, err = "missing source timestamp");
-                continue;
-            };
-            changes.push(TagChange {
-                tag_name: tag.name.clone(),
-                value: last_value.clone().into(),
-                source_timestamp,
+impl CentrifugoSubscriber {
+    const PUBLISH_INTERVAL: Duration = Duration::from_secs(1);
+
+    /// Create a new [`CentrifugoSubscriber`].
+    pub(super) fn new(
+        session: Arc<Session>,
+        partner_id: String,
+        tag_set: Vec<Tag>,
+        values_map: Arc<Mutex<HashMap<String, (Variant, DateTime)>>>,
+        tag_change_channel: mpsc::Sender<TagChangeMessage>,
+    ) -> Self {
+        Self {
+            session,
+            partner_id,
+            tag_set,
+            values_map,
+            tag_change_channel,
+        }
+    }
+
+    /// Enable this subscriber in the OPC-UA session, i.e. create the subscription and monitored items.
+    pub(super) async fn enable(self) -> Result<(), OpcUaError> {
+        let items_to_create = self
+            .tag_set
+            .iter()
+            // Client handles start at 1.
+            .zip(1..)
+            .map(|(tag, client_handle)| {
+                MonitoredItemCreateRequest::new(
+                    tag.node_id.clone().into(),
+                    MonitoringMode::Reporting,
+                    MonitoringParameters {
+                        client_handle,
+                        ..Default::default()
+                    },
+                )
             })
-        }
-        if changes.is_empty() {
-            warn!(msg = "discarded empty tags changes message");
-            return;
-        }
-        let message = DataChangeMessage {
-            partner_id: partner_id.to_string(),
-            changes,
-        };
-        if let Err(err) = data_change_channel.try_send(message) {
-            error!(when = "sending message to channel", %err);
-        }
-    });
+            .collect();
 
-    let subscription_id = {
-        let session = session
-            .try_read_for(SESSION_LOCK_TIMEOUT)
-            .ok_or_else(|| error!(kind = "session lock timeout"))?;
-        session
-            .create_subscription(1000.0, 50, 10, 0, 0, true, data_change_callback)
-            .map_err(|err| {
-                error!(kind = "subscription creation", %err);
-            })?
-    };
+        let cloned_session = Arc::clone(&self.session);
+        let subscription_id = cloned_session
+            .create_subscription(Self::PUBLISH_INTERVAL, 50, 10, 0, 0, true, self)
+            .await
+            .map_err(|status| OpcUaError::new(status, "error creating subscription"))?;
 
-    let items_to_create = tag_set
-        .iter()
-        .zip(1..)
-        .map(|(tag, client_handle)| {
-            MonitoredItemCreateRequest::new(
-                tag.node_id.clone().into(),
-                MonitoringMode::Reporting,
-                MonitoringParameters {
-                    client_handle,
-                    ..Default::default()
-                },
-            )
-        })
-        .collect::<Vec<_>>();
+        let results = cloned_session
+            .create_monitored_items(subscription_id, TimestampsToReturn::Source, items_to_create)
+            .await
+            .map_err(|status| OpcUaError::new(status, "error creating monitored items"))?;
 
-    let results = {
-        let session = session
-            .try_read_for(SESSION_LOCK_TIMEOUT)
-            .ok_or_else(|| error!(kind = "session lock timeout"))?;
-        session
-            .create_monitored_items(
-                subscription_id,
-                TimestampsToReturn::Source,
-                &items_to_create,
-            )
-            .map_err(|err| {
-                error!(kind = "monitored items creation", %err);
-            })?
-    };
-
-    for (i, MonitoredItemCreateResult { status_code, .. }) in results.iter().enumerate() {
-        if !status_code.is_good() {
-            let node_id = &items_to_create[i].item_to_monitor.node_id;
-            error!(kind = "monitored item status", %node_id, %status_code);
-            return Err(());
+        for item in results {
+            let status_code = item.result.status_code;
+            if !status_code.is_good() {
+                return Err(OpcUaError::new(
+                    status_code,
+                    format!("error on monitored item {}", item.item_to_monitor.node_id),
+                ));
+            }
         }
+
+        Ok(())
     }
-
-    Ok(())
 }
 
-#[instrument(skip_all, fields(partner_id))]
-pub(super) fn subscribe_to_health<T>(
-    session: Arc<RwLock<T>>,
-    partner_id: Arc<str>,
-    health_channel: HealthChannel,
-) -> Result<(), ()>
-where
-    T: SubscriptionService + MonitoredItemService,
-{
-    let data_change_callback = DataChangeCallback::new(move |monitored_items| {
-        let _entered = info_span!("health_value_change_handler", %partner_id).entered();
-        let Some(Variant::DateTime(server_time)) = monitored_items
-            .first()
-            .and_then(|item| item.last_value().value.as_ref())
-        else {
-            error!(?monitored_items, err = "unexpected monitored items");
+impl OnSubscriptionNotification for CentrifugoSubscriber {
+    fn on_data_value(&mut self, notification: DataValue, item: &MonitoredItem) {
+        let node_id = &item.item_to_monitor().node_id;
+
+        let _entered = info_span!("tags_values_change_handler", %node_id).entered();
+
+        let client_handle = item.client_handle();
+        // Client handle starts at 1.
+        let tag_index = match client_handle.checked_sub(1) {
+            Some(idx) => usize::try_from(idx).expect("u32 should fit in usize"),
+            None => {
+                error!(err = "client handle is zero");
+                return;
+            }
+        };
+        let Some(tag) = self.tag_set.get(tag_index) else {
+            error!(err = "tag not found for client handle", client_handle);
             return;
         };
-        let server_timestamp = server_time.as_chrono().timestamp_millis();
-        let message = HealthMessage {
-            partner_id: partner_id.to_string(),
-            command: HealthCommand::Update(server_timestamp),
+        let Some(value) = notification.value else {
+            warn!(msg = "missing value");
+            return;
         };
-        if let Err(err) = health_channel.try_send(message) {
+        let Some(source_timestamp) = notification.source_timestamp else {
+            error!(err = "missing source timestamp");
+            return;
+        };
+
+        let data = {
+            let ctx = self.session.encoding_context().read();
+            match encode_tag_changes(&[(&tag.name, &value, &source_timestamp)], &ctx.context()) {
+                Ok(d) => d,
+                Err(err) => {
+                    error!(during = "encoding tag change to JSON", %err);
+                    return;
+                }
+            }
+        };
+
+        // Record the current value.
+        self.values_map
+            .lock_arc()
+            .insert(tag.name.clone(), (value, source_timestamp));
+
+        let message = TagChangeMessage {
+            partner_id: self.partner_id.clone(),
+            data,
+        };
+
+        if let Err(err) = self.tag_change_channel.try_send(message) {
             error!(when = "sending message to channel", %err);
         }
-    });
-
-    let subscription_id = {
-        let session = session
-            .try_read_for(SESSION_LOCK_TIMEOUT)
-            .ok_or_else(|| error!(kind = "session lock timeout"))?;
-        session
-            .create_subscription(
-                OPCUA_HEALTH_INTERVAL.into(),
-                50,
-                10,
-                1,
-                0,
-                true,
-                data_change_callback,
-            )
-            .map_err(|err| {
-                error!(kind = "subscription creation", %err);
-            })?
-    };
-
-    let server_time_node: NodeId = VariableId::Server_ServerStatus_CurrentTime.into();
-
-    let results = {
-        let session = session
-            .try_read_for(SESSION_LOCK_TIMEOUT)
-            .ok_or_else(|| error!(kind = "session lock timeout"))?;
-        session
-            .create_monitored_items(
-                subscription_id,
-                TimestampsToReturn::Neither,
-                &[server_time_node.into()],
-            )
-            .map_err(|err| {
-                error!(kind = "monitored items creation", %err);
-            })?
-    };
-
-    let status_code = results
-        .first()
-        .map(|result| result.status_code)
-        .ok_or_else(|| {
-            error!(kind = "misssing result for monitored item creation");
-        })?;
-
-    if !status_code.is_good() {
-        error!(kind = "monitored item status", %status_code);
-        return Err(());
     }
-
-    Ok(())
 }

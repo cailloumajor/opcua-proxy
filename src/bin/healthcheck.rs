@@ -1,16 +1,13 @@
 use std::time::Duration;
 
-use anyhow::anyhow;
+use anyhow::{Context, anyhow};
 use clap::Parser;
-use futures_util::TryStreamExt;
-use mongodb::Client;
-use mongodb::bson::doc;
-use mongodb::options::{ClientOptions, FindOptions};
-use serde::Deserialize;
-
-use opcua_proxy::{CommonArgs, OPCUA_HEALTH_COLL, OPCUA_HEALTH_INTERVAL};
-
-const SERVER_SELECTION_TIMEOUT: Duration = Duration::from_secs(1);
+use opcua_proxy::CommonArgs;
+use tonic::Request;
+use tonic::transport::Endpoint;
+use tonic_health::pb::HealthCheckRequest;
+use tonic_health::pb::health_check_response::ServingStatus;
+use tonic_health::pb::health_client::HealthClient;
 
 #[derive(Parser)]
 struct Args {
@@ -18,62 +15,30 @@ struct Args {
     common: CommonArgs,
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Health {
-    #[serde(rename = "_id")]
-    id: String,
-    updated_since: i64,
-}
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
+    let args = Args::try_parse().context("Failed to parse arguments")?;
 
-    let mut options = ClientOptions::parse(args.common.mongodb_uri).await?;
-    options.app_name = env!("CARGO_PKG_NAME").to_string().into();
-    options.server_selection_timeout = SERVER_SELECTION_TIMEOUT.into();
+    let addr = args.common.centrifugo_proxy_listen_address;
 
-    let client = Client::with_options(options)?;
-    let db = client.database(&args.common.mongodb_database);
-    let collection = db.collection::<Health>(OPCUA_HEALTH_COLL);
-    let projection = doc! {
-        "updatedAt": true,
-        "updatedSince" : {
-            "$dateDiff": {
-                "startDate": "$updatedAt",
-                "endDate": "$$NOW",
-                "unit": "millisecond",
-            },
-        },
-    };
-    let options = FindOptions::builder().projection(projection).build();
+    let endpoint = Endpoint::from_shared(format!("http://{}:{}", addr.ip(), addr.port()))
+        .context("Failed to create endpoint")?
+        .connect_timeout(Duration::from_secs(1))
+        .connect()
+        .await
+        .context("Failed to connect health client")?;
 
-    let health_documents = collection
-        .find(doc! {})
-        .with_options(options)
-        .await?
-        .try_collect::<Vec<_>>()
-        .await?;
+    let mut client = HealthClient::new(endpoint);
 
-    if health_documents.is_empty() {
-        return Err(anyhow!("health collection is empty or does not exist"));
-    }
+    let req = Request::new(HealthCheckRequest::default());
 
-    let outdated_ids = health_documents
-        .into_iter()
-        .filter_map(|doc| {
-            if doc.updated_since > i64::from(OPCUA_HEALTH_INTERVAL) {
-                Some(doc.id)
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<_>>();
+    let resp = client
+        .check(req)
+        .await
+        .context("Failed to check for health status")?;
 
-    if !outdated_ids.is_empty() {
-        let ids = outdated_ids.join(", ");
-        return Err(anyhow!("outdated health for ids: {ids}"));
+    if resp.into_inner().status() != ServingStatus::Serving {
+        return Err(anyhow!("Status is unhealthy"));
     }
 
     Ok(())
