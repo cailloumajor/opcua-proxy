@@ -79,7 +79,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Lint Dockerfile
-        uses: hadolint/hadolint-action@v3.3.0
+        uses: hadolint/hadolint-action@v3.5.0
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Run integration tests
